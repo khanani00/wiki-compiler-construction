@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapter 5 — Type Checking | COS341 Supplement</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="chapter5.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <span class="site-header__course">COS341 Supplementary Material</span>
+      <nav class="site-header__nav">
+        <a href="#">Home</a>
+        <a href="#">Chapters</a>
+        <a href="grammar.html">Grammar</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="article">
+
+    <p class="breadcrumb">Chapters &rsaquo; Chapter 5 &rsaquo; Type Checking</p>
+    <h1 class="article__title">Chapter 5 &mdash; Type Checking</h1>
+    <p class="article__subtitle">Teaching the compiler to ask: &ldquo;Does this even make sense?&rdquo;</p>
+
+    <!-- ── EVENT 1: GAIN ATTENTION ──────────────────────────────── -->
+    <div class="callout callout--question">
+      <p class="callout__label">Opening Problem</p>
+      <p>Your parser accepted this program without complaint. It is syntactically valid. But something is wrong:</p>
+      <pre class="code-block"><code>main() {
+  number x := 5;
+  text   y := "hello";
+  number z := x + y;   <span class="code-comment">/* adding a number to text — should this work? */</span>
+}</code></pre>
+      <p>The parser's job is structure, not meaning. It sees <code>EXPR + EXPR</code> and passes it through. The <strong>type checker</strong> is the phase that catches this — before the program ever runs.</p>
+    </div>
+
+    <!-- ── EVENT 2: LEARNING OBJECTIVES ─────────────────────────── -->
+    <section class="section" id="objectives">
+      <h2>Learning Objectives</h2>
+      <ul class="objectives-list">
+        <li><span class="bloom bloom--remember">Remember</span> what synthesised and inherited attributes are and how they flow through the AST.</li>
+        <li><span class="bloom bloom--understand">Understand</span> how <code>CheckExp</code> recursively type-checks an expression using <code>vtable</code> and <code>ftable</code>.</li>
+        <li><span class="bloom bloom--apply">Apply</span> <code>CheckExp</code> by hand to trace the type-checking of a concrete expression step by step.</li>
+        <li><span class="bloom bloom--analyse">Analyse</span> what happens when a type error is detected and how the checker continues past it.</li>
+        <li><span class="bloom bloom--evaluate">Evaluate</span> the design choice of returning a guessed type after an error rather than stopping.</li>
+      </ul>
+    </section>
+
+    <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
+    <section class="section" id="recall">
+      <h2>Connecting to What You Already Know</h2>
+      <p>In Chapter 3 you built a <strong>symbol table</strong> that maps names to information about what those names are bound to. In that chapter the information stored was the type, scope level, and declaration status of each variable.</p>
+      <p>In Chapter 5 that same symbol table becomes the <strong>environment</strong> the type checker runs on. Specifically, two tables are passed through every type-checking function:</p>
+      <div class="two-col">
+        <div class="info-card">
+          <p class="info-card__label">vtable</p>
+          <p>Maps <strong>variable names</strong> to their declared types (<code>number</code> or <code>text</code> in our grammar).</p>
+        </div>
+        <div class="info-card">
+          <p class="info-card__label">ftable</p>
+          <p>Maps <strong>function names</strong> to their signatures — the list of parameter types and the return type.</p>
+        </div>
+      </div>
+      <p>These are not new data structures. They are the persistent symbol tables from Chapter 3, populated by crawling the AST, now being <em>used</em> to check types.</p>
+    </section>
+
+    <!-- ── EVENT 4: ATTRIBUTES ───────────────────────────────────── -->
+    <section class="section" id="attributes">
+      <h2>Synthesised and Inherited Attributes</h2>
+      <p>Before looking at <code>CheckExp</code>, you need to understand how information flows through the AST during type checking. There are two directions:</p>
+
+      <div class="attr-diagram" id="attrDiagram">
+        <div class="attr-tree">
+          <div class="attr-node attr-node--root">
+            <span class="node-label">if x &lt; 5 then x + 1 else 0</span>
+          </div>
+          <div class="attr-children">
+            <div class="attr-branch">
+              <div class="attr-arrow attr-arrow--down">vtable, ftable &darr;</div>
+              <div class="attr-node attr-node--cond">x &lt; 5 <span class="attr-badge attr-badge--synth">bool &uarr;</span></div>
+            </div>
+            <div class="attr-branch">
+              <div class="attr-arrow attr-arrow--down">vtable, ftable &darr;</div>
+              <div class="attr-node attr-node--then">x + 1 <span class="attr-badge attr-badge--synth">number &uarr;</span></div>
+            </div>
+            <div class="attr-branch">
+              <div class="attr-arrow attr-arrow--down">vtable, ftable &darr;</div>
+              <div class="attr-node attr-node--else">0 <span class="attr-badge attr-badge--synth">number &uarr;</span></div>
+            </div>
+          </div>
+          <div class="attr-node attr-node--result">
+            Result type: <strong>number</strong> &uarr; (synthesised from branches)
+          </div>
+        </div>
+        <div class="attr-legend">
+          <span class="attr-badge attr-badge--synth">type &uarr;</span> Synthesised — returned upward
+          &nbsp;&nbsp;
+          <span class="attr-arrow attr-arrow--down" style="display:inline">↓</span> Inherited — passed downward
+        </div>
+      </div>
+
+      <p><strong>Inherited attributes</strong> (<code>vtable</code>, <code>ftable</code>) are passed <em>down</em> into each recursive call — every subexpression needs to know the current environment.</p>
+      <p><strong>Synthesised attributes</strong> (the type of each subexpression) are returned <em>up</em> — each call tells its caller what type it computed.</p>
+    </section>
+
+    <!-- ── EVENT 4 cont: CheckExp reference ─────────────────────── -->
+    <section class="section" id="checkexp-ref">
+      <h2>CheckExp — The Type-Checking Function</h2>
+      <p><code>CheckExp</code> takes an expression node from the AST, the variable environment <code>vtable</code>, and the function environment <code>ftable</code>. It returns the <strong>type</strong> of the expression, or reports an error and returns a guessed type so that checking can continue.</p>
+      <p>Below is the full function. Each case is colour-coded — click a case to highlight it and see an explanation.</p>
+
+      <div class="checkexp-layout">
+        <div class="checkexp-code-wrap">
+          <p class="demo-label">CheckExp — All Cases</p>
+          <pre class="code-block code-block--checkexp" id="checkexpCode"><code><span class="ce-case" data-case="num">num
+  &rarr; int</span>
+
+<span class="ce-case" data-case="id">id
+  t = lookup(vtable, getname(id))
+  if t = unbound
+    then error(); return number
+    else return t</span>
+
+<span class="ce-case" data-case="plus">Exp1 + Exp2
+  t1 = CheckExp(Exp1, vtable, ftable)
+  t2 = CheckExp(Exp2, vtable, ftable)
+  if t1 = number and t2 = number
+    then return number
+    else error(); return number</span>
+
+<span class="ce-case" data-case="lt">Exp1 &lt; Exp2
+  t1 = CheckExp(Exp1, vtable, ftable)
+  t2 = CheckExp(Exp2, vtable, ftable)
+  if t1 = t2
+    then return bool
+    else error(); return bool</span>
+
+<span class="ce-case" data-case="if">if Exp1 then Exp2 else Exp3
+  t1 = CheckExp(Exp1, vtable, ftable)
+  t2 = CheckExp(Exp2, vtable, ftable)
+  t3 = CheckExp(Exp3, vtable, ftable)
+  if t1 = bool and t2 = t3
+    then return t2
+    else error(); return t2</span>
+
+<span class="ce-case" data-case="call">fname(Exps)
+  t = lookup(ftable, getname(fname))
+  if t = unbound
+    then error(); return number
+  else
+    (t1,...,tn) &rarr; t0 = t
+    [t'1,...,t'm] = CheckExps(Exps, vtable, ftable)
+    if m = n and t1=t'1, ..., tn=t'n
+      then return t0
+      else error(); return t0</span>
+
+<span class="ce-case" data-case="let">let id = Exp1 in Exp2
+  t1 = CheckExp(Exp1, vtable, ftable)
+  vtable' = bind(vtable, getname(id), t1)
+  return CheckExp(Exp2, vtable', ftable)</span></code></pre>
+        </div>
+
+        <div class="checkexp-explain" id="checkexpExplain">
+          <p class="demo-label">Case Explanation</p>
+          <div class="explain-placeholder">
+            <p>Click a case in the code to see an explanation of what it does and why.</p>
+          </div>
+          <div class="explain-panel" data-panel="num" style="display:none">
+            <h4>Number literal</h4>
+            <p>A numeric constant always has type <code>number</code>. No lookup needed — the type is known from the token itself.</p>
+            <p class="explain-example">Example: <code>42</code> &rarr; <code>number</code></p>
+          </div>
+          <div class="explain-panel" data-panel="id" style="display:none">
+            <h4>Variable reference</h4>
+            <p>Look up the variable name in <code>vtable</code>. If it is found, return its declared type. If not found (<code>unbound</code>), report an error and guess <code>number</code> so checking can continue.</p>
+            <p class="explain-example">Example: if <code>vtable</code> contains <code>x &rarr; number</code>, then <code>x</code> &rarr; <code>number</code>.</p>
+            <p class="explain-watch">Watch out: if the variable was never declared, lookup returns <code>unbound</code> — this is the undeclared variable error.</p>
+          </div>
+          <div class="explain-panel" data-panel="plus" style="display:none">
+            <h4>Addition</h4>
+            <p>Recursively check both sides. Both must be <code>number</code>. If either is not, report an error. Either way, the result type is <code>number</code>.</p>
+            <p class="explain-example">Example: <code>x + 5</code> where <code>x : number</code> &rarr; <code>number</code>.</p>
+            <p class="explain-watch">Watch out: <code>x + y</code> where <code>y : text</code> triggers an error. The checker still returns <code>number</code> as a guess and continues.</p>
+          </div>
+          <div class="explain-panel" data-panel="lt" style="display:none">
+            <h4>Comparison</h4>
+            <p>Both operands must have the <em>same</em> type — the comparison works on any type as long as both sides match. The result is always <code>bool</code>.</p>
+            <p class="explain-example">Example: <code>x &lt; 5</code> where <code>x : number</code> &rarr; <code>bool</code>.</p>
+            <p class="explain-watch">Note: this differs from addition — comparison does not require <code>number</code>, just that both sides match.</p>
+          </div>
+          <div class="explain-panel" data-panel="if" style="display:none">
+            <h4>Conditional expression</h4>
+            <p>Three recursive calls. The condition must be <code>bool</code>. Both branches must have the <em>same</em> type. The result type is that shared type.</p>
+            <p class="explain-example">Example: <code>if x &lt; 5 then x + 1 else 0</code> — condition is <code>bool</code>, both branches are <code>number</code> &rarr; result is <code>number</code>.</p>
+            <p class="explain-watch">Watch out: if the branches have different types, an error is reported and the then-branch type is guessed. This is an arbitrary choice.</p>
+          </div>
+          <div class="explain-panel" data-panel="call" style="display:none">
+            <h4>Function call</h4>
+            <p>Look up the function name in <code>ftable</code> to get its signature. Check that the number of arguments matches and each argument type matches the declared parameter type. Return the function's return type.</p>
+            <p class="explain-example">Example: if <code>ftable</code> has <code>add &rarr; (number, number) &rarr; number</code>, then <code>add(x, 5)</code> where <code>x : number</code> &rarr; <code>number</code>.</p>
+            <p class="explain-watch">Watch out: wrong number of arguments or a type mismatch both trigger errors.</p>
+          </div>
+          <div class="explain-panel" data-panel="let" style="display:none">
+            <h4>Let expression</h4>
+            <p>Check the right-hand side expression to find its type. Extend <code>vtable</code> with the new binding. Use the extended table to check the body. Return the body's type.</p>
+            <p class="explain-example">Example: <code>let z = x + 1 in z &lt; 10</code> — <code>z</code> gets type <code>number</code>, body type is <code>bool</code>.</p>
+            <p class="explain-watch">Note: a let-expression cannot itself cause a type error — only its subexpressions can.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── EVENT 5: WORKED TRACE ─────────────────────────────────── -->
+    <section class="section" id="trace">
+      <h2>Worked Example — Step-by-Step Trace</h2>
+      <p>We trace <code>CheckExp</code> on the expression below, taken from a program in the unified grammar. The vtable and ftable are shown on the right.</p>
+
+      <div class="trace-setup">
+        <div class="trace-program">
+          <p class="demo-label">Expression to type-check</p>
+          <pre class="code-block"><code>if x &lt; 5 then x + 1 else 0</code></pre>
+          <p style="font-size:0.85rem; color:var(--col-muted); margin-top:0.4rem">This expression appears inside a function body where <code>x</code> has been declared.</p>
+        </div>
+        <div class="trace-env">
+          <p class="demo-label">Environments</p>
+          <table class="sym-table">
+            <thead><tr><th>vtable</th><th>type</th></tr></thead>
+            <tbody>
+              <tr><td><code>x</code></td><td><code>number</code></td></tr>
+            </tbody>
+          </table>
+          <table class="sym-table" style="margin-top:0.6rem">
+            <thead><tr><th>ftable</th><th>signature</th></tr></thead>
+            <tbody>
+              <tr><td colspan="2" style="color:var(--col-muted); font-style:italic; font-size:0.82rem">(no functions in scope)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Interactive stepper -->
+      <div class="stepper" id="stepper">
+        <div class="stepper-controls">
+          <button class="btn" id="prevStep" disabled>&larr; Previous</button>
+          <span class="stepper-counter" id="stepCounter">Step 1 of 7</span>
+          <button class="btn" id="nextStep">Next &rarr;</button>
+        </div>
+
+        <div class="stepper-body">
+          <div class="stepper-tree" id="stepTree">
+            <!-- tree updated by JS -->
+          </div>
+          <div class="stepper-detail" id="stepDetail">
+            <!-- detail updated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="callout callout--info" style="margin-top:1.5rem">
+        <p class="callout__label">Key Takeaway from the Trace</p>
+        <p>Notice that <code>vtable</code> and <code>ftable</code> are passed <strong>unchanged</strong> into every recursive call. They are <em>inherited</em> — pushed down the tree. The <strong>type</strong> that each call returns is <em>synthesised</em> — bubbled back up. The final answer (<code>number</code>) is assembled from the bottom of the tree upward.</p>
+      </div>
+    </section>
+
+    <!-- ── EXERCISES ─────────────────────────────────────────────── -->
+    <section class="section" id="exercises">
+      <h2>Exercises</h2>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--remember">Remember</span> Exercise 5.1</p>
+        <p>What is the difference between a synthesised attribute and an inherited attribute? Give one example of each from the type-checking phase.</p>
+        <details class="exercise__hint">
+          <summary>Show answer</summary>
+          <p>A <strong>synthesised</strong> attribute is computed from the children of a node and returned upward — the type of an expression is synthesised. An <strong>inherited</strong> attribute is passed downward from a parent to its children — <code>vtable</code> and <code>ftable</code> are inherited, since every subexpression needs access to the same environment.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--apply">Apply</span> Exercise 5.2</p>
+        <p>Given the vtable <code>{x &rarr; number, y &rarr; text}</code> and an empty ftable, trace <code>CheckExp</code> on the expression <code>x + y</code>. Write out each recursive call, the value returned, and when the error fires.</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>Start at the <code>Exp1 + Exp2</code> case. Make two recursive calls — one for <code>x</code> (variable lookup) and one for <code>y</code> (variable lookup). Then check whether both returned types are <code>number</code>.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--apply">Apply</span> Exercise 5.3</p>
+        <p>Using the unified grammar, write a program with a function <code>double</code> that takes a <code>number</code> and returns a <code>number</code>. Manually construct the <code>ftable</code> entry for <code>double</code>, then trace <code>CheckExp</code> on the call <code>double(x + 1)</code> where <code>x : number</code>.</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>The ftable entry for <code>double</code> should be <code>double &rarr; (number) &rarr; number</code>. Use the function call case of CheckExp. First look up <code>double</code> in ftable, then call CheckExps on the argument list, then compare argument types against the signature.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--analyse">Analyse</span> Exercise 5.4</p>
+        <p>When <code>CheckExp</code> encounters a type error, it reports the error and then <em>guesses</em> a return type (usually <code>number</code>) so that checking can continue. What is the risk of this strategy? Can you construct an expression where the guess causes a <em>spurious</em> error to be reported further up the tree?</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>Try an expression like <code>if (x + y) &lt; 5 then ...</code> where <code>y : text</code>. The <code>+</code> fires an error and guesses <code>number</code>. Then the <code>&lt;</code> case gets <code>number</code> on both sides and passes — no spurious error there. Now try nesting the error inside the condition of an if.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--evaluate">Evaluate</span> Exercise 5.5</p>
+        <p>The textbook's <code>CheckExp</code> always guesses <code>number</code> after a type error. A better alternative is to return an <code>unknown</code> type and treat it as compatible with anything, so that no further spurious errors propagate. What are the trade-offs of each approach? When would the <code>unknown</code> approach fail to catch a real error?</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>Think about what happens when an <code>unknown</code> type flows into a <code>+</code> expression. The checker treats it as compatible and does not report an error. Now think about a situation where two unknown values are compared and the comparison result is used as the condition of an if — has the error been hidden?</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ── EVENT 9: NEXT ─────────────────────────────────────────── -->
+    <section class="section" id="next">
+      <h2>What Comes Next</h2>
+      <div class="callout callout--next">
+        <p class="callout__label">Chapter 6 &rarr; Intermediate Code Generation</p>
+        <p>The type information gathered by <code>CheckExp</code> does not disappear after this phase. In Chapter 6, the code generator uses type annotations to decide which machine instructions to emit. For example, knowing that an addition involves two <code>number</code> values (as opposed to text) tells the code generator to emit an integer addition instruction rather than a string concatenation. The work done in this chapter is what makes that decision possible.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>COS341 Supplementary Material &mdash; University of Pretoria &mdash; Based on Mogensen, <em>Introduction to Compiler Design</em>, 2nd ed.</p>
+  </footer>
+
+  <script src="chapter5.js"></script>
+</body>
+</html>

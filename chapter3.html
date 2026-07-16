@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapter 3 — Scopes and Symbol Tables | COS341 Supplement</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── SITE HEADER ─────────────────────────────────────────────── -->
+  <header class="site-header">
+    <div class="site-header__inner">
+      <span class="site-header__course">COS341 Supplementary Material</span>
+      <nav class="site-header__nav">
+        <a href="#">Home</a>
+        <a href="#">Chapters</a>
+        <a href="grammar.html">Grammar</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ── ARTICLE ──────────────────────────────────────────────────── -->
+  <main class="article">
+
+    <!-- breadcrumb -->
+    <p class="breadcrumb">Chapters &rsaquo; Chapter 3 &rsaquo; Scopes and Symbol Tables</p>
+
+    <h1 class="article__title">Chapter 3 &mdash; Scopes and Symbol Tables</h1>
+    <p class="article__subtitle">&ldquo;Scope defines the boundaries; context dictates the meaning.&rdquo;</p>
+
+    <!-- ── EVENT 1: GAIN ATTENTION ──────────────────────────────── -->
+    <div class="callout callout--question">
+      <p class="callout__label">Opening Problem</p>
+      <p>Your parser has just produced a syntax tree for the program below.
+         Both <code>x</code> variables are valid identifiers — but are they the same variable?
+         How does the compiler tell them apart?</p>
+      <pre class="code-block"><code>main() {
+  number x := 5;
+  {
+    number x := 10;   <span class="code-comment">/* inner x — different variable */</span>
+    x := x + 1;
+  }
+  x := x + 1;        <span class="code-comment">/* outer x restored */</span>
+}</code></pre>
+      <p>The syntax tree knows the <em>structure</em> of this program. It does not know what <code>x</code> <em>means</em> at each point. That is the job of the <strong>symbol table</strong>.</p>
+    </div>
+
+    <!-- ── EVENT 2: LEARNING OBJECTIVES ─────────────────────────── -->
+    <section class="section" id="objectives">
+      <h2>Learning Objectives</h2>
+      <p>By the end of this article you should be able to:</p>
+      <ul class="objectives-list">
+        <li><span class="bloom bloom--remember">Remember</span> what a symbol table is and what operations it supports.</li>
+        <li><span class="bloom bloom--understand">Understand</span> how lexical (static) scoping works and how scope is represented in a syntax tree.</li>
+        <li><span class="bloom bloom--understand">Understand</span> the difference between persistent and imperative symbol table implementations.</li>
+        <li><span class="bloom bloom--apply">Apply</span> tree-crawling to populate a symbol table from a given program.</li>
+        <li><span class="bloom bloom--analyse">Analyse</span> a code block, identify scopes, and construct the corresponding symbol table by hand.</li>
+        <li><span class="bloom bloom--create">Create</span> a symbol table for a program written in the unified COS341 grammar.</li>
+      </ul>
+    </section>
+
+    <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
+    <section class="section" id="recall">
+      <h2>Connecting to What You Already Know</h2>
+      <p>In Chapter 2 you built a <strong>parser</strong> that takes a stream of tokens and produces an <strong>abstract syntax tree (AST)</strong>. The AST captures the grammatical structure of the program — which expressions nest inside which statements, how conditions relate to branches, and so on.</p>
+      <p>But the AST is <em>context-free</em>. It was built using a context-free grammar, which means it carries no information about what names <em>mean</em>. Two uses of the name <code>x</code> look identical in the tree even if they refer to completely different variables.</p>
+      <p>Chapter 3 is where <strong>semantic analysis</strong> begins. The compiler now needs to understand context &mdash; specifically, which declaration each use of a name refers to. This is called <strong>binding</strong>, and the data structure that records it is the <strong>symbol table</strong>.</p>
+      <div class="callout callout--info">
+        <p class="callout__label">Key Connection</p>
+        <p>You will use the symbol table you build here again in Chapter 5 (Type Checking), where it becomes the <em>environment</em> passed to the type checker. Every <code>vtable</code> and <code>ftable</code> you see in Chapter 5 is an instance of what is described in this chapter.</p>
+      </div>
+    </section>
+
+    <!-- ── EVENT 4: CONTENT ──────────────────────────────────────── -->
+    <section class="section" id="content">
+      <h2>Core Concepts</h2>
+
+      <h3>1. Binding and Scope</h3>
+      <p>A <strong>declaration</strong> introduces a name and associates it with an item (a variable, a function, a type). This association is called a <strong>binding</strong>. A <strong>use</strong> of a name is a reference to the item it is bound to.</p>
+      <p>The <strong>scope</strong> of a declaration is the region of the program where that binding is visible. In the unified grammar used across these articles, a scope corresponds to an <code>ALGORITHM</code> block — the region enclosed by <code>{ STAT }</code>.</p>
+      <p>Scoping based on the structure of the syntax tree is called <strong>lexical (static) binding</strong>. The rule is: a use of a name refers to the <em>closest enclosing declaration</em> of that name — that is, the declaration in the smallest subtree that contains both the declaration and the use.</p>
+
+      <h3>2. The Symbol Table</h3>
+      <p>A symbol table (also called an <em>environment</em>) is a mapping from names to information about the items those names are bound to. For variables, that information typically includes:</p>
+      <ul>
+        <li><strong>Name</strong> — the identifier as it appears in the source</li>
+        <li><strong>Type</strong> — <code>number</code> or <code>text</code> in our grammar</li>
+        <li><strong>Scope level</strong> — how deeply nested the declaration is</li>
+        <li><strong>Declared</strong> — whether the name has been declared before use</li>
+      </ul>
+      <p>The symbol table must support five operations:</p>
+
+      <div class="op-table-wrapper">
+        <table class="op-table">
+          <thead>
+            <tr><th>Operation</th><th>What it does</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>empty</code></td><td>Creates a new, empty symbol table with no bindings.</td></tr>
+            <tr><td><code>bind(name, info)</code></td><td>Adds a binding. If the name already exists, the new binding takes precedence (inner scope shadows outer).</td></tr>
+            <tr><td><code>lookup(name)</code></td><td>Returns the information bound to <code>name</code>, or <em>unbound</em> if not found.</td></tr>
+            <tr><td><code>enter()</code></td><td>Opens a new scope — saves the current state so it can be restored later.</td></tr>
+            <tr><td><code>exit()</code></td><td>Closes the current scope — restores the symbol table to the state it was in before <code>enter()</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>3. Populating the Symbol Table: Tree Crawling</h3>
+      <p>The symbol table is populated by <strong>crawling the syntax tree</strong> — visiting every node and recording declarations as they are encountered. The traversal can use either Depth-First Search (DFS) or Breadth-First Search (BFS), but DFS is natural here because scopes are nested and nesting maps directly to recursive tree descent.</p>
+
+      <div class="callout callout--info">
+        <p class="callout__label">General Pseudocode</p>
+        <pre class="code-block"><code>table = empty()
+
+populate(node, table):
+  if node is a declaration:
+    bind(table, node.name, {type: node.type, scope: currentScope})
+  if node opens a new scope:
+    enter()
+    for each child of node:
+      populate(child, table)
+    exit()
+  else:
+    for each child of node:
+      populate(child, table)
+
+return table</code></pre>
+      </div>
+
+      <h3>4. Implementations</h3>
+      <p>There are two main families of implementation. The key difference is in how scopes are managed.</p>
+
+      <div class="impl-grid">
+        <div class="impl-card">
+          <h4>Persistent (Functional)</h4>
+          <p>The old symbol table is never destroyed. When you <code>bind</code> a new entry or <code>enter</code> a scope, a new version of the table is created that shares most of its structure with the old one. When you <code>exit</code> a scope, you simply go back to using the old reference &mdash; it was never touched.</p>
+          <p class="impl-card__use">Natural in functional languages (SML, Haskell). Required when closures need to capture an environment that outlives its scope.</p>
+          <div class="impl-card__structure">
+            <span>Underlying structure:</span>
+            <strong>Association list (linked list of name/value pairs)</strong>
+          </div>
+        </div>
+        <div class="impl-card">
+          <h4>Imperative (Stack-based)</h4>
+          <p>One copy of the symbol table exists. New bindings are pushed on a stack. When you <code>enter</code> a scope, a <em>marker</em> is pushed. When you <code>exit</code>, everything down to the marker is popped, restoring the table to its previous state.</p>
+          <p class="impl-card__use">Natural in imperative languages (C, Java). Efficient for simple scoping where closures are not needed.</p>
+          <div class="impl-card__structure">
+            <span>Underlying structure:</span>
+            <strong>Stack with scope markers</strong>
+          </div>
+        </div>
+      </div>
+
+      <h3>5. Efficiency: Hashing</h3>
+      <p>Both simple implementations use <strong>linear search</strong> for lookup — the table is scanned from top to bottom until a matching name is found. For small programs this is fine, but real programs use libraries that define hundreds of names, making linear search slow.</p>
+      <p>The standard solution is a <strong>hash table</strong>: each name is hashed to an integer index into an array. Each slot in the array holds a short list of entries that share the same hash. With a large enough array, these lists stay very short and lookup is effectively constant time.</p>
+      <p>For imperative implementations, a single auxiliary stack records all updates so that scope exit can undo them in time proportional to the number of bindings added in that scope, without rescanning the whole table.</p>
+
+      <h3>6. Separate vs Shared Name Spaces</h3>
+      <p>Some languages (Pascal) allow a variable and a function to share the same name because the context of use makes it clear which is meant. These have <strong>separate name spaces</strong>. Other languages (C, SML) have a <strong>shared name space</strong> where a local variable can shadow a function of the same name.</p>
+      <p>Separate name spaces are implemented with one symbol table per name space. A shared name space uses one table for everything, sometimes with a prefix or tag added to each name to distinguish its kind.</p>
+    </section>
+
+    <!-- ── EVENT 5: WORKED EXAMPLE ──────────────────────────────── -->
+    <section class="section" id="example">
+      <h2>Worked Example — Using the Unified Grammar</h2>
+      <p>Consider the following program written in the COS341 unified grammar. Hover over any variable name in the code to see its entry highlighted in the symbol table.</p>
+
+      <div class="interactive-demo">
+        <div class="demo-code">
+          <p class="demo-label">Source Program</p>
+          <pre class="code-block code-block--interactive"><code>main() {
+  <span class="var-ref" data-var="x_outer">number x</span> := 5;
+  <span class="var-ref" data-var="y_outer">number y</span> := 10;
+  {
+    <span class="var-ref" data-var="x_inner">number x</span> := <span class="var-ref" data-var="y_outer_use">y</span> + 1;
+    <span class="var-ref" data-var="x_inner_use">x</span> := <span class="var-ref" data-var="x_inner_use2">x</span> + <span class="var-ref" data-var="y_outer_use2">y</span>;
+  }
+  <span class="var-ref" data-var="x_outer_use">x</span> := <span class="var-ref" data-var="x_outer_use2">x</span> + 1;
+}</code></pre>
+        </div>
+
+        <div class="demo-table">
+          <p class="demo-label">Symbol Table State (after full population)</p>
+          <table class="sym-table" id="symTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Scope Level</th>
+                <th>Declared</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="sym-row" data-row="x_outer x_outer_use x_outer_use2">
+                <td><code>x</code></td>
+                <td><code>number</code></td>
+                <td>0 (outer)</td>
+                <td>Yes</td>
+              </tr>
+              <tr class="sym-row" data-row="y_outer y_outer_use y_outer_use2">
+                <td><code>y</code></td>
+                <td><code>number</code></td>
+                <td>0 (outer)</td>
+                <td>Yes</td>
+              </tr>
+              <tr class="sym-row sym-row--inner" data-row="x_inner x_inner_use x_inner_use2">
+                <td><code>x</code> <span class="scope-badge">inner scope</span></td>
+                <td><code>number</code></td>
+                <td>1 (inner)</td>
+                <td>Yes</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="demo-hint" id="demoHint">Hover over a name in the code to highlight its table entry.</p>
+        </div>
+      </div>
+
+      <h3>Trace: What Happens During Tree Crawl</h3>
+      <p>Walking the AST depth-first, left to right, the following events occur:</p>
+      <ol class="trace-list">
+        <li><code>enter()</code> — program starts, scope level 0 begins.</li>
+        <li><code>bind("x", {type: number, scope: 0})</code> — outer <code>x</code> declared.</li>
+        <li><code>bind("y", {type: number, scope: 0})</code> — <code>y</code> declared.</li>
+        <li><code>enter()</code> — inner block <code>{ }</code> begins, scope level 1.</li>
+        <li><code>bind("x", {type: number, scope: 1})</code> — inner <code>x</code> declared. This shadows the outer <code>x</code>; <code>lookup("x")</code> now returns scope 1.</li>
+        <li><code>lookup("y")</code> — <code>y</code> not in scope 1, found in scope 0. Resolves correctly.</li>
+        <li><code>exit()</code> — inner block ends. Inner <code>x</code> is removed. Outer <code>x</code> is restored.</li>
+        <li><code>lookup("x")</code> — now resolves to scope 0 again.</li>
+        <li><code>exit()</code> — program ends.</li>
+      </ol>
+    </section>
+
+    <!-- ── EVENT 6 & 7: EXERCISES + FEEDBACK ────────────────────── -->
+    <section class="section" id="exercises">
+      <h2>Exercises</h2>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--remember">Remember</span> Exercise 3.1</p>
+        <p>List the five operations a symbol table must support. For each one, describe in one sentence what it does.</p>
+        <details class="exercise__hint">
+          <summary>Show answer</summary>
+          <p><code>empty</code> — creates an empty table. <code>bind</code> — adds or overwrites a binding. <code>lookup</code> — retrieves a binding or returns <em>unbound</em>. <code>enter</code> — opens a new scope. <code>exit</code> — closes the current scope and restores the previous state.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--apply">Apply</span> Exercise 3.2</p>
+        <p>Using the unified grammar, write a small program with at least two nested scopes and two variables that share the same name. Then construct the symbol table by hand, showing the state of the table at each <code>enter</code> and <code>exit</code> event.</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>Follow the trace format shown in the worked example above. Draw the table state after each bind, enter, and exit call. Pay attention to which <code>x</code> is visible at each point.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--analyse">Analyse</span> Exercise 3.3</p>
+        <p>A student implements a symbol table using a stack (imperative approach) and forgets to call <code>enter()</code> before entering a nested block. Describe what goes wrong when the block exits and <code>exit()</code> is called. Which bindings will be incorrectly removed?</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>Think about what the stack looks like without the marker. What does <code>exit()</code> use to know where to stop popping?</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--evaluate">Evaluate</span> Exercise 3.4</p>
+        <p>The textbook mentions that closures require a <em>persistent</em> symbol table. Explain why an imperative (stack-based) symbol table breaks when closures are involved. Use a concrete example with a function that returns another function.</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>Think about what happens to the inner function's environment when the outer function returns and its scope is exited. With an imperative table, what has happened to those bindings?</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ── EVENT 9: RETENTION + TRANSFER ────────────────────────── -->
+    <section class="section" id="next">
+      <h2>What Comes Next</h2>
+      <div class="callout callout--next">
+        <p class="callout__label">Chapter 5 &rarr; Type Checking</p>
+        <p>The symbol table you built here becomes the <strong>environment</strong> that the type checker operates on. In Chapter 5, you will see two symbol tables passed through every function: <code>vtable</code>, which maps variable names to their types, and <code>ftable</code>, which maps function names to their signatures. These are exactly the persistent symbol tables described in this chapter — implemented using the <code>bind</code>, <code>lookup</code>, and <code>empty</code> operations you have just learned.</p>
+        <p>Without the symbol table, the type checker has no way to know what type <code>x</code> is when it appears in an expression. The work done in this chapter is what makes type checking possible.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── FOOTER ────────────────────────────────────────────────────── -->
+  <footer class="site-footer">
+    <p>COS341 Supplementary Material &mdash; University of Pretoria &mdash; Based on Mogensen, <em>Introduction to Compiler Design</em>, 2nd ed.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

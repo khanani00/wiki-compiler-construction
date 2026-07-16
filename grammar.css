@@ -1,0 +1,319 @@
+/* ── GRAMMAR PAGE STYLES ──────────────────────────────────────── */
+
+.nav--active {
+  color: #fff !important;
+  text-decoration: underline !important;
+}
+
+/* ── NT demo inline ───────────────────────────────────────────── */
+.nt-demo {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: #e8f0fe;
+  color: #1a3a5c;
+  padding: 0.1em 0.45em;
+  border-radius: 3px;
+  font-weight: 700;
+  border: 1px solid #c5d5f5;
+}
+
+/* ── GRAMMAR LAYOUT ───────────────────────────────────────────── */
+.grammar-layout {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 1.4rem;
+  align-items: start;
+  margin-top: 1rem;
+}
+
+@media (max-width: 720px) {
+  .grammar-layout { grid-template-columns: 1fr; }
+  .grammar-aside  { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+}
+
+@media (max-width: 480px) {
+  .grammar-aside  { grid-template-columns: 1fr; }
+}
+
+/* ── GRAMMAR GROUPS ───────────────────────────────────────────── */
+.grammar-group {
+  margin-bottom: 1.4rem;
+}
+
+.grammar-group__title {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--col-muted);
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid var(--col-border);
+}
+
+/* ── PRODUCTION RULES ─────────────────────────────────────────── */
+.prod-rule {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius);
+  border-left: 3px solid transparent;
+  margin-bottom: 0.2rem;
+  transition: background 0.12s, border-color 0.12s;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.prod-rule:hover {
+  background: #f6f8fa;
+}
+
+/* highlighted state — defines the selected NT */
+.prod-rule.hl-define {
+  background: #fff3b0;
+  border-left-color: #e6ac00;
+}
+
+/* highlighted state — references the selected NT */
+.prod-rule.hl-ref {
+  background: #e8f4fd;
+  border-left-color: #3b89c8;
+}
+
+/* dimmed state — unrelated */
+.prod-rule.dimmed {
+  opacity: 0.35;
+}
+
+.prod-rule--extensible {
+  border-left-color: var(--col-border);
+  background: #fafafa;
+}
+
+/* ── GRAMMAR TOKENS ───────────────────────────────────────────── */
+.nt {
+  color: #1a3a5c;
+  font-weight: 700;
+}
+
+.nt.clickable {
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0 0.1em;
+  transition: background 0.1s;
+}
+
+.nt.clickable:hover {
+  background: #e8f0fe;
+  text-decoration: underline;
+}
+
+.nt.nt--selected {
+  background: #fff3b0;
+  outline: 2px solid #e6ac00;
+}
+
+.arrow {
+  color: var(--col-muted);
+  font-weight: 400;
+  margin: 0 0.2rem;
+}
+
+.kw {
+  color: #6f42c1;
+  font-weight: 600;
+}
+
+.terminal {
+  color: #0a7c42;
+}
+
+.punc {
+  color: #57606a;
+}
+
+.epsilon {
+  color: #c0392b;
+  font-style: italic;
+}
+
+.prod-note {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  color: var(--col-muted);
+  font-style: italic;
+  margin-left: 0.3rem;
+}
+
+.extensible-badge {
+  font-family: var(--font-ui);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #fff0c2;
+  color: #8a6000;
+  padding: 0.1em 0.5em;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-left: 0.4rem;
+  letter-spacing: 0.04em;
+}
+
+/* ── ASIDE CARDS ──────────────────────────────────────────────── */
+.grammar-aside {
+  position: sticky;
+  top: 1rem;
+}
+
+.aside-card {
+  background: var(--col-surface);
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius);
+  padding: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.aside-card__label {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--col-muted);
+  margin-bottom: 0.6rem !important;
+}
+
+.nt-placeholder {
+  font-size: 0.82rem;
+  color: var(--col-muted);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.nt-placeholder .nt-demo { font-size: 0.78em; }
+
+.nt-detail__name {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--col-accent);
+  margin-bottom: 0.3rem !important;
+}
+
+.nt-detail__role {
+  font-size: 0.82rem;
+  color: var(--col-muted);
+  margin-bottom: 0.6rem !important;
+}
+
+.nt-usage-section {
+  margin-top: 0.5rem;
+}
+
+.nt-usage-label {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--col-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.3rem;
+}
+
+.nt-usage-count {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  margin-bottom: 0.2rem;
+}
+
+.count-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.1em 0.5em;
+  border-radius: 10px;
+  margin-right: 0.3rem;
+}
+
+.count-badge--define { background: #fff3b0; color: #8a6000; }
+.count-badge--ref    { background: #e8f4fd; color: #1a6fa8; }
+
+/* ── NT INDEX ─────────────────────────────────────────────────── */
+.nt-index-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.nt-idx-btn {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1a3a5c;
+  background: #e8f0fe;
+  border: 1px solid #c5d5f5;
+  border-radius: 3px;
+  padding: 0.2em 0.5em;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.nt-idx-btn:hover {
+  background: #d0e2ff;
+  border-color: #3b89c8;
+}
+
+.nt-idx-btn.active {
+  background: #fff3b0;
+  border-color: #e6ac00;
+  color: #5a3e00;
+}
+
+/* ── PARSE BREAKDOWN TABLE ────────────────────────────────────── */
+.parse-breakdown { margin-top: 1rem; }
+
+/* ── USAGE GRID ───────────────────────────────────────────────── */
+.usage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 640px) { .usage-grid { grid-template-columns: 1fr; } }
+
+.usage-card {
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: var(--col-surface);
+}
+
+.usage-card__chapter {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--col-muted);
+  margin-bottom: 0.2rem !important;
+}
+
+.usage-card__title {
+  font-family: var(--font-ui);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--col-accent);
+  margin-bottom: 0.5rem !important;
+}
+
+.usage-card p:last-child {
+  font-size: 0.85rem;
+  line-height: 1.55;
+}

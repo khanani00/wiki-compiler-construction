@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unified Grammar Reference | COS341 Supplement</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="grammar.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <span class="site-header__course">COS341 Supplementary Material</span>
+      <nav class="site-header__nav">
+        <a href="#">Home</a>
+        <a href="chapter3.html">Chapter 3</a>
+        <a href="chapter5.html">Chapter 5</a>
+        <a href="#" class="nav--active">Grammar</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="article">
+
+    <p class="breadcrumb">Reference &rsaquo; Unified Grammar</p>
+    <h1 class="article__title">Unified Grammar Reference</h1>
+    <p class="article__subtitle">A single grammar used consistently across all COS341 supplementary articles &mdash; so you never have to re-learn the rules when moving between chapters.</p>
+
+    <!-- ── WHY THIS EXISTS ──────────────────────────────────────── -->
+    <div class="callout callout--info">
+      <p class="callout__label">Why a unified grammar?</p>
+      <p>The Mogensen textbook uses different, sometimes incompatible, example grammars across chapters. This forces you to mentally re-map the rules every time you move from syntax analysis to type checking to code generation. Every worked example in these supplementary articles uses this single grammar instead, so the only thing that changes between chapters is the <em>phase</em> being studied &mdash; not the language being compiled.</p>
+    </div>
+
+    <!-- ── HOW TO USE ────────────────────────────────────────────── -->
+    <section class="section" id="howto">
+      <h2>How to Use This Page</h2>
+      <p>Click any <span class="nt-demo">NON-TERMINAL</span> in the grammar below to highlight every production rule that defines or references it. This shows you how the grammar connects to itself &mdash; useful when tracing a parse or building a symbol table.</p>
+      <p>Click the non-terminal again or click anywhere else to clear the highlight.</p>
+    </section>
+
+    <!-- ── GRAMMAR DISPLAY ───────────────────────────────────────── -->
+    <section class="section" id="grammar">
+      <h2>The Grammar</h2>
+
+      <div class="grammar-layout">
+
+        <!-- LEFT: production rules -->
+        <div class="grammar-rules" id="grammarRules">
+
+          <div class="grammar-group" id="group-program">
+            <h3 class="grammar-group__title">Program Structure</h3>
+            <div class="prod-rule" data-defines="PROGRAM" data-refs="GLOBVARS ALGORITHM FUNCTIONS">
+              <span class="nt clickable" data-nt="PROGRAM">PROGRAM</span>
+              <span class="arrow">&rarr;</span>
+              <span class="kw">main</span> <span class="punc">(</span>
+              <span class="nt clickable" data-nt="GLOBVARS">GLOBVARS</span>
+              <span class="punc">)</span>
+              <span class="nt clickable" data-nt="ALGORITHM">ALGORITHM</span>
+              <span class="nt clickable" data-nt="FUNCTIONS">FUNCTIONS</span>
+            </div>
+          </div>
+
+          <div class="grammar-group" id="group-vars">
+            <h3 class="grammar-group__title">Variables and Types</h3>
+            <div class="prod-rule" data-defines="GLOBVARS" data-refs="VARS">
+              <span class="nt clickable" data-nt="GLOBVARS">GLOBVARS</span>
+              <span class="arrow">&rarr;</span>
+              <span class="nt clickable" data-nt="VARS">VARS</span>
+            </div>
+            <div class="prod-rule" data-defines="VARS" data-refs="">
+              <span class="nt clickable" data-nt="VARS">VARS</span>
+              <span class="arrow">&rarr;</span>
+              <span class="epsilon">&epsilon;</span>
+              <span class="prod-note">(empty &mdash; no variables)</span>
+            </div>
+            <div class="prod-rule" data-defines="VARS" data-refs="VAR VARS">
+              <span class="nt clickable" data-nt="VARS">VARS</span>
+              <span class="arrow">&rarr;</span>
+              <span class="nt clickable" data-nt="VAR">VAR</span>
+              <span class="punc">,</span>
+              <span class="nt clickable" data-nt="VARS">VARS</span>
+            </div>
+            <div class="prod-rule" data-defines="VAR" data-refs="VTYPE VNAME">
+              <span class="nt clickable" data-nt="VAR">VAR</span>
+              <span class="arrow">&rarr;</span>
+              <span class="nt clickable" data-nt="VTYPE">VTYPE</span>
+              <span class="nt clickable" data-nt="VNAME">VNAME</span>
+            </div>
+            <div class="prod-rule" data-defines="VTYPE" data-refs="">
+              <span class="nt clickable" data-nt="VTYPE">VTYPE</span>
+              <span class="arrow">&rarr;</span>
+              <span class="kw">text</span>
+            </div>
+            <div class="prod-rule" data-defines="VTYPE" data-refs="">
+              <span class="nt clickable" data-nt="VTYPE">VTYPE</span>
+              <span class="arrow">&rarr;</span>
+              <span class="kw">number</span>
+            </div>
+            <div class="prod-rule" data-defines="VNAME" data-refs="">
+              <span class="nt clickable" data-nt="VNAME">VNAME</span>
+              <span class="arrow">&rarr;</span>
+              <span class="terminal">_vname</span>
+              <span class="prod-note">(any valid variable name)</span>
+            </div>
+            <div class="prod-rule" data-defines="FNAME" data-refs="">
+              <span class="nt clickable" data-nt="FNAME">FNAME</span>
+              <span class="arrow">&rarr;</span>
+              <span class="terminal">_fname</span>
+              <span class="prod-note">(any valid function name)</span>
+            </div>
+          </div>
+
+          <div class="grammar-group" id="group-algo">
+            <h3 class="grammar-group__title">Algorithm (Statement Block)</h3>
+            <div class="prod-rule" data-defines="ALGORITHM" data-refs="STAT">
+              <span class="nt clickable" data-nt="ALGORITHM">ALGORITHM</span>
+              <span class="arrow">&rarr;</span>
+              <span class="punc">{</span>
+              <span class="nt clickable" data-nt="STAT">STAT</span>
+              <span class="punc">}</span>
+            </div>
+          </div>
+
+          <div class="grammar-group" id="group-stat">
+            <h3 class="grammar-group__title">Statements</h3>
+            <div class="prod-rule" data-defines="STAT" data-refs="STAT">
+              <span class="nt clickable" data-nt="STAT">STAT</span>
+              <span class="arrow">&rarr;</span>
+              <span class="nt clickable" data-nt="STAT">STAT</span>
+              <span class="punc">;</span>
+              <span class="nt clickable" data-nt="STAT">STAT</span>
+              <span class="prod-note">(sequence)</span>
+            </div>
+            <div class="prod-rule" data-defines="STAT" data-refs="VNAME EXPR">
+              <span class="nt clickable" data-nt="STAT">STAT</span>
+              <span class="arrow">&rarr;</span>
+              <span class="nt clickable" data-nt="VNAME">VNAME</span>
+              <span class="kw">:=</span>
+              <span class="nt clickable" data-nt="EXPR">EXPR</span>
+              <span class="prod-note">(assignment)</span>
+            </div>
+            <div class="prod-rule" data-defines="STAT" data-refs="COND ALGORITHM">
+              <span class="nt clickable" data-nt="STAT">STAT</span>
+              <span class="arrow">&rarr;</span>
+              <span class="kw">if</span>
+              <span class="nt clickable" data-nt="COND">COND</span>
+              <span class="kw">then</span>
+              <span class="nt clickable" data-nt="ALGORITHM">ALGORITHM</span>
+              <span class="prod-note">(if, no else)</span>
+            </div>
+            <div class="prod-rule" data-defines="STAT" data-refs="COND ALGORITHM">
+              <span class="nt clickable" data-nt="STAT">STAT</span>
+              <span class="arrow">&rarr;</span>
+              <span class="kw">if</span>
+              <span class="nt clickable" data-nt="COND">COND</span>
+              <span class="kw">then</span>
+              <span class="nt clickable" data-nt="ALGORITHM">ALGORITHM</span>
+              <span class="kw">else</span>
+              <span class="nt clickable" data-nt="ALGORITHM">ALGORITHM</span>
+              <span class="prod-note">(if-else)</span>
+            </div>
+            <div class="prod-rule" data-defines="STAT" data-refs="COND ALGORITHM">
+              <span class="nt clickable" data-nt="STAT">STAT</span>
+              <span class="arrow">&rarr;</span>
+              <span class="kw">while</span>
+              <span class="nt clickable" data-nt="COND">COND</span>
+              <span class="kw">do</span>
+              <span class="nt clickable" data-nt="ALGORITHM">ALGORITHM</span>
+            </div>
+            <div class="prod-rule" data-defines="STAT" data-refs="ALGORITHM COND">
+              <span class="nt clickable" data-nt="STAT">STAT</span>
+              <span class="arrow">&rarr;</span>
+              <span class="kw">repeat</span>
+              <span class="nt clickable" data-nt="ALGORITHM">ALGORITHM</span>
+              <span class="kw">until</span>
+              <span class="nt clickable" data-nt="COND">COND</span>
+            </div>
+            <div class="prod-rule" data-defines="STAT" data-refs="EXPR">
+              <span class="nt clickable" data-nt="STAT">STAT</span>
+              <span class="arrow">&rarr;</span>
+              <span class="kw">return</span>
+              <span class="nt clickable" data-nt="EXPR">EXPR</span>
+            </div>
+          </div>
+
+          <div class="grammar-group" id="group-cond">
+            <h3 class="grammar-group__title">Conditions</h3>
+            <div class="prod-rule" data-defines="COND" data-refs="EXPR RELOP">
+              <span class="nt clickable" data-nt="COND">COND</span>
+              <span class="arrow">&rarr;</span>
+              <span class="punc">(</span>
+              <span class="nt clickable" data-nt="EXPR">EXPR</span>
+              <span class="nt clickable" data-nt="RELOP">RELOP</span>
+              <span class="nt clickable" data-nt="EXPR">EXPR</span>
+              <span class="punc">)</span>
+            </div>
+            <div class="prod-rule" data-defines="RELOP" data-refs="">
+              <span class="nt clickable" data-nt="RELOP">RELOP</span>
+              <span class="arrow">&rarr;</span>
+              <span class="terminal">&lt;</span>
+              <span class="terminal">&gt;</span>
+              <span class="terminal">=</span>
+              <span class="terminal">&lt;=</span>
+              <span class="terminal">&gt;=</span>
+              <span class="prod-note">(one of these)</span>
+            </div>
+          </div>
+
+          <div class="grammar-group" id="group-expr">
+            <h3 class="grammar-group__title">Expressions</h3>
+            <div class="prod-rule" data-defines="EXPR" data-refs="">
+              <span class="nt clickable" data-nt="EXPR">EXPR</span>
+              <span class="arrow">&rarr;</span>
+              <span class="terminal">_number</span>
+              <span class="prod-note">(numeric literal)</span>
+            </div>
+            <div class="prod-rule" data-defines="EXPR" data-refs="">
+              <span class="nt clickable" data-nt="EXPR">EXPR</span>
+              <span class="arrow">&rarr;</span>
+              <span class="terminal">_text</span>
+              <span class="prod-note">(text literal)</span>
+            </div>
+            <div class="prod-rule" data-defines="EXPR" data-refs="VNAME">
+              <span class="nt clickable" data-nt="EXPR">EXPR</span>
+              <span class="arrow">&rarr;</span>
+              <span class="nt clickable" data-nt="VNAME">VNAME</span>
+              <span class="prod-note">(variable reference)</span>
+            </div>
+            <div class="prod-rule" data-defines="EXPR" data-refs="UNOP EXPR">
+              <span class="nt clickable" data-nt="EXPR">EXPR</span>
+              <span class="arrow">&rarr;</span>
+              <span class="nt clickable" data-nt="UNOP">UNOP</span>
+              <span class="nt clickable" data-nt="EXPR">EXPR</span>
+              <span class="prod-note">(unary operation)</span>
+            </div>
+            <div class="prod-rule" data-defines="EXPR" data-refs="EXPR BINOP">
+              <span class="nt clickable" data-nt="EXPR">EXPR</span>
+              <span class="arrow">&rarr;</span>
+              <span class="nt clickable" data-nt="EXPR">EXPR</span>
+              <span class="nt clickable" data-nt="BINOP">BINOP</span>
+              <span class="nt clickable" data-nt="EXPR">EXPR</span>
+              <span class="prod-note">(binary operation)</span>
+            </div>
+            <div class="prod-rule" data-defines="EXPR" data-refs="FNAME VARS">
+              <span class="nt clickable" data-nt="EXPR">EXPR</span>
+              <span class="arrow">&rarr;</span>
+              <span class="nt clickable" data-nt="FNAME">FNAME</span>
+              <span class="punc">(</span>
+              <span class="nt clickable" data-nt="VARS">VARS</span>
+              <span class="punc">)</span>
+              <span class="prod-note">(function call)</span>
+            </div>
+          </div>
+
+          <div class="grammar-group" id="group-ops">
+            <h3 class="grammar-group__title">Operators <span class="extensible-badge">extensible</span></h3>
+            <div class="prod-rule prod-rule--extensible" data-defines="UNOP" data-refs="">
+              <span class="nt clickable" data-nt="UNOP">UNOP</span>
+              <span class="arrow">&rarr;</span>
+              <span class="prod-note">add unary operators here as needed (e.g. <code>not</code>, <code>-</code>)</span>
+            </div>
+            <div class="prod-rule prod-rule--extensible" data-defines="BINOP" data-refs="">
+              <span class="nt clickable" data-nt="BINOP">BINOP</span>
+              <span class="arrow">&rarr;</span>
+              <span class="prod-note">add binary operators here as needed (e.g. <code>+</code>, <code>-</code>, <code>and</code>, <code>or</code>)</span>
+            </div>
+          </div>
+
+          <div class="grammar-group" id="group-funs">
+            <h3 class="grammar-group__title">Functions</h3>
+            <div class="prod-rule" data-defines="FUNCTIONS" data-refs="">
+              <span class="nt clickable" data-nt="FUNCTIONS">FUNCTIONS</span>
+              <span class="arrow">&rarr;</span>
+              <span class="epsilon">&epsilon;</span>
+              <span class="prod-note">(no additional functions)</span>
+            </div>
+            <div class="prod-rule" data-defines="FUNCTIONS" data-refs="DECL FUNCTIONS">
+              <span class="nt clickable" data-nt="FUNCTIONS">FUNCTIONS</span>
+              <span class="arrow">&rarr;</span>
+              <span class="nt clickable" data-nt="DECL">DECL</span>
+              <span class="nt clickable" data-nt="FUNCTIONS">FUNCTIONS</span>
+            </div>
+            <div class="prod-rule" data-defines="DECL" data-refs="HEADER BODY">
+              <span class="nt clickable" data-nt="DECL">DECL</span>
+              <span class="arrow">&rarr;</span>
+              <span class="nt clickable" data-nt="HEADER">HEADER</span>
+              <span class="nt clickable" data-nt="BODY">BODY</span>
+            </div>
+            <div class="prod-rule" data-defines="HEADER" data-refs="FNAME VARS">
+              <span class="nt clickable" data-nt="HEADER">HEADER</span>
+              <span class="arrow">&rarr;</span>
+              <span class="nt clickable" data-nt="FNAME">FNAME</span>
+              <span class="punc">(</span>
+              <span class="nt clickable" data-nt="VARS">VARS</span>
+              <span class="punc">)</span>
+            </div>
+            <div class="prod-rule" data-defines="BODY" data-refs="ALGORITHM">
+              <span class="nt clickable" data-nt="BODY">BODY</span>
+              <span class="arrow">&rarr;</span>
+              <span class="nt clickable" data-nt="ALGORITHM">ALGORITHM</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: info panel + index -->
+        <aside class="grammar-aside">
+
+          <!-- active NT info -->
+          <div class="aside-card" id="ntInfo">
+            <p class="aside-card__label">Non-terminal Info</p>
+            <div class="nt-placeholder">
+              <p>Click any <span class="nt-demo">NON-TERMINAL</span> to see where it is defined and used.</p>
+            </div>
+            <div class="nt-detail" style="display:none">
+              <p class="nt-detail__name" id="ntName"></p>
+              <p class="nt-detail__role" id="ntRole"></p>
+              <div id="ntUsedIn"></div>
+            </div>
+          </div>
+
+          <!-- quick index -->
+          <div class="aside-card" id="ntIndex">
+            <p class="aside-card__label">Quick Index</p>
+            <ul class="nt-index-list" id="ntIndexList">
+              <li><button class="nt-idx-btn" data-nt="PROGRAM">PROGRAM</button></li>
+              <li><button class="nt-idx-btn" data-nt="GLOBVARS">GLOBVARS</button></li>
+              <li><button class="nt-idx-btn" data-nt="VARS">VARS</button></li>
+              <li><button class="nt-idx-btn" data-nt="VAR">VAR</button></li>
+              <li><button class="nt-idx-btn" data-nt="VTYPE">VTYPE</button></li>
+              <li><button class="nt-idx-btn" data-nt="VNAME">VNAME</button></li>
+              <li><button class="nt-idx-btn" data-nt="FNAME">FNAME</button></li>
+              <li><button class="nt-idx-btn" data-nt="ALGORITHM">ALGORITHM</button></li>
+              <li><button class="nt-idx-btn" data-nt="STAT">STAT</button></li>
+              <li><button class="nt-idx-btn" data-nt="COND">COND</button></li>
+              <li><button class="nt-idx-btn" data-nt="RELOP">RELOP</button></li>
+              <li><button class="nt-idx-btn" data-nt="EXPR">EXPR</button></li>
+              <li><button class="nt-idx-btn" data-nt="UNOP">UNOP</button></li>
+              <li><button class="nt-idx-btn" data-nt="BINOP">BINOP</button></li>
+              <li><button class="nt-idx-btn" data-nt="FUNCTIONS">FUNCTIONS</button></li>
+              <li><button class="nt-idx-btn" data-nt="DECL">DECL</button></li>
+              <li><button class="nt-idx-btn" data-nt="HEADER">HEADER</button></li>
+              <li><button class="nt-idx-btn" data-nt="BODY">BODY</button></li>
+            </ul>
+          </div>
+
+        </aside>
+      </div>
+    </section>
+
+    <!-- ── TERMINALS ─────────────────────────────────────────────── -->
+    <section class="section" id="terminals">
+      <h2>Terminals and Tokens</h2>
+      <p>The following table describes the terminal symbols and token placeholders used in the grammar.</p>
+      <div class="op-table-wrapper">
+        <table class="op-table">
+          <thead>
+            <tr><th>Symbol</th><th>Meaning</th><th>Examples</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>_vname</code></td><td>Any valid variable name (identifier)</td><td><code>x</code>, <code>total</code>, <code>result</code></td></tr>
+            <tr><td><code>_fname</code></td><td>Any valid function name (identifier)</td><td><code>main</code>, <code>add</code>, <code>compute</code></td></tr>
+            <tr><td><code>_number</code></td><td>A numeric literal</td><td><code>0</code>, <code>42</code>, <code>3</code></td></tr>
+            <tr><td><code>_text</code></td><td>A text string literal</td><td><code>"hello"</code>, <code>"world"</code></td></tr>
+            <tr><td><code>:=</code></td><td>Assignment operator</td><td><code>x := 5</code></td></tr>
+            <tr><td><code>{ }</code></td><td>Block delimiters (scope boundary)</td><td><code>{ x := 1 ; y := 2 }</code></td></tr>
+            <tr><td><code>( )</code></td><td>Parameter list delimiters</td><td><code>main(x, y)</code></td></tr>
+            <tr><td><code>RELOP</code></td><td>Relational operator: <code>&lt;</code> <code>&gt;</code> <code>=</code> <code>&lt;=</code> <code>&gt;=</code></td><td><code>(x &lt; 5)</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── WORKED EXAMPLE ────────────────────────────────────────── -->
+    <section class="section" id="example">
+      <h2>A Complete Program in This Grammar</h2>
+      <p>The following program is fully valid under the unified grammar. It declares a global variable, defines a helper function, and calls it from <code>main</code>.</p>
+      <pre class="code-block"><code><span class="code-comment">/* PROGRAM: main with one global variable and one function */</span>
+
+main ( number x ) {
+  number result := 0;
+  result := double(x);
+  return result
+}
+
+<span class="code-comment">/* FUNCTIONS */</span>
+double ( number n ) {
+  return n + n
+}</code></pre>
+      <div class="parse-breakdown">
+        <p class="demo-label">How this maps to the grammar</p>
+        <table class="op-table">
+          <thead><tr><th>Program part</th><th>Grammar rule</th></tr></thead>
+          <tbody>
+            <tr><td><code>main ( number x )</code></td><td><code>PROGRAM &rarr; main ( GLOBVARS ) ALGORITHM FUNCTIONS</code></td></tr>
+            <tr><td><code>number x</code></td><td><code>VAR &rarr; VTYPE VNAME</code> where <code>VTYPE &rarr; number</code></td></tr>
+            <tr><td><code>{ number result := 0; result := double(x); return result }</code></td><td><code>ALGORITHM &rarr; { STAT }</code> with three statements sequenced by <code>;</code></td></tr>
+            <tr><td><code>result := double(x)</code></td><td><code>STAT &rarr; VNAME := EXPR</code> where <code>EXPR &rarr; FNAME ( VARS )</code></td></tr>
+            <tr><td><code>double ( number n ) { return n + n }</code></td><td><code>DECL &rarr; HEADER BODY</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── CHAPTER USAGE ─────────────────────────────────────────── -->
+    <section class="section" id="usage">
+      <h2>How This Grammar Is Used Across Chapters</h2>
+      <div class="usage-grid">
+        <div class="usage-card">
+          <p class="usage-card__chapter">Chapter 3</p>
+          <p class="usage-card__title">Scopes &amp; Symbol Tables</p>
+          <p>The <code>ALGORITHM</code> rule defines a scope boundary. Every <code>{ STAT }</code> block triggers an <code>enter()</code> call in the symbol table. <code>VAR</code> declarations are bound using <code>bind()</code>. <code>VNAME</code> references are resolved using <code>lookup()</code>.</p>
+        </div>
+        <div class="usage-card">
+          <p class="usage-card__chapter">Chapter 5</p>
+          <p class="usage-card__title">Type Checking</p>
+          <p><code>VTYPE</code> provides the declared type for <code>vtable</code> entries. <code>EXPR</code> rules map directly to cases in <code>CheckExp</code>. <code>HEADER</code> provides function signatures for <code>ftable</code>. <code>BODY</code> is what <code>CheckFun</code> type-checks against the declared return type.</p>
+        </div>
+        <div class="usage-card">
+          <p class="usage-card__chapter">Chapter 6+</p>
+          <p class="usage-card__title">Code Generation</p>
+          <p><code>STAT</code> rules map to intermediate code instructions. <code>ALGORITHM</code> blocks define the structure of code blocks. <code>DECL</code> drives function prologues and epilogues. The same grammar, the same example programs — only the output changes.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>COS341 Supplementary Material &mdash; University of Pretoria &mdash; Based on Mogensen, <em>Introduction to Compiler Design</em>, 2nd ed.</p>
+  </footer>
+
+  <script src="grammar.js"></script>
+</body>
+</html>
