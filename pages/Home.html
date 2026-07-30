@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COS341 | Compiler Construction</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/home.css">
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="site-header__inner">
+            <span class="site-header__course">COS341 Supplementary Material</span>
+            <nav class="site-header__nav">
+                <a href="#" class="nav--active">Home</a>
+                <a href="chapter1.html">Chapter 1</a>
+                <a href="chapter3.html">Chapter 3</a>
+                <a href="chapter5.html">Chapter 5</a>
+                <a href="grammar.html">Grammar</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="article">
+        <section class="hero">
+            <div class="hero__content">
+                <p class="hero__eyebrow">COS341</p>
+                <h1> Compiler Construction Supplementary material</h1>
+                <p class="hero__subtitle">
+                    An interactive supplementary material to
+                    <i>Introduction to Compiler Design</i>
+                    by Torben Ægidius Mogensen.
+
+                    Designed to bridge the gap between compiler theory
+                    and compiler implementation through worked examples,
+                    visual explanations and interactive demonstrations.
+                </p>
+                <div class="hero__buttons">
+                    <a class="btn btn-primary" href="chapter1.html"> Start Learning </a>
+
+                    <a class="btn btn-secondary" href="grammar.html"> Check out the Unified Grammar</a>
+                </div>
+            </div>
+
+            </section>
+
+            <section class="section">
+                <h2> This website </h2>
+                <p>
+                    This supplementary material keeps the language, grammar and
+                    examples consistent across every chapter so you only
+                    learn one compiler while exploring each compiler phase.
+                </p>
+            </section>
+
+            <section class="section">
+                <h2> Your Compiler Construction Journey </h2>
+                <div class="pipeline">
+                    <div class="pipeline-step">Characters </div>
+                    ↓
+                    <div class="pipeline-step">Lexer</div>
+                    ↓
+                    <div class="pipeline-step">Tokens</div>
+                    ↓
+                    <div class="pipeline-step">Parser</div>
+                    ↓
+                    <div class="pipeline-step">Parse Tree</div>
+                    ↓
+                    <div class="pipeline-step">Symbol Table</div>
+                    ↓
+                    <div class="pipeline-step">Type Checker</div>
+                    ↓
+                    <div class="pipeline-step">Intermediate Code</div>
+                    ↓
+                    <div class="pipeline-step">Target Code</div>
+                </div>
+
+            </section>
+
+            <section class="section">
+                <h2>
+                    One Grammar.
+                    One Program.
+                    One Compiler.
+                </h2>
+                <p>
+                    Instead of introducing a different language in every
+                    chapter, every example throughout this website uses the
+                    same grammar and the same running example.
+
+                    As you progress through the chapters, you will watch
+                    this single program evolve from raw characters into a
+                    fully compiled program.
+                </p>
+                <pre class="code-block"><code>main() {
+  number x := 5;
+  text   y := "hello";
+  number z := x + y;   <span class="code-comment">/* adding a number to text — should this work? */</span>
+}</code></pre>
+                <p>
+                    This is the only program we are working with throughout.
+
+                    Every compiler phase studies this same program from a
+                    different perspective.
+
+                    Also, follow the <a href="grammar.html">unified grammar</a> here
+                </p>
+            </section>
+            <section class="section">
+                <h2>Learning Path</h2>
+                <div class="chapter-grid">
+                    <div class="chapter-card">
+                        <h3>Chapter 1</h3>
+                        <h4>Lexical Analysis</h4>
+                        <p>Convert characters into tokens.</p>
+                        <a href="chapter1.html">Open →</a>
+                    </div>
+
+                    <div class="chapter-card">
+                        <h3>Chapter 2</h3>
+                        <h4>Syntax Analysis</h4>
+                        <p>Build a parse tree from tokens.</p>
+                        <a href="#">Open →</a>
+                    </div>
+
+                    <div class="chapter-card">
+                        <h3>Chapter 3</h3>
+                        <h4>Symbol Tables</h4>
+                        <p>Symbol table and scope.</p>
+                        <a href="chapter3.html">Open →</a>
+                    </div>
+
+                    <div class="chapter-card">
+                        <h3>Chapter 5</h3>
+                        <h4>Code Generation</h4>
+                        <p>Translate the program into executable code.</p>
+                        <a href="chapter5.html">Open →</a>
+                    </div>
+
+                </div>
+
+            </section>
+
+            <section class="section">
+                <h2>Reference</h2>
+                <div class="reference-grid">
+                    <div class="reference-card">
+                        <h3>Unified Grammar</h3>
+                        <p>A single grammar used throughout every chapter.</p>
+                        <a href="grammar.html">Open →</a>
+                    </div>
+
+                    <div class="reference-card">
+                        <h3>Compiler Pipeline</h3>
+                        <p>Understand how each compiler phase fits together.</p>
+                    </div>
+                </div>
+            </section>
+
+    </main>
+
+    <footer class="site-footer">
+        <p>COS341 Supplementary Material &mdash; University of Pretoria &mdash; Based on Mogensen, <em>Introduction to Compiler Design</em>, 2nd ed.</p>
+    </footer>
+
+    <script src=""></script>
+    
+</body>
+</html>

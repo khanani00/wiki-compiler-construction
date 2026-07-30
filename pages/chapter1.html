@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 1 - Lexical Analysis | COS341 Supplement</title>
+    <link rel="stylesheet" href="../css/style.css"/>
+    <link rel="stylesheet" href="../css/chapter5.css"/>
+    <link rel="stylesheet" href="../css/chapter1.css"/>
+</head>
+<body>
+
+    <!-- ── HEADER ─────────────────────────────────────────────── -->
+    <header class="site-header">
+        <div class="site-header__inner">
+        <span class="site-header__course">COS341 Supplementary Material</span>
+        <nav class="site-header__nav">
+            <a href="Home.html">Home</a>
+            <a href="#">Chapters</a>
+            <a href="grammar.html">Grammar</a>
+        </nav>
+        </div>
+    </header>
+
+    <!-- ── ARTICLE ──────────────────────────────────────────────────── -->
+    <main class="article">
+
+        <!-- breadcrumb -->
+        <p class="breadcrumb">Chapters &rsaquo; Chapter 1 &rsaquo; Lexical Analysis</p>
+        <h1 class="article__title">Chapter 1 &mdash; Lexical Analysis</h1>
+        <p class="article__subtitle">&ldquo;Scope defines the boundaries; context dictates the meaning.&rdquo;</p>
+
+    <!-- ── EVENT 1: GAIN ATTENTION ──────────────────────────────── -->
+    <div class="callout callout--question">
+        <p class="callout__label">Opening Problem</p>
+        <p>Here is a fragment from a program </p>
+        <pre class="code-block">x := 5 ; y := x + 1</pre>
+        <p>To you, these two statements are apparent to you: assign <code>5</code> to <code>x</code>, then assign <code>x + 1</code> to <code>y</code> separated by a semicolon.</p>
+        <p>To a compiler, this is source file with a stream of characters.</p>
+        <p>Before the parser can build any structure, something has to scan these raw characters and group them into tokens: <em>identifiers, operators, number, variable etc.</em> </p>
+        <p>This something is the <strong>lexer</strong></p>
+    </div>
+
+    <div class="callout callout--info">
+        <p class="callout__label">Why do we need a lexer?</p>
+        <p>
+            A compiler's job, broadly, is to turn source code into something a machine can run. 
+            That happens in stages — lexical analysis, syntax analysis, type checking, code generation — and lexical analysis is the first one, 
+            because every later stage needs to work with meaningful tokens (identifiers, numbers, operators), not raw characters.
+        </p>
+        <p>
+            A lexer groups characters into tokens, discard what doesn't matter (whitespace, comments), 
+            and hands the parser a clean, categorised stream to work with.
+        </p>
+    </div>
+
+    <!-- ── EVENT 2: LEARNING OBJECTIVES ─────────────────────────── -->
+    <section class="section" id="objectives">
+      <h2>Learning Objectives</h2>
+      <p>By the end of this article you should be able to:</p>
+      <ul class="objectives-list">
+        <li><span class="bloom bloom--remember">Remember</span> the token types used in the <a href="grammar.html"> unified grammar</a> </li>
+        <li><span class="bloom bloom--understand">Understand</span> why regular expressions alone are not directly executable, and why NFAs and DFAs exist as a construction path between a regex and a working program. </li>
+        <li><span class="bloom bloom--understand">Understand</span> the difference between an NFA and a DFA, and why lexers are built on DFAs specifically.</li>
+        <li><span class="bloom bloom--apply">Apply</span> subset construction to convert a small NFA into a DFA.</li>
+        <li><span class="bloom bloom--analyse">Analyse</span> DFA to determine which token it accepts, using longest-match and priority rules.</li>
+        <li><span class="bloom bloom--create">Create</span> a working lexer for a small token set.</li>
+      </ul>
+    </section>
+
+    <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
+     <section class="section" id="recall">
+      <h2>Connecting to What You Already Know</h2>
+      <p>You should know regular expression or pattern matching prior to this. 
+        This chapter turns that familiar idea into a program that scans character by character.</p>
+      <div class="callout callout--info">
+        <p class="callout__label">Key Connection</p>
+        <p>
+            The tokens produced in Chapter 1 are exactly what Chapter 2's parser takes as input. 
+            Every token category defined in this chapter becomes a terminal symbol in the grammer used for parsing.</p>
+      </div>
+    </section>
+
+    <!-- ── EVENT 4: CONTENT ───────────────────────────────────────── -->
+    <section class="section" id="content">
+        <h2>Core Concepts</h2>
+        <p>Two thing sneeds to be made clear before any construction can happen:
+            What the lexer needs to recognize (token types/categories) and how each one is described (using regualr expression definitions).
+            Everything else in the chapter builds on these two things.
+        </p>
+        <p>Token types in the unified grammar</p>
+        <div class="op-table-wrapper">
+            <table class="op-table">
+                <thead>
+                    <tr>
+                        <th>Type/Category</th><th>Examples</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Keyword/ <code>_text</code></td>
+                        <td>reserved words: <code>main</code>, <code>if</code>, <code>while</code>, <code>return</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>_vname</code> (identifier)</td>
+                        <td><code>x</code>, <code>y</code>, <code>total</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>_number</code> (numeral literal)</td>
+                        <td><code>5</code>, <code>123</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>:=</code></td>
+                        <td>assignment</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Regualar Expression definitions</h3>
+        <p> Each token is described by a regular expression.</p>
+
+        <div class="op-table-wrapper">
+            <table class="op-table">
+                <tbody>
+                    <tr>
+                        <td><code>_vname</code></td>
+                        <td>[a-zA-Z][a-zA-Z0-9]*</td>
+                    </tr>
+                    <tr>
+                        <td><code>_number</code></td>
+                        <td>[0-9][0-9]*</td>
+                    </tr>
+                    <tr>
+                        <td><code>:=</code></td>
+                        <td>":="</td>
+                    </tr>
+                    <tr>
+                        <td><code>+</code></td>
+                        <td>"+"</td>
+                    </tr>
+                    <tr>
+                        <td><code>;</code></td>
+                        <td>";"</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p> 
+            These are five ones this chapter's worked examples uses.
+            The same style extends to the rest of the grammar's terminals when needed.
+        </p>
+
+        <div class="callout callout--question">
+            <h3>Pipeline</h3>
+            <p>
+                The problem this whole chapter tries to resolve: regualr expression tells you what a token looks like, 
+                but it is not a program, hence caoont be executed by a computer.
+                Getting from "description of a pattern" to "working code that recognizes that pattern" takes a couple of steps.
+                This is that path:
+            </p>
+            <h3>1. Regex</h3>
+            <p>Human readable specification describing a pattern.</p>
+
+            <h3>2. NFA</h3>
+            <p>
+                Built from a regualar expression (specification), one construction rule per operator.
+                The problem with NFA is that it can be in several states at once, due to epsilon-transitions,
+                this not something a simple loop can track directly.
+            </p>
+
+            <h3>3. Subset construction (NFA to DFA)</h3>
+            <p>
+                Solves previous problem bytracking sets of NFA as single DFA states. 
+                The result has no epsilon-transitions and exactly one next state per input character.
+            </p>
+
+            <h3>4. Minimisation</h3>
+            <p>
+                The DFA that subset construction produces often has more states than necessary. 
+                This step merges any states that behave identically going forward, and removes dead states (ones that can never lead to acceptance).
+            </p>
+
+            <h3>5. Combined DFA</h3>
+            <p>
+                So far this covers one token type. 
+                A real lexer needs to recognize all token types from a single scan, 
+                so this step merges every pattern's automaton into one, with each accepting state tagged with which token type it matches.
+            </p>
+        </div>
+
+        <div class="callout callout--info">
+            <p class="callout__label">rules</p>
+
+            <p>
+                <strong>longest match:</strong> always consume the longest valid prefix, not the first thing that happens to match.
+            </p>
+            <p>
+                <strong>priority:</strong> when two token types could both match the same longest string (a keyword like <code>number</code> also matches the <code>_vname</code> pattern), 
+                a fixed order decides the winner - usually keywords (reserved words like <code>if</code>, <code>return</code> etc get first preference)
+            </p>
+            <p>
+                <strong>error handling</strong>
+            </p>
+        </div>
+    </section>
+
+    <!-- ── EVENT 5: WORKED EXAMPLE ──────────────────────────────── -->
+    <section class="section" id="example">
+        
+        <h2> Constructing the DFA - from regex to lexer</h2>
+        <p>
+            Everything so far has described the pipeline in the abstract — regex to NFA to DFA, in principle. 
+            This section makes it concrete: it actually carries one real pattern through every stage, 
+            so you can see each step produce the next.
+        </p>
+        <div class="stepper" id="constructStepper">
+            <div class="stepper-controls">
+            <button class="btn" id="constructPrev">&larr; Previous</button>
+            <span class="stepper-counter" id="constructCounter">Step 1 of 6</span>
+            <button class="btn" id="constructNext">Next &rarr;</button>
+            </div>
+            <div class="stepper-body">
+            <div class="stepper-tree" id="constructTree"></div>
+            <div class="stepper-detail" id="constructDetail"></div>
+            </div>
+        </div>
+
+        <h2> Worked Example - Using the Unified Grammar</h2>
+        <p>
+            The previous section built the automaton. 
+            This section uses it — running the finished combined DFA against a real fragment of source code, 
+            one character at a time, exactly the way scan() would. 
+            Watch how the same two rules (longest match, priority) from the Pipeline section show up concretely at every single step.
+        </p>
+        <p> Let us tokenize the fragment from the opening probem, using the unified grammar's terminals </p>
+        <pre class="code-block">x := 5 ; y := x + 1</pre>
+
+        <!-- Interactive stepper -->
+      <div class="stepper" id="stepper">
+        <div class="stepper-controls">
+          <button class="btn" id="prevStep" disabled>&larr; Previous</button>
+          <span class="stepper-counter" id="stepCounter">Step 1 of 7</span>
+          <button class="btn" id="nextStep">Next &rarr;</button>
+        </div>
+
+        <div class="stepper-body">
+          <div class="stepper-tree" id="stepTree">
+            <!-- tree updated by JS -->
+          </div>
+          <div class="stepper-detail" id="stepDetail">
+            <!-- detail updated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="callout callout--info" style="margin-top:1.5rem">
+        <p class="callout__label">Key Takeaway from the Trace</p>
+        <p>
+            Every step above follows the same two rules: consume characters while a transition exists, 
+            and only accept once none does (longest match); 
+            when a character could complete more than one token type, 
+            whichever pattern is listed first wins (priority). 
+            
+            This trace is the pseudocode. 
+            <stong>
+                start at S0, follow a transition if one exists,
+                remember the last accepting state you passed through,
+                emit a token and reset to S0 once none exists.
+            </stong>
+        </p>
+      </div>
+    </section>
+
+    <!-- ── EXERCISES ─────────────────────────────────────────────── -->
+    <section class="section" id="exercises">
+        <h2>Exercises</h2>
+
+        <div class="exercise">
+            <p class="exercise__level"><span class="bloom bloom--apply">Apply</span> Exercise 1.1</p>
+            <p>Given the regex <code>[ab]*c</code>, construct the NFA, then apply subset construction to get the DFA.</p>
+            <details class="exercise__hint">
+                <summary>Show answer</summary>
+                <p>
+                    A <strong>synthesised</strong> attribute is computed from the children of a node and returned upward —
+                    the type of an expression is synthesised. An <strong>inherited</strong> attribute is passed downward from a parent to its children
+                    — <code>vtable</code> and <code>ftable</code> are inherited, since every subexpression needs access to the same environment.</p>
+            </details>
+        </div>
+
+        <div class="exercise">
+            <p class="exercise__level"><span class="bloom bloom--analyse">Apply</span> Exercise 1.2</p>
+            <p>
+                A DFA has two states that both transition identically on every input symbol and lead only to rejection. 
+                Explain why these can be merged during minimization, 
+                and what would go wrong if they were not merged in a large lexer with hundreds of token types.</p>
+            <details class="exercise__hint">
+                <summary>Show answer</summary>
+                <p>A <strong>synthesised</strong> attribute is computed from the children of a node and returned upward — the type of an expression is synthesised. An <strong>inherited</strong> attribute is passed downward from a parent to its children — <code>vtable</code> and <code>ftable</code> are inherited, since every subexpression needs access to the same environment.</p>
+            </details>
+        </div>
+
+    </section>
+
+    <!-- ── EVENT 9: NEXT ─────────────────────────────────────────── -->
+    <section class="section" id="next">
+        <h2>What comes next</h2>
+        <div class="callout callout--next">
+        <p class="callout__label">Chapter 2 &rarr; Syntax Analysis</p>
+            <p> The token stream produced in this chapter is exactly the input the parser consumes. 
+                Every terminal symbol in the COS341 unified grammar corresponds to a token type/category defined here. 
+                Chapter 1 answered the questions <em>"what are there words"</em>, Chapter 2 answers <em>"what can be built from the words and are they grammatically valid?"</em>
+            </p>
+        </div>
+    </section>
+
+    </main>
+
+    <!-- ── FOOTER ────────────────────────────────────────────────────── -->
+    <footer class="site-footer">
+        <p>COS341 Supplementary Material &mdash; University of Pretoria &mdash; Based on Mogensen, <em>Introduction to Compiler Design</em>, 2nd ed.</p>
+    </footer>
+
+    <script src="../js/chapter1.js"></script>
+</body>
+</html>
