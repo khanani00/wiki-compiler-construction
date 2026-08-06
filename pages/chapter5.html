@@ -53,7 +53,7 @@
     <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
     <section class="section" id="recall">
       <h2>Connecting to What You Already Know</h2>
-      <p>In Chapter 3 you built a <strong>symbol table</strong> that maps names to information about what those names are bound to. In that chapter the information stored was the type, scope level, and declaration status of each variable.</p>
+      <p>In Chapter 3 you built a <a href="chapter3.html"><strong>symbol table</strong></a> that maps names to information about what those names are bound to. In that chapter the information stored was the type, scope level, and declaration status of each variable.</p>
       <p>In Chapter 5 that same symbol table becomes the <strong>environment</strong> the type checker runs on. Specifically, two tables are passed through every type-checking function:</p>
       <div class="two-col">
         <div class="info-card">
@@ -116,7 +116,7 @@
       <div class="checkexp-layout">
         <div class="checkexp-code-wrap">
           <p class="demo-label">CheckExp — All Cases</p>
-          <pre class="code-block code-block--checkexp" id="checkexpCode"><code><span class="ce-case" data-case="num">num
+          <pre class="code-block code-block--pseudo" id="checkexpCode"><code><span class="ce-case" data-case="num">num
   &rarr; int</span>
 
 <span class="ce-case" data-case="id">id
@@ -217,7 +217,7 @@
     <!-- ── EVENT 5: WORKED TRACE ─────────────────────────────────── -->
     <section class="section" id="trace">
       <h2>Worked Example — Step-by-Step Trace</h2>
-      <p>We trace <code>CheckExp</code> on the expression below, taken from a program in the unified grammar. The vtable and ftable are shown on the right.</p>
+      <p>We trace <code>CheckExp</code> on the expression below, taken from a program in the  grammar. The vtable and ftable are shown on the right.</p>
 
       <div class="trace-setup">
         <div class="trace-program">
@@ -290,7 +290,7 @@
 
       <div class="exercise">
         <p class="exercise__level"><span class="bloom bloom--apply">Apply</span> Exercise 5.3</p>
-        <p>Using the unified grammar, write a program with a function <code>double</code> that takes a <code>number</code> and returns a <code>number</code>. Manually construct the <code>ftable</code> entry for <code>double</code>, then trace <code>CheckExp</code> on the call <code>double(x + 1)</code> where <code>x : number</code>.</p>
+        <p>Using the grammar, write a program with a function <code>double</code> that takes a <code>number</code> and returns a <code>number</code>. Manually construct the <code>ftable</code> entry for <code>double</code>, then trace <code>CheckExp</code> on the call <code>double(x + 1)</code> where <code>x : number</code>.</p>
         <details class="exercise__hint">
           <summary>Show hint</summary>
           <p>The ftable entry for <code>double</code> should be <code>double &rarr; (number) &rarr; number</code>. Use the function call case of CheckExp. First look up <code>double</code> in ftable, then call CheckExps on the argument list, then compare argument types against the signature.</p>

@@ -63,7 +63,7 @@
     <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
     <section class="section" id="recall">
       <h2>Connecting to What You Already Know</h2>
-      <p>In Chapter 2 you built a <strong>parser</strong> that takes a stream of tokens and produces an <strong>abstract syntax tree (AST)</strong>. The AST captures the grammatical structure of the program — which expressions nest inside which statements, how conditions relate to branches, and so on.</p>
+      <p>In Chapter 2 you built a <strong><a href="chapter2.html">parser</a></strong> that takes a stream of tokens and produces an <strong>abstract syntax tree (AST)</strong>. The AST captures the grammatical structure of the program — which expressions nest inside which statements, how conditions relate to branches, and so on.</p>
       <p>But the AST is <em>context-free</em>. It was built using a context-free grammar, which means it carries no information about what names <em>mean</em>. Two uses of the name <code>x</code> look identical in the tree even if they refer to completely different variables.</p>
       <p>Chapter 3 is where <strong>semantic analysis</strong> begins. The compiler now needs to understand context &mdash; specifically, which declaration each use of a name refers to. This is called <strong>binding</strong>, and the data structure that records it is the <strong>symbol table</strong>.</p>
       <div class="callout callout--info">
@@ -111,7 +111,7 @@
 
       <div class="callout callout--info">
         <p class="callout__label">General Pseudocode</p>
-        <pre class="code-block"><code>table = empty()
+        <pre class="code-block code-block--pseudo"><code>table = empty()
 
 populate(node, table):
   if node is a declaration:
