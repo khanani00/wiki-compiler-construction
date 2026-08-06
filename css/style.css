@@ -170,6 +170,11 @@ code {
   font-size: 0.88rem;
   line-height: 1.6;
 }
+/* for pseudocode */
+.code-block--pseudo {
+  background: #abb2bf;
+  color: #1e2127;
+}
 
 .code-block code {
   background: none;
@@ -179,6 +184,7 @@ code {
 }
 
 .code-comment { color: #7f848e; font-style: italic; }
+
 
 /* ── LEARNING OBJECTIVES LIST ─────────────────────────────────── */
 .objectives-list {

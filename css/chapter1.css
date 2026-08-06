@@ -70,7 +70,6 @@
   font-family: monospace;
 }
 
-/* --- pipeline (Regex → NFA → DFA → ... → Scan) --- */
 .pipeline {
   display: flex;
   align-items: stretch;

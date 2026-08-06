@@ -1,100 +1,87 @@
 (function () {
   var steps = [
     {
-      title: 'Step 1: The regex for _vname',
+      detail: `
+        <h5 class="mb-2">Step 1: Regex to NFA (_vname)</h5>
+        <p class="text-primary small fw-bold mb-2">Pattern: <code>[a-zA-Z][a-zA-Z0-9]*</code></p>
+        <p class="text-muted">We begin by converting the regular expression for variable names into a Non-Deterministic Finite Automaton (NFA) using Thompson's Construction.</p>
+        <ul class="text-muted small">
+          <li>Must start with a letter (a-z or A-Z).</li>
+          <li>Can be followed by any number of letters or digits.</li>
+          <li>Uses $\\epsilon$-transitions (epsilon transitions) to handle optional repeating characters.</li>
+        </ul>`,
       tree: [
-        { text: 'construct("[a-zA-Z][a-zA-Z0-9]*")', state: 'active' },
-        { text: '  1. regex                    \u2192 [a-zA-Z][a-zA-Z0-9]*', state: 'active' },
-        { text: '  2. build the NFA            ...', state: 'pending' },
-        { text: '  3. subset construction      ...', state: 'pending' },
-        { text: '  4. minimize                 ...', state: 'pending' },
-        { text: '  5. the other four patterns  ...', state: 'pending' },
-        { text: '  6. combine into one DFA     ...', state: 'pending' },
-      ],
-      detail: '<h4>Starting point</h4>' +
-              '<p>Everything below is derived from this one regex &mdash; nothing in the final DFA is asserted without a reason.</p>' +
-              '<p><code>[a-zA-Z][a-zA-Z0-9]*</code>: one letter, followed by zero or more letters/digits.</p>',
+        { text: "", state: "active" }
+      ]
     },
     {
-      title: 'Step 2: Build the NFA',
+      detail: `
+        <h5 class="mb-2">Step 2: NFA to DFA Conversion</h5>
+        <p class="text-primary small fw-bold mb-2">Algorithm: Subset Construction</p>
+        <p class="text-muted">We convert the <code>_vname</code> NFA into a Deterministic Finite Automaton (DFA) to eliminate state ambiguity.</p>
+        <ul class="text-muted small">
+          <li>Each DFA state represents a set of reachable NFA states.</li>
+          <li>Calculates $\\epsilon$-closures for every transition.</li>
+          <li>Ensures every character input leads to exactly one predictable next state.</li>
+        </ul>`,
       tree: [
-        { text: 'construct("[a-zA-Z][a-zA-Z0-9]*")', state: 'done' },
-        { text: '  1. regex                    \u2192 [a-zA-Z][a-zA-Z0-9]* \u2713', state: 'done' },
-        { text: '  2. build the NFA', state: 'active' },
-        { text: '  |    n0 --[a-zA-Z]--> n1 --\u03b5--> n2 --\u03b5--> n3 --[a-zA-Z0-9]--> n4', state: 'active' },
-        { text: '  |    n2 --\u03b5--> n5   (skip the loop entirely)', state: 'active' },
-        { text: '  |    n4 --\u03b5--> n2   (repeat)      n4 --\u03b5--> n5   (exit)', state: 'active' },
-        { text: '  3. subset construction      ...', state: 'pending' },
-        { text: '  4. minimize                 ...', state: 'pending' },
-        { text: '  5. the other four patterns  ...', state: 'pending' },
-        { text: '  6. combine into one DFA     ...', state: 'pending' },
-      ],
-      detail: '<h4>One rule per regex piece</h4>' +
-              '<p>A char-class atom (<code>[a-zA-Z]</code>) becomes two states joined by one edge. The <code>*</code> wraps its inner fragment (<code>[a-zA-Z0-9]</code>, built the same way) with a fresh start/accept pair and two extra \u03b5-edges: one to skip the loop, one to repeat it. Concatenation chains fragments with an \u03b5-edge.</p>' +
-              '<p><code>n0</code> = start, <code>n5</code> = accept.</p>',
+        { text: "", state: "active" }
+      ]
     },
     {
-      title: 'Step 3: Subset construction \u2014 NFA to DFA',
+      detail: `
+        <h5 class="mb-2">Step 3: DFA Minimization</h5>
+        <p class="text-primary small fw-bold mb-2">Algorithm: Hopcroft's Algorithm</p>
+        <p class="text-muted">We optimize the DFA for <code>_vname</code> by merging equivalent states into their simplest possible form.</p>
+        <ul class="text-muted small">
+          <li>Identifies redundant or equivalent states producing identical outcomes.</li>
+          <li>Combines states to produce the smallest valid state machine.</li>
+          <li>Reduces memory footprint and transition overhead during scanning.</li>
+        </ul>`,
       tree: [
-        { text: 'construct("[a-zA-Z][a-zA-Z0-9]*")', state: 'done' },
-        { text: '  1. regex                    \u2192 [a-zA-Z][a-zA-Z0-9]* \u2713', state: 'done' },
-        { text: '  2. build the NFA            \u2192 6 states, 3 \u03b5-edges \u2713', state: 'done' },
-        { text: '  3. subset construction', state: 'active' },
-        { text: '  |    A = closure({n0}) = {n0}                          (start)', state: 'active' },
-        { text: '  |    on [a-zA-Z] from A \u2192 B = closure({n1}) = {n1,n2,n3,n5}   accepting', state: 'active' },
-        { text: '  |    on [a-zA-Z0-9] from B \u2192 C = closure({n4}) = {n4,n2,n3,n5}   accepting', state: 'active' },
-        { text: '  4. minimize                 ...', state: 'pending' },
-        { text: '  5. the other four patterns  ...', state: 'pending' },
-        { text: '  6. combine into one DFA     ...', state: 'pending' },
-      ],
-      detail: '<h4>Sets of NFA states become single DFA states</h4>' +
-              '<p>Each \u03b5-closure is one DFA state. <span class="step-call">A --[a-zA-Z]--> B</span>, then <span class="step-call">B --[a-zA-Z0-9]--> C</span>. Both B and C contain <code>n5</code>, so both are accepting.</p>',
+        { text: "[ Minimized DFA Diagram Placeholder ]", state: "active" }
+      ]
     },
     {
-      title: 'Step 4: Minimize',
+      detail: `
+        <h5 class="mb-2">Step 4: Minimized DFAs for Remaining Patterns</h5>
+        <p class="text-primary small fw-bold mb-2">Direct Construction</p>
+        <p class="text-muted">Since the Regex $\\rightarrow$ NFA $\\rightarrow$ DFA $\\rightarrow$ Minimized DFA pipeline was demonstrated above, we skip directly to the minimized DFAs for the rest of our grammar tokens:</p>
+        <ul class="text-muted small">
+          <li><strong>_number:</strong> <code>[0-9]+</code></li>
+          <li><strong>Assignment:</strong> <code>:=</code></li>
+          <li><strong>Symbols:</strong> <code>+</code> and <code>;</code></li>
+        </ul>`,
       tree: [
-        { text: 'construct("[a-zA-Z][a-zA-Z0-9]*")', state: 'done' },
-        { text: '  1. regex                    \u2192 [a-zA-Z][a-zA-Z0-9]* \u2713', state: 'done' },
-        { text: '  2. build the NFA            \u2192 6 states, 3 \u03b5-edges \u2713', state: 'done' },
-        { text: '  3. subset construction      \u2192 A, B, C \u2713', state: 'done' },
-        { text: '  4. minimize', state: 'active' },
-        { text: '  |    B and C: both accepting, both loop to C on [a-zA-Z0-9], no other edges', state: 'active' },
-        { text: '  |    no input string can tell them apart  \u2192  merge  B \u2261 C', state: 'active' },
-        { text: '  result: S0 --[a-zA-Z]--> S1  (accepting, loops on [a-zA-Z0-9])', state: 'active' },
-        { text: '  5. the other four patterns  ...', state: 'pending' },
-        { text: '  6. combine into one DFA     ...', state: 'pending' },
-      ],
-      detail: '<h4>Same shape as the trace</h4>' +
-              '<p><span class="step-result">S0 \u2192 S1</span> with a self-loop &mdash; this is the exact transition used in every <code>_vname</code> step of the worked-example trace below. It wasn\'t asserted there; this is where it comes from.</p>',
+        { text: "[ Minimized DFAs Diagram Placeholder ]", state: "active" }
+      ]
     },
     {
-      title: 'Step 5: The other four patterns',
+      detail: `
+        <h5 class="mb-2">Step 5: Combine All DFAs</h5>
+        <p class="text-primary small fw-bold mb-2">Master DFA Construction</p>
+        <p class="text-muted">We join all individual minimized DFAs into a single unified scanner system.</p>
+        <ul class="text-muted small">
+          <li>Creates a single start state ($S_0$) branching out to all token paths.</li>
+          <li>Resolves overlap between keywords, symbols, numbers, and identifiers.</li>
+          <li>Prepares the full transition lookup grid.</li>
+        </ul>`,
       tree: [
-        { text: 'construct("[a-zA-Z][a-zA-Z0-9]*")', state: 'done' },
-        { text: '  1\u20134. (as above)                              \u2192 S0 \u2192 S1 \u2713', state: 'done' },
-        { text: '  5. the other four patterns', state: 'active' },
-        { text: '  |    _number  [0-9][0-9]*   \u2192 same shape \u2192 S0 --[0-9]--> S2  (loops)', state: 'active' },
-        { text: '  |    :=       ":="          \u2192 concatenation only \u2192 S0 --:--> S3 --=--> S4', state: 'active' },
-        { text: '  |    +        "+"           \u2192 single literal \u2192 S0 --+--> S5  (accept)', state: 'active' },
-        { text: '  |    ;        ";"           \u2192 single literal \u2192 S0 --;--> S6  (accept)', state: 'active' },
-        { text: '  6. combine into one DFA     ...', state: 'pending' },
-      ],
-      detail: '<h4>Same rules, smaller patterns</h4>' +
-              '<p><code>_number</code> repeats the same argument as <code>_vname</code>. The three literal patterns have no <code>*</code>, so nothing to minimize &mdash; every state is already distinguishable.</p>',
+        { text: "[ Master Combined DFA Placeholder ]", state: "active" }
+      ]
     },
     {
-      title: 'Step 6: Combine into one DFA',
+      detail: `
+        <h5 class="mb-2">Step 6: Lexical Scanner Ready</h5>
+        <p class="text-primary small fw-bold mb-2">Execution Phase</p>
+        <div class="alert alert-success mt-2 mb-2">
+          <h6 class="alert-heading fw-bold mb-1">DFA Ready for Action</h6>
+          <p class="mb-0 small">The lexical analyzer reads source code stream, transitions between states, and emits recognized tokens at accepting states.</p>
+        </div>`,
       tree: [
-        { text: 'construct("[a-zA-Z][a-zA-Z0-9]*")', state: 'done' },
-        { text: '  1\u20135. (as above)                               \u2713', state: 'done' },
-        { text: '  6. combine into one DFA', state: 'active' },
-        { text: '  |    all five NFAs joined under one shared start state', state: 'active' },
-        { text: '  |    subset construction run across all five together, not one at a time', state: 'active' },
-        { text: '  final states: S0, S1, S2, S3, S4, S5, S6    (7 states)', state: 'active' },
-      ],
-      detail: '<h4>Ready to scan</h4>' +
-              '<p>This 7-state DFA is exactly what the worked example below scans against. Note <code>+</code> and <code>;</code> land on their own accept states (S5, S6) rather than looping back onto S0 &mdash; the "reset to S0" behaviour belongs to the scan loop between tokens, not to the automaton itself.</p>',
-    },
+        { text: "[ Lexer Execution Flow Placeholder ]", state: "active" }
+      ]
+    }
   ];
 
   var current = 0;
@@ -104,25 +91,21 @@
   var prevBtn   = document.getElementById('constructPrev');
   var nextBtn   = document.getElementById('constructNext');
 
-  if (!treeEl) return; // stepper not on this page — do nothing
-
-  function stateClass(s) {
-    if (s === 'active') return 'tree-line--active';
-    if (s === 'done')   return 'tree-line--done';
-    return 'tree-line--pending';
-  }
+  if (!treeEl) return;
 
   function render() {
     var step = steps[current];
 
+    // diagrams
     treeEl.innerHTML = step.tree.map(function (line) {
-      return '<span class="tree-line ' + stateClass(line.state) + '">' +
-             line.text + '</span>';
+      return '<div class="p-4 border border-dashed rounded text-center bg-light h-100 d-flex align-items-center justify-content-center">' +
+             '<span class="text-muted small font-monospace">' + line.text + '</span>' +
+             '</div>';
     }).join('\n');
 
     detailEl.innerHTML = step.detail;
-    counterEl.textContent = 'Step ' + (current + 1) + ' of ' + steps.length;
 
+    counterEl.textContent = 'Step ' + (current + 1) + ' of ' + steps.length;
     prevBtn.disabled = current === 0;
     nextBtn.disabled = current === steps.length - 1;
   }
@@ -130,6 +113,7 @@
   prevBtn.addEventListener('click', function () {
     if (current > 0) { current--; render(); }
   });
+
   nextBtn.addEventListener('click', function () {
     if (current < steps.length - 1) { current++; render(); }
   });
@@ -138,75 +122,7 @@
 })();
 
 
-// ── Widget 2: DFA diagram (static SVG, states/edges highlighted per step) ──
-// Add this container somewhere inside your second .stepper-body, above
-// or beside stepTree — it does not need to be inside stepTree itself:
-//
-//   <div class="dfa-diagram" id="dfaDiagram"></div>
-//
-var DFA_SVG = '' +
-  '<svg viewBox="0 0 480 320" class="dfa-svg" xmlns="http://www.w3.org/2000/svg">' +
-    '<defs>' +
-      '<marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">' +
-        '<path d="M0,0 L0,6 L9,3 z" class="dfa-arrowhead" />' +
-      '</marker>' +
-    '</defs>' +
-
-    '<line x1="15" y1="160" x2="42" y2="160" class="dfa-edge" marker-end="url(#arrow)" />' +
-
-    '<line id="edge-S0-S1" x1="95" y1="140" x2="205" y2="85" class="dfa-edge" marker-end="url(#arrow)" />' +
-    '<text x="130" y="100" class="dfa-label">[a-zA-Z]</text>' +
-
-    '<path id="edge-S1-S1" d="M215,45 C205,15 255,15 245,45" class="dfa-edge" marker-end="url(#arrow)" fill="none" />' +
-    '<text x="200" y="15" class="dfa-label">[a-zA-Z0-9]</text>' +
-
-    '<line id="edge-S0-S2" x1="95" y1="180" x2="205" y2="235" class="dfa-edge" marker-end="url(#arrow)" />' +
-    '<text x="130" y="230" class="dfa-label">[0-9]</text>' +
-
-    '<path id="edge-S2-S2" d="M215,285 C205,315 255,315 245,285" class="dfa-edge" marker-end="url(#arrow)" fill="none" />' +
-    '<text x="205" y="318" class="dfa-label">[0-9]</text>' +
-
-    '<line id="edge-S0-S3" x1="98" y1="160" x2="202" y2="160" class="dfa-edge" marker-end="url(#arrow)" />' +
-    '<text x="140" y="150" class="dfa-label">:</text>' +
-
-    '<line id="edge-S3-S4" x1="258" y1="160" x2="352" y2="160" class="dfa-edge" marker-end="url(#arrow)" />' +
-    '<text x="295" y="150" class="dfa-label">=</text>' +
-
-    '<path id="edge-S0-S0" d="M55,135 C35,95 105,95 85,135" class="dfa-edge" marker-end="url(#arrow)" fill="none" />' +
-    '<text x="40" y="85" class="dfa-label">+  ;  (accept)</text>' +
-
-    '<g id="state-S0" class="dfa-state dfa-state--accept">' +
-      '<circle cx="70" cy="160" r="28" />' +
-      '<circle cx="70" cy="160" r="22" class="dfa-state-inner" />' +
-      '<text x="70" y="165">S0</text>' +
-    '</g>' +
-
-    '<g id="state-S1" class="dfa-state dfa-state--accept">' +
-      '<circle cx="230" cy="70" r="28" />' +
-      '<circle cx="230" cy="70" r="22" class="dfa-state-inner" />' +
-      '<text x="230" y="75">S1</text>' +
-    '</g>' +
-
-    '<g id="state-S2" class="dfa-state dfa-state--accept">' +
-      '<circle cx="230" cy="250" r="28" />' +
-      '<circle cx="230" cy="250" r="22" class="dfa-state-inner" />' +
-      '<text x="230" y="255">S2</text>' +
-    '</g>' +
-
-    '<g id="state-S3" class="dfa-state">' +
-      '<circle cx="230" cy="160" r="28" />' +
-      '<text x="230" y="165">S3</text>' +
-    '</g>' +
-
-    '<g id="state-S4" class="dfa-state dfa-state--accept">' +
-      '<circle cx="380" cy="160" r="28" />' +
-      '<circle cx="380" cy="160" r="22" class="dfa-state-inner" />' +
-      '<text x="380" y="165">S4</text>' +
-    '</g>' +
-  '</svg>';
-
-
-// ── Widget 3: Scanning the input (token-by-token trace) ──────────
+//Scanning the input (token-by-token trace) ──────────
 (function () {
   var steps = [
     {
@@ -378,7 +294,7 @@ var DFA_SVG = '' +
 
   if (!treeEl) return; // stepper not on this page — do nothing
 
-  if (dfaEl) { dfaEl.innerHTML = DFA_SVG; }
+//   if (dfaEl) { dfaEl.innerHTML = DFA_SVG; }
 
   function stateClass(s) {
     if (s === 'active') return 'tree-line--active';

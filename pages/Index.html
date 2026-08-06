@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COS341 | Compiler Construction</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/home.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="site-header__inner">
+            <span class="site-header__course">COS341 Supplementary Material</span>
+            <nav class="site-header__nav">
+                <a href="#" class="nav--active">Home</a>
+                <a href="chapter1.html">Chapter 1</a>
+                <a href="chapter2.html">Chapter 2</a>
+                <a href="chapter3.html">Chapter 3</a>
+                <a href="chapter5.html">Chapter 5</a>
+                <a href="grammar.html">Grammar</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="article">
+        <section class="hero">
+            <div class="hero__content">
+                <p class="hero__eyebrow">COS341</p>
+                <h1> Compiler Construction Supplementary material</h1>
+                <p class="hero__subtitle">
+                    An interactive supplementary material to
+                    <i>Introduction to Compiler Design</i>
+                    by Torben Ægidius Mogensen.
+
+                    Designed to bridge the gap between compiler theory
+                    and compiler implementation through worked examples,
+                    visual explanations and interactive demonstrations.
+                </p>
+                <div class="hero__buttons">
+                    <a class="btn btn-primary" href="chapter1.html"> Start Learning </a>
+
+                    <a class="btn btn-secondary" href="grammar.html"> Check out the Reference Grammar</a>
+                </div>
+            </div>
+            </section>
+
+            <p>
+            <a href="#overview">Overview</a> ·
+            <a href="#manual">Manual</a> ·
+            <a href="#chapters">Chapters</a>
+        </p>
+
+            <section class="section" id="overview">
+                <h2>Overview</h2>
+                <p>
+                    This supplementary material keeps the language, grammar and
+                    examples consistent across every chapter so you only
+                    learn one compiler while exploring each compiler phase.
+                    Instead of introducing a different language in every chapter, every
+                    example throughout this website uses the same grammar and
+                    the same running example. As you progress through the
+                    chapters, you will watch this single program evolve from raw
+                    characters into a fully compiled program.
+                </p>
+                <h3>
+                    One Grammar.
+                    One Program.
+                    One Compiler.
+                </h3>
+
+                <pre class="code-block"><code>main() {
+  number x := 5;
+  text   y := "hello";
+  number z := x + y;   <span class="code-comment">/* adding a number to text — should this work? */</span>
+}</code></pre>
+                <p>
+                    This is the only program we are working with throughout.
+                    Every compiler phase studies this same program from a
+                    different perspective.
+                </p>
+                <p>
+                    Follow the <a href="grammar.html">Reference Grammar</a> for the full language definition.
+                </p>
+            </section>
+
+
+            <section class="section" id="manual">
+
+                <section id="code-blocks">
+                    <h2>Manual: how to read this site</h2>
+                    <h3>Code blocks: program vs. pseudocode</h3>
+                    <p>
+                        Two kinds of code appear throughout the site, styled
+                        differently so you can always tell which is which instantly.
+                    </p>
+                    
+                    <div class="section" id="program">
+                        <p class="demo-label">The Program</p>
+
+                        <pre class="code-block"><code>main() {
+        number x := 5;
+        text   y := "hello";
+        number z := x + y;   <span class="code-comment">/* adding a number to text — should this work? */</span>
+        }</code></pre>
+                        <p>
+                            This dark block always means the one running program that every
+                            chapter studies from a different angle.
+                        </p>
+                    </div>
+
+                    <div class="section" id="pseudocode">
+                        <p class="demo-label">Pseudocode</p>
+
+                        <pre class="code-block code-block--pseudo"><code>function TYPECHECK(expr):
+        if expr is BINOP(op, left, right):
+            t1 := TYPECHECK(left)
+            t2 := TYPECHECK(right)
+            if t1 != t2:
+                report type error
+            return t1
+        return TYPE_OF(expr)</code></pre>
+                    <p>
+                        This lighter block means pseudocode, which an algorithm that acts <em>on</em> the program (like a
+                        type-checking routine), rather than being the program itself.
+                    </p>
+                        
+                    </div>
+                </section>
+
+                <section>
+                    <h3>Callout boxes</h3>
+                    <p>
+                        You'll also see coloured callout boxes throughout the
+                        chapters. Each colour has a consistent meaning:
+                    </p>
+
+                    <div class="callout callout--question">
+                        <p class="callout__label">Question</p>
+                        <p>What happens when you add a number to a text value?</p>
+                    </div>
+                    <p>
+                        Poses a question — usually at the
+                        start of a topic, to give you something to think about
+                        before the explanation.
+                    </p>
+        
+                    <div class="callout callout--info">
+                        <p class="callout__label">Info</p>
+                        <p>Scope determines which declarations are visible at a given point in the program.</p>
+                    </div>
+                    <p>
+                        Adds a clarifying note or reminder
+                        alongside the main explanation.
+                    </p>
+        
+                    <div class="callout callout--next">
+                        <p class="callout__label">Up next</p>
+                        <p>We'll trace this expression through the symbol table in Chapter 3.</p>
+                    </div>
+                    <p>
+                        Previews what the next section or chapter covers.
+                    </p>
+                </section>
+            </section>
+            
+
+            <section class="section" id="chapters">
+                <h2>Learning Path</h2>
+                <div class="chapter-grid">
+                    <div class="chapter-card">
+                        <h3>Chapter 1</h3>
+                        <h4>Lexical Analysis</h4>
+                        <p>Convert characters into tokens.</p>
+                        <a href="chapter1.html">Open →</a>
+                    </div>
+
+                    <div class="chapter-card">
+                        <h3>Chapter 2</h3>
+                        <h4>Syntax Analysis</h4>
+                        <p>Build a parse tree from tokens.</p>
+                        <a href="#">Open →</a>
+                    </div>
+
+                    <div class="chapter-card">
+                        <h3>Chapter 3</h3>
+                        <h4>Symbol Tables</h4>
+                        <p>Symbol table and scope.</p>
+                        <a href="chapter3.html">Open →</a>
+                    </div>
+
+                    <div class="chapter-card">
+                        <h3>Chapter 5</h3>
+                        <h4>Code Generation</h4>
+                        <p>Translate the program into executable code.</p>
+                        <a href="chapter5.html">Open →</a>
+                    </div>
+
+                </div>
+
+            </section>
+
+    </main>
+
+    <footer class="site-footer">
+        <p>COS341 Supplementary Material &mdash; University of Pretoria &mdash; Based on Mogensen, <em>Introduction to Compiler Design</em>, 2nd ed.</p>
+    </footer>
+
+    <script src=""></script>
+    
+</body>
+</html>
