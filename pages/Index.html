@@ -25,7 +25,6 @@
     <main class="article">
         <section class="hero">
             <div class="hero__content">
-                <p class="hero__eyebrow">COS341</p>
                 <h1> Compiler Construction Supplementary material</h1>
                 <p class="hero__subtitle">
                     An interactive supplementary material to
@@ -37,29 +36,18 @@
                     visual explanations and interactive demonstrations.
                 </p>
                 <div class="hero__buttons">
-                    <a class="btn btn-primary" href="chapter1.html"> Start Learning </a>
-
-                    <a class="btn btn-secondary" href="grammar.html"> Check out the Reference Grammar</a>
+                    <a class="btn btn-primary" href="#overview"> Get started </a>
                 </div>
             </div>
             </section>
-
-            <p>
-            <a href="#overview">Overview</a> ·
-            <a href="#manual">Manual</a> ·
-            <a href="#chapters">Chapters</a>
-        </p>
 
             <section class="section" id="overview">
                 <h2>Overview</h2>
                 <p>
                     This supplementary material keeps the language, grammar and
                     examples consistent across every chapter so you only
-                    learn one compiler while exploring each compiler phase.
-                    Instead of introducing a different language in every chapter, every
-                    example throughout this website uses the same grammar and
-                    the same running example. As you progress through the
-                    chapters, you will watch this single program evolve from raw
+                    learn one compiler while exploring each compiler phase. 
+                    As you progress through the chapters, you will watch this single <a href="#program">program </a>evolve from raw
                     characters into a fully compiled program.
                 </p>
                 <h3>
@@ -68,24 +56,46 @@
                     One Compiler.
                 </h3>
 
-                <pre class="code-block"><code>main() {
-  number x := 5;
-  text   y := "hello";
-  number z := x + y;   <span class="code-comment">/* adding a number to text — should this work? */</span>
-}</code></pre>
+                <pre class="code-block" id="program"><code>main(number a, number b) {
+  number result := 0;
+  result := gcd(a, b);
+  return result
+}
+
+gcd(number a, number b) {
+  number temp := 0;
+  while (b > 0) do {
+    temp := b;
+    b := a - (a / b * b);
+    a := temp
+  };
+  return a
+}
+
+isZero(number x) {
+  number out := 0;
+  if (x = 0) then {
+    out := 1
+  } else {
+    out := 0
+  };
+  return out
+}
+</code></pre>
                 <p>
                     This is the only program we are working with throughout.
                     Every compiler phase studies this same program from a
                     different perspective.
-                </p>
-                <p>
                     Follow the <a href="grammar.html">Reference Grammar</a> for the full language definition.
                 </p>
+                <div class="hero__buttons">
+                    <a class="btn btn-primary" href="chapter1.html"> Start Learning </a>
+                    <a class="btn btn-primary" href="#chapters"> Learning Pathway</a>
+                    <a class="btn btn-secondary" href="#manual"> Website manual</a>
+                </div>
             </section>
 
-
             <section class="section" id="manual">
-
                 <section id="code-blocks">
                     <h2>Manual: how to read this site</h2>
                     <h3>Code blocks: program vs. pseudocode</h3>
@@ -93,24 +103,22 @@
                         Two kinds of code appear throughout the site, styled
                         differently so you can always tell which is which instantly.
                     </p>
-                    
-                    <div class="section" id="program">
-                        <p class="demo-label">The Program</p>
-
+                    <div class="section">
+                        <p class="demo-label">Program (example code)</p>
+                        
                         <pre class="code-block"><code>main() {
         number x := 5;
         text   y := "hello";
         number z := x + y;   <span class="code-comment">/* adding a number to text — should this work? */</span>
         }</code></pre>
                         <p>
-                            This dark block always means the one running program that every
+                            This dark block always refers to the one running program that every
                             chapter studies from a different angle.
                         </p>
-                    </div>
 
-                    <div class="section" id="pseudocode">
-                        <p class="demo-label">Pseudocode</p>
-
+        
+                        <p class="demo-label">Pseudocode (example code)</p>
+                        
                         <pre class="code-block code-block--pseudo"><code>function TYPECHECK(expr):
         if expr is BINOP(op, left, right):
             t1 := TYPECHECK(left)
@@ -119,11 +127,10 @@
                 report type error
             return t1
         return TYPE_OF(expr)</code></pre>
-                    <p>
-                        This lighter block means pseudocode, which an algorithm that acts <em>on</em> the program (like a
-                        type-checking routine), rather than being the program itself.
-                    </p>
-                        
+                        <p>
+                            This lighter block means pseudocode, which an algorithm that acts <em>on</em> the program (like a
+                            type-checking routine), rather than being the program itself.
+                        </p>
                     </div>
                 </section>
 
@@ -178,7 +185,7 @@
                         <h3>Chapter 2</h3>
                         <h4>Syntax Analysis</h4>
                         <p>Build a parse tree from tokens.</p>
-                        <a href="#">Open →</a>
+                        <a href="chapter2.html">Open →</a>
                     </div>
 
                     <div class="chapter-card">

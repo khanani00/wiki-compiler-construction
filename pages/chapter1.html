@@ -6,6 +6,7 @@
     <title>Chapter 1 - Lexical Analysis | COS341 Supplement</title>
     <link rel="stylesheet" href="../css/style.css"/>
     <link rel="stylesheet" href="../css/chapter5.css"/>
+    <link rel="stylesheet" href="../css/home.css"/>
     <link rel="stylesheet" href="../css/chapter1.css"/>
 </head>
 <body>
@@ -15,7 +16,7 @@
         <div class="site-header__inner">
         <span class="site-header__course">COS341 Supplementary Material</span>
         <nav class="site-header__nav">
-            <a href="Index.html">Home</a>
+            <a href="index.html">Home</a>
             <a href="#">Chapters</a>
             <a href="grammar.html">Grammar</a>
         </nav>
@@ -59,96 +60,88 @@
       <h2>Learning Objectives</h2>
       <p>By the end of this article you should be able to:</p>
       <ul class="objectives-list">
-        <li><span class="bloom bloom--remember">Remember</span> the token types used in the <a href="grammar.html"> unified grammar</a> </li>
-        <li><span class="bloom bloom--understand">Understand</span> why regular expressions alone are not directly executable, and why NFAs and DFAs exist as a construction path between a regex and a working program. </li>
+        <li><span class="bloom bloom--remember">Remember</span> the token types used in the <a href="grammar.html">Reference Grammar</a></li>
+        <li><span class="bloom bloom--understand">Understand</span> why regular expressions alone are not directly executable, and why NFAs and DFAs exist as a construction path between a regex and a working program.</li>
         <li><span class="bloom bloom--understand">Understand</span> the difference between an NFA and a DFA, and why lexers are built on DFAs specifically.</li>
         <li><span class="bloom bloom--apply">Apply</span> subset construction to convert a small NFA into a DFA.</li>
-        <li><span class="bloom bloom--analyse">Analyse</span> DFA to determine which token it accepts, using longest-match and priority rules.</li>
-        <li><span class="bloom bloom--create">Create</span> a working lexer for a small token set.</li>
+        <li><span class="bloom bloom--understand">Understand</span> how longest-match and priority rules resolve token boundaries, by following a full scan trace step by step.</li>
+        <li><span class="bloom bloom--understand">Understand</span> how a combined DFA and the <code>scan()</code> algorithm together implement a working lexer.</li>
       </ul>
     </section>
 
     <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
      <section class="section" id="recall">
-      <h2>Connecting to What You Already Know</h2>
-      <p>You should know regular expression or pattern matching prior to this. 
-        This chapter turns that familiar idea into a program that scans character by character.</p>
-      <div class="callout callout--info">
-        <p class="callout__label">Key Connection</p>
+        <h2>Connecting to What You Already Know</h2>
         <p>
-            The tokens produced in Chapter 1 are exactly what Chapter 2's parser takes as input. 
-            Every token category defined in this chapter becomes a terminal symbol in the grammer used for parsing.</p>
-      </div>
+            You should already be comfortable with regular expressions or pattern matching before this chapter. 
+            Everything here turns that familiar idea — a compact description of a pattern — into a program that scans character by character.
+        </p>
+        <div class="callout callout--info">
+            <p class="callout__label">Key Connection</p>
+            <p>
+                The tokens produced in Chapter 1 are exactly what Chapter 2's parser takes as input. 
+                Every token category defined in this chapter becomes a terminal symbol in the grammer used for parsing.</p>
+        </div>
     </section>
 
     <!-- ── EVENT 4: CONTENT ───────────────────────────────────────── -->
     <section class="section" id="content">
         <h2>Core Concepts</h2>
         <p>Two thing sneeds to be made clear before any construction can happen:
-            What the lexer needs to recognize (token types/categories) and how each one is described (using regualr expression definitions).
+            What the lexer needs to recognize (token types/categories) and how each one is described (using regular expression definitions).
             Everything else in the chapter builds on these two things.
         </p>
-        <p>Token types in the unified grammar</p>
+        <h3 id="regex">Regular Expression</h3>
+        <p>
+            A regular expression is a compact pattern language for describing a <em>set</em> of strings —
+            not a specific string. Each token type in our grammar gets exactly one regular expression,
+            and anything that matches it is a valid instance of that token.
+        </p>
+         <p>Token types in the <a href="grammar.html">Reference Grammar</a>, with the regular expression that defines each:</p>
         <div class="op-table-wrapper">
             <table class="op-table">
                 <thead>
                     <tr>
-                        <th>Type/Category</th><th>Examples</th>
+                        <th>Type/Category</th><th>Examples</th><th>Regular Expression</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>Keyword/ <code>_text</code></td>
                         <td>reserved words: <code>main</code>, <code>if</code>, <code>while</code>, <code>return</code></td>
+                        <td>matches the literal word, e.g. <code>"if"</code></td>
                     </tr>
                     <tr>
                         <td><code>_vname</code> (identifier)</td>
                         <td><code>x</code>, <code>y</code>, <code>total</code></td>
+                        <td>code>[a-zA-Z][a-zA-Z0-9]*</code></td>
                     </tr>
                     <tr>
                         <td><code>_number</code> (numeral literal)</td>
                         <td><code>5</code>, <code>123</code></td>
+                        <td><code>[0-9][0-9]*</code></td>
                     </tr>
                     <tr>
                         <td><code>:=</code></td>
                         <td>assignment</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <h3>Regualar Expression definitions</h3>
-        <p> Each token is described by a regular expression.</p>
-
-        <div class="op-table-wrapper">
-            <table class="op-table">
-                <tbody>
-                    <tr>
-                        <td><code>_vname</code></td>
-                        <td>[a-zA-Z][a-zA-Z0-9]*</td>
-                    </tr>
-                    <tr>
-                        <td><code>_number</code></td>
-                        <td>[0-9][0-9]*</td>
-                    </tr>
-                    <tr>
-                        <td><code>:=</code></td>
-                        <td>":="</td>
+                        <td><code>":="</code></td>
                     </tr>
                     <tr>
                         <td><code>+</code></td>
-                        <td>"+"</td>
+                        <td>addition operator</td>
+                        <td><code>"+"</code></td>
                     </tr>
                     <tr>
                         <td><code>;</code></td>
-                        <td>";"</td>
+                        <td>statement separator</td>
+                        <td><code>";"</code></td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
         <p> 
-            These are five ones this chapter's worked examples uses.
+            These are the six token types this chapter's worked examples use.
             The same style extends to the rest of the grammar's terminals when needed.
         </p>
 
@@ -156,7 +149,7 @@
             <h3>Pipeline</h3>
             <p>
                 The problem this whole chapter tries to resolve: regualr expression tells you what a token looks like, 
-                but it is not a program, hence caoont be executed by a computer.
+                but it is not a program, hence cannot be executed by a computer.
                 Getting from "description of a pattern" to "working code that recognizes that pattern" takes a couple of steps.
                 This is that path:
             </p>
@@ -215,6 +208,7 @@
             This section makes it concrete: it actually carries one real pattern through every stage, 
             so you can see each step produce the next.
         </p>
+        <p>Click the next button to follow the process step by step</p>
         <div class="stepper" id="constructStepper">
             <div class="stepper-controls">
             <button class="btn" id="constructPrev">&larr; Previous</button>
@@ -234,9 +228,11 @@
             one character at a time, exactly the way scan() would. 
             Watch how the same two rules (longest match, priority) from the Pipeline section show up concretely at every single step.
         </p>
+
         <p> Let us tokenize the fragment from the opening probem, using the unified grammar's terminals </p>
         <pre class="code-block">x := 5 ; y := x + 1</pre>
 
+        <p>Click the next button to follow the process step by step</p>
         <!-- Interactive stepper -->
       <div class="stepper" id="stepper">
         <div class="stepper-controls">
@@ -308,11 +304,14 @@
         <h2>What comes next</h2>
         <div class="callout callout--next">
         <p class="callout__label">Chapter 2 &rarr; Syntax Analysis</p>
-            <p> The token stream produced in this chapter is exactly the input the parser consumes. 
-                Every terminal symbol in the COS341 unified grammar corresponds to a token type/category defined here. 
-                Chapter 1 answered the questions <em>"what are there words"</em>, Chapter 2 answers <em>"what can be built from the words and are they grammatically valid?"</em>
+            <p> The token stream produced in this chapter is exactly the input the parser consumes.
+                Every terminal symbol in the COS341 Reference Grammar corresponds to a token type defined here.
+                Chapter 1 answered the question <em>"what are the words?"</em>, Chapter 2 answers <em>"what can be built from the words, and is it grammatically valid?"</em>
             </p>
         </div>
+        <p style="margin-top: 1rem;">
+                <a class="btn btn-primary" href="chapter2.html">Continue to Chapter 2 &rarr;</a>
+            </p>
     </section>
 
     </main>
