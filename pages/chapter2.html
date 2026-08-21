@@ -19,6 +19,125 @@
         </div>
     </header>
 
+    <main class="article">
+
+        <!-- breadcrumb -->
+        <p class="breadcrumb">Chapters &rsaquo; Chapter 2 &rsaquo; Syntax Analysis</p>
+        <h1 class="article__title">Chapter 2 &mdash; Syntax Analysis</h1>
+        <p class="article__subtitle">&ldquo; takes a string of tokens produced by the
+lexer, and constructs a syntax tree.&rdquo;</p>
+
+        <!-- ── EVENT 1: GAIN ATTENTION ──────────────────────────────── -->
+        <div class="callout callout--question">
+            <p class="callout__label">Opening Problem</p>
+            <p>Here's the while-loop body in the <code>gcd</code> function from the <a href="index.html"></a> </p>
+            <pre class="code-block">temp := b ;
+b := a - ( a / b * b ) ;
+a := temp</pre>
+            <p>
+                You know exactly what this does. 
+                But hand this fragmentto three different people, 
+                with nothing but the grammar rules to go on, 
+                and ask each to draw the tree showing how the pieces combine. 
+                Would they draw the same tree?
+            </p>
+            <p>
+                For some of the grammar's rules, the answer is: not necessarily, not without more information.
+                For others, surprisingly, yes.
+            </p>
+            <p>
+                By the end of this chapter you'll know exactly which parts of the Reference Grammar are genuinely ambiguous,
+                how to fix the ones that are, and how a parser mechanically turns a token stream into one unambiguous tree.
+            </p>
+        </div>
+
+        <!-- ── EVENT 2: LEARNING OBJECTIVES ─────────────────────────── -->
+        <section class="section" id="objectives">
+            <h2>Learning Objectives</h2>
+            <p>By the end of this article you should be able to:</p>
+            <ul class="objectives-list">
+                <li><span class="bloom bloom--remember">Remember</span> which productions in the Reference Grammar are ambiguous or left-recursive as written.</li>
+                <li><span class="bloom bloom--understand">Understand</span> why an ambiguous or left-recursive grammar blocks a deterministic top-down parser, and how bottom-up parsing is able to handle a broader class of grammars.</li>
+                <li><span class="bloom bloom--apply">Apply</span> the nullable, FIRST, and FOLLOW algorithms, and use precedence layering and left-recursion elimination to rewrite an ambiguous rule into an LL(1)-friendly form.</li>
+                <li><span class="bloom bloom--analyse">Analyse</span> a constructed LL(1), SLR, or LR table to determine whether a given cell contains a conflict, and trace which grammar property caused it.</li>
+                <li><span class="bloom bloom--evaluate">Evaluate</span> which parsing strategy &mdash; LL(1), SLR, or LR &mdash; is suitable for a given grammar rule, justifying the choice by what each strategy can and cannot handle.</li>
+                <li><span class="bloom bloom--create">Create</span> an LL(1), SLR, or LR parsing table from FIRST/FOLLOW sets or item sets, and use it to trace the parse of a real program fragment.</li>
+            </ul>
+        </section>
+
+        <section class="section" id="core-content">
+            <h2>Core concepts</h2>
+            <p>Two families of parsers build the same kind of tree from opposite directions:</p>
+            <img src="../assests/parsing_methods.png">
+            <ul>
+                <li><strong>Top-down: </strong>starts at the grammar's start symbol and predicts which production to expand next.</li>
+                <li><strong>Bottom-up: </strong>starts at the tokens themselves and repeatedly recognises and collapses ("reduces") pieces matching a production's right-hand side.</li>
+            </ul>
+            <p>
+                These are the methods that will be explored below.
+                All three build the same shape of tree for an unambiguous grammar, 
+                they just get there differently. 
+                Each has different requirements on how the grammar has to be written. 
+                That gap is a running thread through the rest of this chapter.
+            </p>
+        </section>
+
+        <section class="section" id="recall">
+            <h2>Connecting to What You Already Know</h2>
+            <p>
+                The previous chapter, <a href="chapter1.html">Lexical Analysis</a>, ended with a finished token stream. 
+                That stream is this chapter's input. 
+                Nothing here re-reads the source characters; syntax analysis only ever sees the sequence
+                the lexer already produced.
+            </p>
+            <p>
+                You should also already be comfortable with <strong>context-free grammars</strong> and <strong>derivations</strong> from your 
+                prerequisite coursework. This chapter turns that into something stricter: not just that a grammar can 
+                generate a given token sequence, but which one, single, unambiguous tree it corresponds to, 
+                and how a parser builds that tree deterministically rather than by guessing.
+            </p>
+        </section>
+
+        <section class="section" id="ambiguity">
+            <h2>Ambiguity</h2>
+
+        </section>
+
+        <section class="section" id="sets">
+            <h2>Nullable/First/FOLLOW sets</h2>
+
+        </section>
+
+        <section class="section" id="ll1">
+            <h2>LL(1)</h2>
+
+        </section>
+
+        <section class="section" id="slr">
+            <h2>SLR</h2>
+
+        </section>
+
+        <section class="section" id="lr">
+            <h2>LR</h2>
+
+        </section>
+
+        <!-- ── EVENT 9: NEXT ─────────────────────────────────────────── -->
+        <section class="section" id="next">
+            <h2>What Comes Next</h2>
+            <div class="callout callout--next">
+                <a href="chapter3.html">
+                    <p class="callout__label">Chapter 3 &rarr; Scopes and symbol tables</p>
+                </a>
+                <p>
+                    The type information gathered by <code>CheckExp</code> does not disappear after this phase. 
+                </p>
+            </div>
+        </section>
+
+    </main>
+
 
     <footer class="site-footer">
         <p>COS341 Supplementary Material &mdash; University of Pretoria &mdash; Based on Mogensen, <em>Introduction to Compiler Design</em>, 2nd ed.</p>
