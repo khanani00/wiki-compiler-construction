@@ -1,0 +1,181 @@
+/* ── CHAPTER 6 SPECIFIC STYLES ────────────────────────────────── */
+
+/* Two-col recap cards */
+.two-col-recap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 0.8rem 0;
+}
+@media (max-width: 560px) { .two-col-recap { grid-template-columns: 1fr; } }
+
+.recap-card {
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  background: var(--col-surface);
+}
+
+.recap-card__label {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--col-muted);
+  margin-bottom: 0.3rem !important;
+}
+
+/* ── IL INSTRUCTION GRID ──────────────────────────────────────── */
+.il-instruction-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin: 0.8rem 0 1.2rem;
+}
+@media (max-width: 560px) { .il-instruction-grid { grid-template-columns: 1fr; } }
+
+.il-card {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.8rem;
+  background: #f6f8fa;
+}
+
+.il-card code {
+  font-size: 0.82rem;
+  white-space: nowrap;
+  color: var(--col-accent);
+  background: none;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.il-card span {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--col-muted);
+}
+
+/* ── SDT EXAMPLE ──────────────────────────────────────────────── */
+.sdt-example {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  margin: 0.8rem 0;
+  flex-wrap: wrap;
+}
+
+.sdt-rule, .sdt-attribution { flex: 1; min-width: 200px; }
+
+.sdt-label {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--col-muted);
+  margin-bottom: 0.3rem !important;
+}
+
+.sdt-arrow {
+  font-size: 1.4rem;
+  color: var(--col-accent);
+  padding-top: 1.6rem;
+  flex-shrink: 0;
+}
+
+/* ── FLOWCHART ────────────────────────────────────────────────── */
+.flowchart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 1rem;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+}
+
+.fc-node {
+  padding: 0.35rem 1rem;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  min-width: 140px;
+}
+
+.fc-label  { background: #e8f4fd; border: 2px solid #3b89c8; color: #1a3a5c; }
+.fc-diamond{ background: #fff8f0; border: 2px solid var(--bloom-apply); color: #5a3000;
+             border-radius: 6px; padding: 0.35rem 0.8rem; }
+.fc-rect   { background: #f0f9f0; border: 2px solid var(--bloom-understand); color: #1a4a1a; }
+.fc-goto   { background: #f9f0ff; border: 2px dashed #9b59b6; color: #4a1a6a;
+             font-style: italic; }
+
+.fc-arrow { color: var(--col-muted); font-size: 1.1rem; line-height: 1; }
+
+.fc-branches {
+  display: flex;
+  gap: 3rem;
+}
+
+.fc-branch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.fc-branch-label {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--col-muted);
+}
+
+/* ── ANNOTATED CODE PANEL ─────────────────────────────────────── */
+.annotated-code {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+  margin: 1rem 0;
+}
+@media (max-width: 640px) { .annotated-code { grid-template-columns: 1fr; } }
+
+/* hover highlight */
+.src-line, .il-line {
+  display: block;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.1s;
+  padding: 0 2px;
+}
+
+.src-line:hover, .il-line:hover,
+.src-line.active, .il-line.active {
+  background: rgba(255, 243, 176, 0.4);
+  outline: 1px solid rgba(230, 172, 0, 0.5);
+}
+
+/* group colour coding */
+.src-line[data-group="while-cond"].active,
+.il-line[data-group="while-cond"].active  { background: rgba(59,137,200,0.15); outline-color: #3b89c8; }
+
+.src-line[data-group="b-assign"].active,
+.il-line[data-group="b-assign"].active    { background: rgba(155,89,182,0.12); outline-color: #9b59b6; }
+
+.src-line[data-group="temp-assign"].active,
+.il-line[data-group="temp-assign"].active { background: rgba(91,168,91,0.15); outline-color: #3a7a3a; }
+
+.src-line[data-group="a-assign"].active,
+.il-line[data-group="a-assign"].active    { background: rgba(230,172,0,0.18); outline-color: #e6ac00; }
+
+.src-line[data-group="ret"].active,
+.il-line[data-group="ret"].active         { background: rgba(192,57,43,0.1); outline-color: #c0392b; }
+
+.src-line[data-group="decl"].active,
+.il-line[data-group="decl"].active        { background: rgba(52,73,94,0.1); outline-color: #34495e; }

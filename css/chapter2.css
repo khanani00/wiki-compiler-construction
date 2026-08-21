@@ -1,0 +1,226 @@
+/* ── CHAPTER 2 SPECIFIC STYLES ────────────────────────────────── */
+
+/* LL(1) badge row */
+.ll1-badge-row {
+  display: flex;
+  gap: 1rem;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+}
+
+.ll1-badge {
+  flex: 1;
+  min-width: 180px;
+  border: 2px solid var(--col-accent);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.9rem;
+  background: #eef2f8;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.ll1-letter {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: var(--col-accent);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.ll1-meaning {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: #2a3a50;
+  line-height: 1.4;
+}
+
+/* ── DECISION BOX ─────────────────────────────────────────────── */
+.decision-box {
+  border: 2px solid var(--col-accent);
+  border-radius: var(--radius);
+  background: var(--col-surface);
+  padding: 1.1rem 1.2rem;
+  margin: 1rem 0;
+}
+
+.decision-box__title {
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--col-accent);
+  margin-bottom: 0.8rem;
+}
+
+.decision-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+.decision-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius);
+}
+
+.decision-rule--first  { background: #e8f4fd; border-left: 3px solid var(--bloom-apply); }
+.decision-rule--follow { background: #f0f9f0; border-left: 3px solid var(--bloom-understand); }
+
+.rule-num {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: var(--col-accent);
+  flex-shrink: 0;
+  padding-top: 0.1rem;
+}
+
+.decision-rule p {
+  font-size: 0.85rem;
+  color: var(--col-muted);
+  margin: 0.2rem 0 0 !important;
+}
+
+.decision-box__else {
+  font-family: var(--font-ui);
+  font-size: 0.88rem;
+  color: var(--bloom-evaluate);
+  font-weight: 600;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--col-border);
+  margin: 0 !important;
+}
+
+/* ── GRAMMAR SUBSET TABLE ─────────────────────────────────────── */
+.grammar-subset { overflow-x: auto; margin: 0.8rem 0 1.4rem; }
+
+/* ── NULLABLE / YES / NO BADGES ──────────────────────────────── */
+.badge {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15em 0.55em;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge--yes { background: #d1fae5; color: #065f46; }
+.badge--no  { background: #fee2e2; color: #991b1b; }
+
+/* ── PARSE TABLE ──────────────────────────────────────────────── */
+.parse-table-wrapper {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.parse-table {
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  min-width: 100%;
+}
+
+.parse-table th {
+  background: var(--col-accent);
+  color: #fff;
+  padding: 0.45rem 0.5rem;
+  text-align: center;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid #2a4a70;
+}
+
+.pt-corner {
+  text-align: left !important;
+  min-width: 90px;
+}
+
+.pt-nt {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--col-accent);
+  background: #eef2f8;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--col-border);
+  white-space: nowrap;
+}
+
+.pt-empty {
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  padding: 0.4rem 0.5rem;
+}
+
+.pt-cell {
+  background: var(--col-surface);
+  border: 1px solid var(--col-border);
+  padding: 0.4rem 0.5rem;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--col-accent);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.pt-cell:hover { background: #e8f0fe; }
+
+.pt-cell.active {
+  background: #fff3b0;
+  outline: 2px solid #e6ac00;
+}
+
+/* ── STATIC PARSE TABLE ───────────────────────────────────────── */
+.parse-table--static .pt-cell {
+  cursor: default;
+  vertical-align: middle;
+  min-width: 80px;
+  padding: 0.4rem 0.5rem;
+  text-align: center;
+}
+
+.parse-table--static .pt-cell:hover { background: inherit; }
+
+/* rule colour borders */
+.pt-cell--r1 { border-left: 3px solid var(--bloom-apply); background: #f6f9ff; }
+.pt-cell--r2 { border-left: 3px solid var(--bloom-understand); background: #f0f9f0; }
+
+/* set notation — main content of each cell */
+.pt-set {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1a3a5c;
+  line-height: 1.3;
+  margin-bottom: 0.2rem;
+}
+
+/* FOLLOW(...) cells — green text to distinguish from FIRST */
+.pt-set--follow {
+  color: #1a5c2a;
+  font-style: italic;
+}
+
+.pt-num {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: var(--col-accent);
+  color: #fff;
+  padding: 0.05em 0.4em;
+  border-radius: 2px;
+}
+
+/* keep pt-why hidden — no longer used but kept for safety */
+.pt-why { display: none; }
