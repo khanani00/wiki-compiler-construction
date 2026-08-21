@@ -1,29 +1,262 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chapter 2 - Syntax Analysis</title>
-    <link rel="stylesheet" href="../css/style.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapter 2 — Syntax Analysis | COS341 Supplement</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/chapter2.css" />
 </head>
 <body>
-     <!-- ── HEADER ─────────────────────────────────────────────── -->
-    <header class="site-header">
-        <div class="site-header__inner">
-        <span class="site-header__course">COS341 Supplementary Material</span>
-        <nav class="site-header__nav">
-            <a href="index.html">Home</a>
-            <a href="#">Chapters</a>
-            <a href="grammar.html">Grammar</a>
-        </nav>
-        </div>
-    </header>
 
+  <header class="site-header">
+    <div class="site-header__inner">
+      <span class="site-header__course">COS341 Supplementary Material</span>
+      <nav class="site-header__nav">
+        <a href="index.html">Home</a>
+        <a href="#">Chapters</a>
+        <a href="grammar.html">Grammar</a>
+      </nav>
+    </div>
+  </header>
 
-    <footer class="site-footer">
-        <p>COS341 Supplementary Material &mdash; University of Pretoria &mdash; Based on Mogensen, <em>Introduction to Compiler Design</em>, 2nd ed.</p>
-    </footer>
-    
-    <script src="../js/chapter2.js"></script>
+  <main class="article">
+
+    <p class="breadcrumb">Chapters &rsaquo; Chapter 2 &rsaquo; Syntax Analysis</p>
+    <h1 class="article__title">Chapter 2 &mdash; Syntax Analysis</h1>
+    <p class="article__subtitle">Building a parser that deterministically knows which rule to apply next.</p>
+
+    <!-- ── LL(1) PARSING EXAMPLE ────────────────────────────────── -->
+    <section class="section" id="ll1-example">
+      <h2>LL(1) Parsing — Applied to the <a href="grammar.html">Referenced Grammar</a></h2>
+      <p>We apply the full LL(1) analysis to a subset of the referenced grammar —
+         the parts covering variable declarations, statements, and the program structure.
+         This is where the nullable production lives and where the interesting decisions happen.</p>
+
+      <!-- ── GRAMMAR SUBSET ──────────────────────────────────────── -->
+      <h3>Grammar Subset</h3>
+      <div class="grammar-subset">
+        <table class="op-table">
+          <thead><tr><th>#</th><th>Production</th><th>Section</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><code>PROGRAM &rarr; main ( GLOBVARS ) ALGORITHM FUNCTIONS</code></td><td>Top level</td></tr>
+            <tr><td>2</td><td><code>GLOBVARS &rarr; VARS</code></td><td>Global vars</td></tr>
+            <tr><td>3</td><td><code>VARS &rarr; &epsilon;</code></td><td>Empty var list</td></tr>
+            <tr><td>4</td><td><code>VARS &rarr; VAR , VARS</code></td><td>Non-empty var list</td></tr>
+            <tr><td>5</td><td><code>VAR &rarr; VTYPE VNAME</code></td><td>Single declaration</td></tr>
+            <tr><td>6</td><td><code>VTYPE &rarr; number</code></td><td>Number type</td></tr>
+            <tr><td>7</td><td><code>VTYPE &rarr; text</code></td><td>Text type</td></tr>
+            <tr><td>8</td><td><code>ALGORITHM &rarr; { STAT }</code></td><td>Statement block</td></tr>
+            <tr><td>9</td><td><code>STAT &rarr; VNAME := EXPR</code></td><td>Assignment</td></tr>
+            <tr><td>10</td><td><code>STAT &rarr; return EXPR</code></td><td>Return</td></tr>
+            <tr><td>11</td><td><code>STAT &rarr; if COND then ALGORITHM else ALGORITHM</code></td><td>Conditional</td></tr>
+            <tr><td>12</td><td><code>STAT &rarr; while COND do ALGORITHM</code></td><td>Loop</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── NULLABLE ────────────────────────────────────────────── -->
+      <h3>Step 1 &mdash; Nullable</h3>
+      <p>Which nonterminals can derive the empty string?</p>
+      <table class="op-table">
+        <thead><tr><th>Nonterminal</th><th>Nullable?</th><th>Reason</th></tr></thead>
+        <tbody>
+          <tr><td><code>VARS</code></td><td><span class="badge badge--yes">YES</span></td><td>Production 3: <code>VARS &rarr; &epsilon;</code> directly</td></tr>
+          <tr><td><code>GLOBVARS</code></td><td><span class="badge badge--yes">YES</span></td><td><code>GLOBVARS &rarr; VARS</code> and VARS is nullable</td></tr>
+          <tr><td><code>PROGRAM</code></td><td><span class="badge badge--no">NO</span></td><td>Starts with terminal <code>main</code></td></tr>
+          <tr><td><code>VAR</code></td><td><span class="badge badge--no">NO</span></td><td>VTYPE is not nullable — both its productions are terminals</td></tr>
+          <tr><td><code>VTYPE</code></td><td><span class="badge badge--no">NO</span></td><td>Productions are <code>number</code> and <code>text</code> — both terminals</td></tr>
+          <tr><td><code>ALGORITHM</code></td><td><span class="badge badge--no">NO</span></td><td>Starts with terminal <code>{</code></td></tr>
+          <tr><td><code>STAT</code></td><td><span class="badge badge--no">NO</span></td><td>All productions start with a terminal or non-nullable nonterminal</td></tr>
+        </tbody>
+      </table>
+
+      <!-- ── FIRST ───────────────────────────────────────────────── -->
+      <h3>Step 2 &mdash; FIRST Sets</h3>
+      <p>FIRST(N) = the terminals that can begin a string derived from N.</p>
+      <table class="op-table">
+        <thead><tr><th>Nonterminal</th><th>FIRST set</th><th>How</th></tr></thead>
+        <tbody>
+          <tr><td><code>VTYPE</code></td><td><code>{ number, text }</code></td><td>Directly from the two terminal productions</td></tr>
+          <tr><td><code>VAR</code></td><td><code>{ number, text }</code></td><td><code>VAR &rarr; VTYPE VNAME</code> &rarr; FIRST(VTYPE)</td></tr>
+          <tr><td><code>VARS</code></td><td><code>{ number, text }</code></td><td><code>VARS &rarr; VAR , VARS</code> &rarr; FIRST(VAR). Empty production contributes &empty;</td></tr>
+          <tr><td><code>GLOBVARS</code></td><td><code>{ number, text }</code></td><td><code>GLOBVARS &rarr; VARS</code> &rarr; FIRST(VARS)</td></tr>
+          <tr><td><code>ALGORITHM</code></td><td><code>{ { }</code></td><td>Starts with terminal <code>{</code></td></tr>
+          <tr><td><code>STAT</code></td><td><code>{ _vname, return, if, while }</code></td><td>Each production starts with a distinct terminal</td></tr>
+          <tr><td><code>PROGRAM</code></td><td><code>{ main }</code></td><td>Starts with keyword <code>main</code></td></tr>
+        </tbody>
+      </table>
+
+      <!-- ── FOLLOW ──────────────────────────────────────────────── -->
+      <h3>Step 3 &mdash; FOLLOW Sets</h3>
+      <p>FOLLOW(N) = terminals that can appear immediately <em>after</em> N in a derivation from the start symbol.</p>
+      <table class="op-table">
+        <thead><tr><th>Nonterminal</th><th>FOLLOW set</th><th>Constraint source</th></tr></thead>
+        <tbody>
+          <tr><td><code>GLOBVARS</code></td><td><code>{ ) }</code></td><td><code>PROGRAM &rarr; main ( GLOBVARS ) ...</code> &mdash; <code>)</code> immediately follows</td></tr>
+          <tr><td><code>VARS</code></td><td><code>{ ) }</code></td><td><code>GLOBVARS &rarr; VARS</code> so FOLLOW(GLOBVARS) &sube; FOLLOW(VARS)</td></tr>
+          <tr><td><code>VAR</code></td><td><code>{ , }</code></td><td><code>VARS &rarr; VAR , VARS</code> &mdash; <code>,</code> immediately follows VAR</td></tr>
+          <tr><td><code>VTYPE</code></td><td><code>{ _vname }</code></td><td><code>VAR &rarr; VTYPE VNAME</code> &mdash; FIRST(VNAME) = {_vname} follows VTYPE</td></tr>
+          <tr><td><code>ALGORITHM</code></td><td><code>{ else, $, until, then }</code></td><td>Appears in if-then-else, while-do, repeat-until, and at program end</td></tr>
+          <tr><td><code>STAT</code></td><td><code>{ } }</code></td><td><code>ALGORITHM &rarr; { STAT }</code> &mdash; <code>}</code> follows STAT</td></tr>
+        </tbody>
+      </table>
+
+      <!-- ── PARSE TABLE ─────────────────────────────────────────── -->
+      <h3>Step 4 &mdash; LL(1) Parse Table</h3>
+      <p>Each cell is indexed by LA(N) — the lookahead set for that nonterminal — and the
+         current input token. Cells filled by Rule 1 show the FIRST set symbol in blue.
+         Cells filled by Rule 2 (nullable production) show <code>FOLLOW(N)</code> in green.
+         Empty cells = syntax error. This matches the LA-set notation used in lectures.</p>
+
+      <div class="parse-table-wrapper">
+        <table class="parse-table parse-table--static">
+          <thead>
+            <tr>
+              <th class="pt-corner">LA(N) \ token</th>
+              <th>main</th>
+              <th>number</th>
+              <th>text</th>
+              <th>_vname</th>
+              <th>)</th>
+              <th>{</th>
+              <th>return</th>
+              <th>if</th>
+              <th>while</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <tr>
+              <td class="pt-nt">LA(PROGRAM)</td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{main}</span><span class="pt-num">#1</span></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+            </tr>
+
+            <tr>
+              <td class="pt-nt">LA(GLOBVARS)</td>
+              <td class="pt-empty"></td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{number}</span><span class="pt-num">#2</span></td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{text}</span><span class="pt-num">#2</span></td>
+              <td class="pt-empty"></td>
+              <td class="pt-cell pt-cell--r2"><span class="pt-set pt-set--follow">FOLLOW(GLOBVARS)</span><span class="pt-num">#2</span></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+            </tr>
+
+            <tr>
+              <td class="pt-nt">LA(VARS)</td>
+              <td class="pt-empty"></td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{number}</span><span class="pt-num">#4</span></td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{text}</span><span class="pt-num">#4</span></td>
+              <td class="pt-empty"></td>
+              <td class="pt-cell pt-cell--r2"><span class="pt-set pt-set--follow">FOLLOW(VARS)</span><span class="pt-num">#3 (&epsilon;)</span></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+            </tr>
+
+            <tr>
+              <td class="pt-nt">LA(VAR)</td>
+              <td class="pt-empty"></td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{number}</span><span class="pt-num">#5</span></td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{text}</span><span class="pt-num">#5</span></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+            </tr>
+
+            <tr>
+              <td class="pt-nt">LA(VTYPE)</td>
+              <td class="pt-empty"></td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{number}</span><span class="pt-num">#6</span></td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{text}</span><span class="pt-num">#7</span></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+            </tr>
+
+            <tr>
+              <td class="pt-nt">LA(ALGORITHM)</td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{{}</span><span class="pt-num">#8</span></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+            </tr>
+
+            <tr>
+              <td class="pt-nt">LA(STAT)</td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{_vname}</span><span class="pt-num">#9</span></td>
+              <td class="pt-empty"></td>
+              <td class="pt-empty"></td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{return}</span><span class="pt-num">#10</span></td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{if}</span><span class="pt-num">#11</span></td>
+              <td class="pt-cell pt-cell--r1"><span class="pt-set">{while}</span><span class="pt-num">#12</span></td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── CONFLICT CHECK ──────────────────────────────────────── -->
+      <h3>Step 5 &mdash; LL(1) Conflict Check</h3>
+      <p>A grammar is LL(1) if and only if <strong>no cell contains more than one production</strong>.
+         Every cell above has at most one entry &mdash; this grammar subset is LL(1).</p>
+
+      <div class="callout callout--info">
+        <p class="callout__label">The interesting case: VARS</p>
+        <p>VARS has two productions: <code>VARS &rarr; &epsilon;</code> and <code>VARS &rarr; VAR , VARS</code>.
+           FIRST of the non-empty production = {number, text}. The nullable production applies only when
+           <code>t &isin; FOLLOW(VARS) = {)}</code>. The sets {number, text} and {)} are disjoint
+           &rarr; <strong>no conflict</strong>.</p>
+      </div>
+
+      <!-- ── CONFLICT EXAMPLE ────────────────────────────────────── -->
+      <h3>What a Conflict Looks Like &mdash; Dangling Else</h3>
+      <p>If we allowed both:</p>
+      <pre class="code-block"><code>STAT &rarr; if COND then ALGORITHM
+STAT &rarr; if COND then ALGORITHM else ALGORITHM</code></pre>
+      <p>Both have FIRST = {if}. The parse table would have <strong>two productions in the same cell</strong>
+         for STAT under token <code>if</code> &mdash; a conflict. The fix is left-factoring:</p>
+      <pre class="code-block"><code>STAT      &rarr; if COND then ALGORITHM ELSE-PART
+ELSE-PART &rarr; else ALGORITHM
+ELSE-PART &rarr; &epsilon;</code></pre>
+      <p>Now STAT has one production for <code>if</code>. ELSE-PART chooses <code>else ALGORITHM</code>
+         (Rule 1) or <code>&epsilon;</code> when the lookahead is in FOLLOW(ELSE-PART) (Rule 2). No conflict.</p>
+
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>COS341 Supplementary Material &mdash; University of Pretoria &mdash; Based on Mogensen,
+       <em>Introduction to Compiler Design</em>, 2nd ed.</p>
+  </footer>
+
+  <script src="../js/chapter2.js"></script>
 </body>
 </html>

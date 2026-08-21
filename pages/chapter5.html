@@ -30,12 +30,22 @@
     <div class="callout callout--question">
       <p class="callout__label">Opening Problem</p>
       <p>Your parser accepted this program without complaint. It is syntactically valid. But something is wrong:</p>
-      <pre class="code-block"><code>main() {
-  number x := 5;
-  text   y := "hello";
-  number z := x + y;   <span class="code-comment">/* adding a number to text — should this work? */</span>
+      <pre class="code-block"><code>main(number a, number b) {
+  number result := 0;
+  result := gcd(a, b);
+  return result
+}
+
+gcd(number a, number b) {
+  number temp := 0;
+  while (b > 0) do {
+    temp := b;
+    b := a - (a / b * b);   <span class="code-comment">/* what if b is text? parser won't catch it */</span>
+    a := temp
+  };
+  return a
 }</code></pre>
-      <p>The parser's job is structure, not meaning. It sees <code>EXPR + EXPR</code> and passes it through. The <strong>type checker</strong> is the phase that catches this — before the program ever runs.</p>
+      <p>The parser's job is structure, not meaning. It sees <code>EXPR BINOP EXPR</code> and passes it through regardless of types. The <strong>type checker</strong> is the phase that verifies every operation makes sense — before the program ever runs.</p>
     </div>
 
     <!-- ── EVENT 2: LEARNING OBJECTIVES ─────────────────────────── -->
@@ -44,7 +54,7 @@
       <ul class="objectives-list">
         <li><span class="bloom bloom--remember">Remember</span> what synthesised and inherited attributes are and how they flow through the AST.</li>
         <li><span class="bloom bloom--understand">Understand</span> how <code>CheckExp</code> recursively type-checks an expression using <code>vtable</code> and <code>ftable</code>.</li>
-        <li><span class="bloom bloom--apply">Apply</span> <code>CheckExp</code> by hand to trace the type-checking of a concrete expression step by step.</li>
+        <li><span class="bloom bloom--apply">Apply</span> <code>CheckExp</code> by hand to trace the type-checking of a concrete expression from the GCD program step by step.</li>
         <li><span class="bloom bloom--analyse">Analyse</span> what happens when a type error is detected and how the checker continues past it.</li>
         <li><span class="bloom bloom--evaluate">Evaluate</span> the design choice of returning a guessed type after an error rather than stopping.</li>
       </ul>
@@ -53,19 +63,21 @@
     <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
     <section class="section" id="recall">
       <h2>Connecting to What You Already Know</h2>
-      <p>In Chapter 3 you built a <strong>symbol table</strong> that maps names to information about what those names are bound to. In that chapter the information stored was the type, scope level, and declaration status of each variable.</p>
-      <p>In Chapter 5 that same symbol table becomes the <strong>environment</strong> the type checker runs on. Specifically, two tables are passed through every type-checking function:</p>
+      <p>In <a href="chapter3.html">Chapter 3</a> you built a <strong>symbol table</strong> that maps names to information about what those names are bound to. For the GCD program, that process produced the following tables:</p>
       <div class="two-col">
         <div class="info-card">
-          <p class="info-card__label">vtable</p>
-          <p>Maps <strong>variable names</strong> to their declared types (<code>number</code> or <code>text</code> in our grammar).</p>
+          <p class="info-card__label">vtable (inside gcd)</p>
+          <p><code>a &rarr; number</code><br>
+             <code>b &rarr; number</code><br>
+             <code>temp &rarr; number</code></p>
         </div>
         <div class="info-card">
-          <p class="info-card__label">ftable</p>
-          <p>Maps <strong>function names</strong> to their signatures — the list of parameter types and the return type.</p>
+          <p class="info-card__label">ftable (global)</p>
+          <p><code>gcd &rarr; (number, number) &rarr; number</code><br>
+             <code>isZero &rarr; (number) &rarr; number</code></p>
         </div>
       </div>
-      <p>These are not new data structures. They are the persistent symbol tables from Chapter 3, populated by crawling the AST, now being <em>used</em> to check types.</p>
+      <p>These are not new data structures. They are the persistent symbol tables from <a href="chapter3.html">Chapter 3</a>, populated by crawling the AST, now being <em>used</em> to check types. The type checker inherits them and passes them through every recursive call.</p>
     </section>
 
     <!-- ── EVENT 4: ATTRIBUTES ───────────────────────────────────── -->
@@ -76,30 +88,26 @@
       <div class="attr-diagram" id="attrDiagram">
         <div class="attr-tree">
           <div class="attr-node attr-node--root">
-            <span class="node-label">if x &lt; 5 then x + 1 else 0</span>
+            <span class="node-label">a - (a / b * b) &nbsp;&nbsp;<span style="font-size:0.75rem;color:#888">(from gcd body)</span></span>
           </div>
           <div class="attr-children">
             <div class="attr-branch">
               <div class="attr-arrow attr-arrow--down">vtable, ftable &darr;</div>
-              <div class="attr-node attr-node--cond">x &lt; 5 <span class="attr-badge attr-badge--synth">bool &uarr;</span></div>
+              <div class="attr-node attr-node--cond">a <span class="attr-badge attr-badge--synth">number &uarr;</span></div>
             </div>
             <div class="attr-branch">
               <div class="attr-arrow attr-arrow--down">vtable, ftable &darr;</div>
-              <div class="attr-node attr-node--then">x + 1 <span class="attr-badge attr-badge--synth">number &uarr;</span></div>
-            </div>
-            <div class="attr-branch">
-              <div class="attr-arrow attr-arrow--down">vtable, ftable &darr;</div>
-              <div class="attr-node attr-node--else">0 <span class="attr-badge attr-badge--synth">number &uarr;</span></div>
+              <div class="attr-node attr-node--then">(a / b * b) <span class="attr-badge attr-badge--synth">number &uarr;</span></div>
             </div>
           </div>
           <div class="attr-node attr-node--result">
-            Result type: <strong>number</strong> &uarr; (synthesised from branches)
+            Result type: <strong>number</strong> &uarr; (synthesised — subtraction of two numbers)
           </div>
         </div>
         <div class="attr-legend">
           <span class="attr-badge attr-badge--synth">type &uarr;</span> Synthesised — returned upward
           &nbsp;&nbsp;
-          <span class="attr-arrow attr-arrow--down" style="display:inline">↓</span> Inherited — passed downward
+          <span class="attr-arrow attr-arrow--down" style="display:inline">&darr;</span> Inherited — passed downward
         </div>
       </div>
 
@@ -107,7 +115,7 @@
       <p><strong>Synthesised attributes</strong> (the type of each subexpression) are returned <em>up</em> — each call tells its caller what type it computed.</p>
     </section>
 
-    <!-- ── EVENT 4 cont: CheckExp reference ─────────────────────── -->
+    <!-- ── CheckExp reference ────────────────────────────────────── -->
     <section class="section" id="checkexp-ref">
       <h2>CheckExp — The Type-Checking Function</h2>
       <p><code>CheckExp</code> takes an expression node from the AST, the variable environment <code>vtable</code>, and the function environment <code>ftable</code>. It returns the <strong>type</strong> of the expression, or reports an error and returns a guessed type so that checking can continue.</p>
@@ -116,8 +124,8 @@
       <div class="checkexp-layout">
         <div class="checkexp-code-wrap">
           <p class="demo-label">CheckExp — All Cases</p>
-          <pre class="code-block code-block--checkexp" id="checkexpCode"><code><span class="ce-case" data-case="num">num
-  &rarr; int</span>
+          <pre class="code-block code-block--pseudo" id="checkexpCode"><code><span class="ce-case" data-case="num">num
+  &rarr; number</span>
 
 <span class="ce-case" data-case="id">id
   t = lookup(vtable, getname(id))
@@ -125,14 +133,14 @@
     then error(); return number
     else return t</span>
 
-<span class="ce-case" data-case="plus">Exp1 + Exp2
+<span class="ce-case" data-case="plus">Exp1 + Exp2  (or -, *, /)
   t1 = CheckExp(Exp1, vtable, ftable)
   t2 = CheckExp(Exp2, vtable, ftable)
   if t1 = number and t2 = number
     then return number
     else error(); return number</span>
 
-<span class="ce-case" data-case="lt">Exp1 &lt; Exp2
+<span class="ce-case" data-case="lt">Exp1 &lt; Exp2  (or >, =, <=, >=)
   t1 = CheckExp(Exp1, vtable, ftable)
   t2 = CheckExp(Exp2, vtable, ftable)
   if t1 = t2
@@ -154,7 +162,7 @@
   else
     (t1,...,tn) &rarr; t0 = t
     [t'1,...,t'm] = CheckExps(Exps, vtable, ftable)
-    if m = n and t1=t'1, ..., tn=t'n
+    if m = n and t1=t'1,...,tn=t'n
       then return t0
       else error(); return t0</span>
 
@@ -171,72 +179,96 @@
           </div>
           <div class="explain-panel" data-panel="num" style="display:none">
             <h4>Number literal</h4>
-            <p>A numeric constant always has type <code>number</code>. No lookup needed — the type is known from the token itself.</p>
-            <p class="explain-example">Example: <code>42</code> &rarr; <code>number</code></p>
+            <p>A numeric constant always has type <code>number</code>. No lookup needed.</p>
+            <p class="explain-example">In GCD: <code>0</code> in <code>number temp := 0</code> &rarr; <code>number</code></p>
           </div>
           <div class="explain-panel" data-panel="id" style="display:none">
             <h4>Variable reference</h4>
-            <p>Look up the variable name in <code>vtable</code>. If it is found, return its declared type. If not found (<code>unbound</code>), report an error and guess <code>number</code> so checking can continue.</p>
-            <p class="explain-example">Example: if <code>vtable</code> contains <code>x &rarr; number</code>, then <code>x</code> &rarr; <code>number</code>.</p>
-            <p class="explain-watch">Watch out: if the variable was never declared, lookup returns <code>unbound</code> — this is the undeclared variable error.</p>
+            <p>Look up the variable name in <code>vtable</code>. If found, return its declared type. If not found, report an error and guess <code>number</code>.</p>
+            <p class="explain-example">In GCD: <code>lookup(vtable, "a")</code> &rarr; <code>number</code> ✓</p>
+            <p class="explain-watch">Watch out: if <code>b</code> were undeclared, lookup returns <code>unbound</code> — undeclared variable error.</p>
           </div>
           <div class="explain-panel" data-panel="plus" style="display:none">
-            <h4>Addition</h4>
-            <p>Recursively check both sides. Both must be <code>number</code>. If either is not, report an error. Either way, the result type is <code>number</code>.</p>
-            <p class="explain-example">Example: <code>x + 5</code> where <code>x : number</code> &rarr; <code>number</code>.</p>
-            <p class="explain-watch">Watch out: <code>x + y</code> where <code>y : text</code> triggers an error. The checker still returns <code>number</code> as a guess and continues.</p>
+            <h4>Arithmetic (BINOP)</h4>
+            <p>Both operands must be <code>number</code>. Result is <code>number</code>. This covers <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code> in the <a href="grammar.html">referenced grammar</a>.</p>
+            <p class="explain-example">In GCD: <code>a / b</code> — both <code>number</code> &rarr; <code>number</code> ✓</p>
+            <p class="explain-watch">Watch out: <code>a - (a / b * b)</code> requires three nested arithmetic checks, each returning <code>number</code>.</p>
           </div>
           <div class="explain-panel" data-panel="lt" style="display:none">
-            <h4>Comparison</h4>
-            <p>Both operands must have the <em>same</em> type — the comparison works on any type as long as both sides match. The result is always <code>bool</code>.</p>
-            <p class="explain-example">Example: <code>x &lt; 5</code> where <code>x : number</code> &rarr; <code>bool</code>.</p>
-            <p class="explain-watch">Note: this differs from addition — comparison does not require <code>number</code>, just that both sides match.</p>
+            <h4>Comparison (RELOP)</h4>
+            <p>Both operands must have the <em>same</em> type. Result is always <code>bool</code>.</p>
+            <p class="explain-example">In GCD: <code>b > 0</code> — <code>b : number</code>, <code>0 : number</code> &rarr; <code>bool</code> ✓</p>
+            <p class="explain-example">In isZero: <code>x = 0</code> — <code>x : number</code>, <code>0 : number</code> &rarr; <code>bool</code> ✓</p>
           </div>
           <div class="explain-panel" data-panel="if" style="display:none">
-            <h4>Conditional expression</h4>
-            <p>Three recursive calls. The condition must be <code>bool</code>. Both branches must have the <em>same</em> type. The result type is that shared type.</p>
-            <p class="explain-example">Example: <code>if x &lt; 5 then x + 1 else 0</code> — condition is <code>bool</code>, both branches are <code>number</code> &rarr; result is <code>number</code>.</p>
-            <p class="explain-watch">Watch out: if the branches have different types, an error is reported and the then-branch type is guessed. This is an arbitrary choice.</p>
+            <h4>Conditional (if-then-else)</h4>
+            <p>Condition must be <code>bool</code>. Both branches must have the same type. Result is that shared type.</p>
+            <p class="explain-example">In isZero: condition <code>x = 0</code> is <code>bool</code> ✓, then-branch <code>1</code> is <code>number</code>, else-branch <code>0</code> is <code>number</code> — match ✓ &rarr; result <code>number</code>.</p>
           </div>
           <div class="explain-panel" data-panel="call" style="display:none">
             <h4>Function call</h4>
-            <p>Look up the function name in <code>ftable</code> to get its signature. Check that the number of arguments matches and each argument type matches the declared parameter type. Return the function's return type.</p>
-            <p class="explain-example">Example: if <code>ftable</code> has <code>add &rarr; (number, number) &rarr; number</code>, then <code>add(x, 5)</code> where <code>x : number</code> &rarr; <code>number</code>.</p>
-            <p class="explain-watch">Watch out: wrong number of arguments or a type mismatch both trigger errors.</p>
+            <p>Look up the function in <code>ftable</code>. Check argument count and types. Return the declared return type.</p>
+            <p class="explain-example">In main: <code>gcd(a, b)</code> — ftable has <code>gcd &rarr; (number, number) &rarr; number</code>. <code>a : number</code>, <code>b : number</code> — match ✓ &rarr; returns <code>number</code>.</p>
           </div>
           <div class="explain-panel" data-panel="let" style="display:none">
             <h4>Let expression</h4>
-            <p>Check the right-hand side expression to find its type. Extend <code>vtable</code> with the new binding. Use the extended table to check the body. Return the body's type.</p>
-            <p class="explain-example">Example: <code>let z = x + 1 in z &lt; 10</code> — <code>z</code> gets type <code>number</code>, body type is <code>bool</code>.</p>
-            <p class="explain-watch">Note: a let-expression cannot itself cause a type error — only its subexpressions can.</p>
+            <p>Check the RHS, extend vtable, check the body with the extended table.</p>
+            <p class="explain-example">Not directly used in GCD (declarations use assignment syntax), but the same pattern applies: once a variable is bound, its type flows into all subsequent uses via the extended vtable.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ── EVENT 5: WORKED TRACE ─────────────────────────────────── -->
+    <!-- ── EVENT 5: WORKED TRACE — GCD ──────────────────────────── -->
     <section class="section" id="trace">
-      <h2>Worked Example — Step-by-Step Trace</h2>
-      <p>We trace <code>CheckExp</code> on the expression below, taken from a program in the unified grammar. The vtable and ftable are shown on the right.</p>
+      <h2>Worked Example — Type-Checking the GCD Body</h2>
+      <p>We walk through the full type-checking process for the GCD program — from
+         <code>CheckProgram</code> building the function table, through <code>CheckFun(main)</code>,
+         to <code>CheckFun(gcd)</code> and its body expressions. Use the stepper to follow each
+         decision the type checker makes. The environments are shown to the right.</p>
 
       <div class="trace-setup">
         <div class="trace-program">
-          <p class="demo-label">Expression to type-check</p>
-          <pre class="code-block"><code>if x &lt; 5 then x + 1 else 0</code></pre>
-          <p style="font-size:0.85rem; color:var(--col-muted); margin-top:0.4rem">This expression appears inside a function body where <code>x</code> has been declared.</p>
+          <p class="demo-label">Program being type-checked</p>
+          <pre class="code-block" style="font-size:0.78rem"><code>main(number a, number b) {
+  number result := 0;
+  result := gcd(a, b);
+  return result
+}
+gcd(number a, number b) {
+  number temp := 0;
+  while (b > 0) do {
+    temp := b;
+    b := a - (a / b * b);
+    a := temp
+  };
+  return a
+}
+isZero(number x) {
+  number out := 0;
+  if (x = 0) then {
+    out := 1
+  } else {
+    out := 0
+  };
+  return out
+}</code></pre>
         </div>
         <div class="trace-env">
-          <p class="demo-label">Environments</p>
+          <p class="demo-label">Environments (inside gcd)</p>
           <table class="sym-table">
             <thead><tr><th>vtable</th><th>type</th></tr></thead>
             <tbody>
-              <tr><td><code>x</code></td><td><code>number</code></td></tr>
+              <tr><td><code>a</code></td><td><code>number</code></td></tr>
+              <tr><td><code>b</code></td><td><code>number</code></td></tr>
+              <tr><td><code>temp</code></td><td><code>number</code></td></tr>
             </tbody>
           </table>
           <table class="sym-table" style="margin-top:0.6rem">
             <thead><tr><th>ftable</th><th>signature</th></tr></thead>
             <tbody>
-              <tr><td colspan="2" style="color:var(--col-muted); font-style:italic; font-size:0.82rem">(no functions in scope)</td></tr>
+              <tr><td><code>gcd</code></td><td><code>(num,num)&rarr;num</code></td></tr>
+              <tr><td><code>isZero</code></td><td><code>(num)&rarr;num</code></td></tr>
             </tbody>
           </table>
         </div>
@@ -246,25 +278,86 @@
       <div class="stepper" id="stepper">
         <div class="stepper-controls">
           <button class="btn" id="prevStep" disabled>&larr; Previous</button>
-          <span class="stepper-counter" id="stepCounter">Step 1 of 7</span>
+          <span class="stepper-counter" id="stepCounter">Step 1 of 8</span>
           <button class="btn" id="nextStep">Next &rarr;</button>
         </div>
-
+        <div style="background:#2a3550;padding:0.4rem 1rem;font-family:var(--font-ui);font-size:0.75rem;color:#8fa8c8;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;">
+          <span id="stepPhase">Phase 1 &mdash; CheckProgram</span>
+        </div>
         <div class="stepper-body">
-          <div class="stepper-tree" id="stepTree">
-            <!-- tree updated by JS -->
-          </div>
-          <div class="stepper-detail" id="stepDetail">
-            <!-- detail updated by JS -->
-          </div>
+          <div class="stepper-tree" id="stepTree"></div>
+          <div class="stepper-detail" id="stepDetail"></div>
         </div>
       </div>
 
       <div class="callout callout--info" style="margin-top:1.5rem">
         <p class="callout__label">Key Takeaway from the Trace</p>
-        <p>Notice that <code>vtable</code> and <code>ftable</code> are passed <strong>unchanged</strong> into every recursive call. They are <em>inherited</em> — pushed down the tree. The <strong>type</strong> that each call returns is <em>synthesised</em> — bubbled back up. The final answer (<code>number</code>) is assembled from the bottom of the tree upward.</p>
+        <p>The expression <code>a - (a / b * b)</code> involves five variable lookups and three arithmetic operations, all nested. Every single recursive call receives the <strong>same</strong> <code>vtable</code> and <code>ftable</code> — inherited unchanged from above. Each call returns <code>number</code> upward — synthesised from below. The final result is <code>number</code>, which matches the declared type of <code>b</code>, so the assignment is valid.</p>
+      </div>
+
+      <h3>Type-Checking the Full gcd Function</h3>
+      <p>Once the expressions are checked, <code>CheckFun</code> verifies the whole function. For <code>gcd</code>:</p>
+      <ol class="trace-list">
+        <li><code>GetTypeId</code> extracts the declared return type: <code>number</code>.</li>
+        <li><code>CheckTypeIds</code> builds the vtable: <code>{a &rarr; number, b &rarr; number}</code> and confirms no duplicate parameter names.</li>
+        <li><code>bind("temp", number)</code> is added when the local declaration is processed.</li>
+        <li><code>CheckExp</code> is called on the body — the while loop, its condition, and all statements inside.</li>
+        <li>The return expression <code>a</code> is type-checked: <code>lookup(vtable, "a")</code> &rarr; <code>number</code>.</li>
+        <li>Declared return type (<code>number</code>) matches body type (<code>number</code>) &rarr; <strong>no error</strong>.</li>
+      </ol>
+
+      <!-- Textbook bug -->
+      <div class="callout callout--warn" style="margin-top:1.2rem">
+        <p class="callout__label">Known Error in Mogensen (2nd ed.) — Fig. 5.3 and Fig. 5.4</p>
+        <p>The textbook contains two logically inverted conditions.</p>
+        <table class="op-table" style="margin-top:0.8rem">
+          <thead><tr><th>Location</th><th>As printed (incorrect)</th><th>Should be</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Fig. 5.3 — <code>CheckFun</code></td>
+              <td><code>if t0 = t1 then error()</code></td>
+              <td><code>if t0 &ne; t1 then error()</code></td>
+            </tr>
+            <tr>
+              <td>Fig. 5.4 — <code>CheckProgram</code></td>
+              <td><code>if lookup(ftable, main) = (int)&rarr;int then error()</code></td>
+              <td><code>if lookup(ftable, main) &ne; (int)&rarr;int then error()</code></td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin-top:0.7rem">As printed, <code>CheckFun</code> fires an error when the declared return type <em>matches</em> the body — the exact case where no error should occur. Implement the corrected versions above.</p>
       </div>
     </section>
+
+      <!-- Textbook bug -->
+      <div class="callout callout--warn" style="margin-top:1.2rem">
+        <p class="callout__label">Known Errors in Mogensen (2nd ed.) &mdash; Fig. 5.3 and Fig. 5.4</p>
+        <p>The textbook contains two logically inverted conditions that were lost in typesetting.
+           Implementing the code as printed will produce a type checker that rejects correct programs
+           and silently accepts incorrect ones.</p>
+        <table class="op-table" style="margin-top:0.8rem">
+          <thead>
+            <tr><th>Figure</th><th>Function</th><th>As printed (wrong)</th><th>Correct version</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Fig. 5.3</td>
+              <td><code>CheckFun</code></td>
+              <td><code>if t0 = t1 then error()</code></td>
+              <td><code>if t0 &ne; t1 then error()</code></td>
+            </tr>
+            <tr>
+              <td>Fig. 5.4</td>
+              <td><code>CheckProgram</code></td>
+              <td><code>if lookup(ftable, main) = (int)&rarr;int then error()</code></td>
+              <td><code>if lookup(ftable, main) &ne; (int)&rarr;int then error()</code></td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin-top:0.7rem">In both cases the error should fire when the types <strong>do not match</strong>
+           (&ne;), not when they do. The condition was almost certainly inverted during typesetting
+           — the = sign should be &ne;.</p>
+      </div>
 
     <!-- ── EXERCISES ─────────────────────────────────────────────── -->
     <section class="section" id="exercises">
@@ -272,46 +365,46 @@
 
       <div class="exercise">
         <p class="exercise__level"><span class="bloom bloom--remember">Remember</span> Exercise 5.1</p>
-        <p>What is the difference between a synthesised attribute and an inherited attribute? Give one example of each from the type-checking phase.</p>
+        <p>What is the difference between a synthesised attribute and an inherited attribute? Give one example of each from the GCD type-checking trace above.</p>
         <details class="exercise__hint">
           <summary>Show answer</summary>
-          <p>A <strong>synthesised</strong> attribute is computed from the children of a node and returned upward — the type of an expression is synthesised. An <strong>inherited</strong> attribute is passed downward from a parent to its children — <code>vtable</code> and <code>ftable</code> are inherited, since every subexpression needs access to the same environment.</p>
+          <p>A <strong>synthesised</strong> attribute is computed from the children and returned upward — e.g. the type <code>number</code> returned by <code>CheckExp(a, ...)</code>. An <strong>inherited</strong> attribute is passed downward — e.g. the <code>vtable</code> containing <code>{a, b, temp}</code> passed into every recursive call inside <code>gcd</code>.</p>
         </details>
       </div>
 
       <div class="exercise">
         <p class="exercise__level"><span class="bloom bloom--apply">Apply</span> Exercise 5.2</p>
-        <p>Given the vtable <code>{x &rarr; number, y &rarr; text}</code> and an empty ftable, trace <code>CheckExp</code> on the expression <code>x + y</code>. Write out each recursive call, the value returned, and when the error fires.</p>
+        <p>Trace <code>CheckExp</code> on the condition <code>b > 0</code> from the GCD while loop. Write out each call, the value returned, and the final type. Use the vtable <code>{a &rarr; number, b &rarr; number, temp &rarr; number}</code>.</p>
         <details class="exercise__hint">
           <summary>Show hint</summary>
-          <p>Start at the <code>Exp1 + Exp2</code> case. Make two recursive calls — one for <code>x</code> (variable lookup) and one for <code>y</code> (variable lookup). Then check whether both returned types are <code>number</code>.</p>
+          <p>This is a comparison (<code>RELOP</code> case). Make two recursive calls — <code>CheckExp(b, ...)</code> and <code>CheckExp(0, ...)</code>. Check that both return the same type, then return <code>bool</code>.</p>
         </details>
       </div>
 
       <div class="exercise">
         <p class="exercise__level"><span class="bloom bloom--apply">Apply</span> Exercise 5.3</p>
-        <p>Using the unified grammar, write a program with a function <code>double</code> that takes a <code>number</code> and returns a <code>number</code>. Manually construct the <code>ftable</code> entry for <code>double</code>, then trace <code>CheckExp</code> on the call <code>double(x + 1)</code> where <code>x : number</code>.</p>
+        <p>Trace <code>CheckExp</code> on the function call <code>gcd(a, b)</code> in the body of <code>main</code>. The ftable contains <code>gcd &rarr; (number, number) &rarr; number</code> and the vtable for main contains <code>{a &rarr; number, b &rarr; number, result &rarr; number}</code>. Show all steps.</p>
         <details class="exercise__hint">
           <summary>Show hint</summary>
-          <p>The ftable entry for <code>double</code> should be <code>double &rarr; (number) &rarr; number</code>. Use the function call case of CheckExp. First look up <code>double</code> in ftable, then call CheckExps on the argument list, then compare argument types against the signature.</p>
+          <p>Use the function call case. Look up <code>gcd</code> in ftable. Call <code>CheckExps</code> on the argument list <code>[a, b]</code> — each lookup returns <code>number</code>. Check that argument count (2) matches parameter count (2) and types match. Return <code>number</code>.</p>
         </details>
       </div>
 
       <div class="exercise">
         <p class="exercise__level"><span class="bloom bloom--analyse">Analyse</span> Exercise 5.4</p>
-        <p>When <code>CheckExp</code> encounters a type error, it reports the error and then <em>guesses</em> a return type (usually <code>number</code>) so that checking can continue. What is the risk of this strategy? Can you construct an expression where the guess causes a <em>spurious</em> error to be reported further up the tree?</p>
+        <p>Suppose a student writes <code>b := a - (a / b * b)</code> but accidentally declares <code>b</code> as <code>text</code> instead of <code>number</code>. Trace which specific call to <code>CheckExp</code> fires the first error and what type it guesses. Does the error propagate to cause further spurious errors in the same expression?</p>
         <details class="exercise__hint">
           <summary>Show hint</summary>
-          <p>Try an expression like <code>if (x + y) &lt; 5 then ...</code> where <code>y : text</code>. The <code>+</code> fires an error and guesses <code>number</code>. Then the <code>&lt;</code> case gets <code>number</code> on both sides and passes — no spurious error there. Now try nesting the error inside the condition of an if.</p>
+          <p>The first error fires at the <code>a / b</code> division — <code>CheckExp(b)</code> returns <code>text</code>, which fails the <code>t1 = number and t2 = number</code> check. The guess is <code>number</code>. Trace whether that guess causes any further errors in the outer <code>* b</code> and outer <code>a - ...</code>.</p>
         </details>
       </div>
 
       <div class="exercise">
         <p class="exercise__level"><span class="bloom bloom--evaluate">Evaluate</span> Exercise 5.5</p>
-        <p>The textbook's <code>CheckExp</code> always guesses <code>number</code> after a type error. A better alternative is to return an <code>unknown</code> type and treat it as compatible with anything, so that no further spurious errors propagate. What are the trade-offs of each approach? When would the <code>unknown</code> approach fail to catch a real error?</p>
+        <p>The textbook's <code>CheckExp</code> always guesses <code>number</code> after a type error. A better alternative is to return an <code>unknown</code> type compatible with anything. What are the trade-offs? When would <code>unknown</code> fail to catch a real error in the GCD program specifically?</p>
         <details class="exercise__hint">
           <summary>Show hint</summary>
-          <p>Think about what happens when an <code>unknown</code> type flows into a <code>+</code> expression. The checker treats it as compatible and does not report an error. Now think about a situation where two unknown values are compared and the comparison result is used as the condition of an if — has the error been hidden?</p>
+          <p>Think about what happens if <code>unknown</code> flows into the condition <code>b > 0</code>. The comparison case checks <code>t1 = t2</code> — if one is <code>unknown</code> and the other is <code>number</code>, does it pass? If you treat unknown as matching anything, the error is hidden. Is hiding it acceptable here?</p>
         </details>
       </div>
     </section>
@@ -321,7 +414,7 @@
       <h2>What Comes Next</h2>
       <div class="callout callout--next">
         <p class="callout__label">Chapter 6 &rarr; Intermediate Code Generation</p>
-        <p>The type information gathered by <code>CheckExp</code> does not disappear after this phase. In Chapter 6, the code generator uses type annotations to decide which machine instructions to emit. For example, knowing that an addition involves two <code>number</code> values (as opposed to text) tells the code generator to emit an integer addition instruction rather than a string concatenation. The work done in this chapter is what makes that decision possible.</p>
+        <p>The type information gathered here does not disappear. In Chapter 6, the code generator uses type annotations from this phase to decide which machine instructions to emit. For the GCD program, knowing that <code>a</code>, <code>b</code>, and <code>temp</code> are all <code>number</code> tells the code generator to emit integer arithmetic instructions throughout — no runtime type checks needed. The work done in this chapter is what makes that optimisation possible.</p>
       </div>
     </section>
 

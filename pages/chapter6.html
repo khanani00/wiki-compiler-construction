@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapter 6 — Intermediate Code Generation | COS341 Supplement</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/chapter6.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <span class="site-header__course">COS341 Supplementary Material</span>
+      <nav class="site-header__nav">
+        <a href="index.html">Home</a>
+        <a href="#">Chapters</a>
+        <a href="grammar.html">Grammar</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="article">
+
+    <p class="breadcrumb">Chapters &rsaquo; Chapter 6 &rsaquo; Intermediate Code Generation</p>
+    <h1 class="article__title">Chapter 6 &mdash; Intermediate Code Generation</h1>
+    <p class="article__subtitle">Translating the syntax tree into flat, executable instructions — one grammar rule at a time.</p>
+
+    <!-- ── EVENT 1: GAIN ATTENTION ──────────────────────────────── -->
+    <div class="callout callout--question">
+      <p class="callout__label">Opening Problem</p>
+      <p>You have a fully type-checked syntax tree for the GCD program. The tree has structure
+         — nested expressions, a while loop, assignments. But the machine that will run this
+         program has no concept of trees. It executes a flat sequence of simple instructions:
+         load, store, add, jump.</p>
+      <p>How do you get from this:</p>
+      <pre class="code-block"><code>b := a - (a / b * b)    <span class="code-comment">/* nested expression tree */</span></code></pre>
+      <p>To this:</p>
+      <pre class="code-block"><code>t1 := v0            <span class="code-comment">/* load a */</span>
+t2 := v0            <span class="code-comment">/* load a again */</span>
+t3 := v1            <span class="code-comment">/* load b */</span>
+t4 := t2 / t3       <span class="code-comment">/* a / b */</span>
+t5 := t4 * v1       <span class="code-comment">/* * b */</span>
+t6 := t1 - t5       <span class="code-comment">/* a - (...) */</span>
+v1 := t6            <span class="code-comment">/* store result in b */</span></code></pre>
+      <p>The answer is <strong>syntax-directed translation</strong> — a recursive process where
+         every grammar rule has a corresponding translation function. The tree structure
+         <em>guides</em> the translation.</p>
+    </div>
+
+    <!-- ── EVENT 2: LEARNING OBJECTIVES ─────────────────────────── -->
+    <section class="section" id="objectives">
+      <h2>Learning Objectives</h2>
+      <ul class="objectives-list">
+        <li><span class="bloom bloom--remember">Remember</span> what intermediate code is and why compilers use it as a stepping stone between source and machine code.</li>
+        <li><span class="bloom bloom--understand">Understand</span> how syntax-directed translation works — each grammar rule maps to a <code>trans</code> function.</li>
+        <li><span class="bloom bloom--understand">Understand</span> how <code>TransExp</code> and <code>TransStat</code> use <code>newvar</code>, <code>newlabel</code>, <code>vtable</code>, and <code>ftable</code>.</li>
+        <li><span class="bloom bloom--apply">Apply</span> <code>TransExp</code> and <code>TransStat</code> by hand to translate expressions and statements from the GCD program.</li>
+        <li><span class="bloom bloom--apply">Apply</span> the while-loop translation to produce labelled intermediate code with GOTO jumps.</li>
+        <li><span class="bloom bloom--analyse">Analyse</span> the generated code to explain why each temporary variable and label was introduced.</li>
+      </ul>
+    </section>
+
+    <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
+    <section class="section" id="recall">
+      <h2>Connecting to What You Already Know</h2>
+      <p>In <a href="chapter5.html">Chapter 5</a> the type checker walked the syntax tree and
+         verified that every operation made sense. It produced no output code — its job was
+         purely to check. Now in Chapter 6 the same tree is walked again, but this time the
+         goal is to <em>emit</em> instructions.</p>
+      <p>Critically, the vtable and ftable from <a href="chapter3.html">Chapter 3</a> are still
+         in use — but their content has changed. In Chapter 3 the tables stored <em>types</em>.
+         In Chapter 6 they store <em>intermediate-language variable names</em>. The symbol table
+         mechanism is identical; only what it maps names to has changed.</p>
+
+      <div class="two-col-recap">
+        <div class="recap-card">
+          <p class="recap-card__label">Chapter 3 vtable</p>
+          <p>Maps source name &rarr; <strong>type</strong></p>
+          <pre class="code-block" style="font-size:0.78rem;margin:0.4rem 0"><code>a    &rarr; number
+b    &rarr; number
+temp &rarr; number</code></pre>
+        </div>
+        <div class="recap-card">
+          <p class="recap-card__label">Chapter 6 vtable</p>
+          <p>Maps source name &rarr; <strong>internal variable</strong></p>
+          <pre class="code-block" style="font-size:0.78rem;margin:0.4rem 0"><code>a    &rarr; v0
+b    &rarr; v1
+temp &rarr; v2</code></pre>
+        </div>
+      </div>
+
+      <div class="callout callout--info">
+        <p class="callout__label">Gruner's key point from lectures</p>
+        <p>The syntax tree has no meaning by itself — "guided by &ne; determined by". The compiler
+           engineer creates meaning by designing the appropriate attributions. Each grammar rule
+           gets a <code>trans()</code> function. Every tree node corresponds to a recursive
+           function call. The base case returns empty code; recursive cases append code from
+           children and add their own instruction.</p>
+      </div>
+    </section>
+
+    <!-- ── EVENT 4: CORE CONCEPTS ────────────────────────────────── -->
+    <section class="section" id="concepts">
+      <h2>Core Concepts</h2>
+
+      <h3>1. The Intermediate Language</h3>
+      <p>The intermediate language used in this chapter is flat and low-level. Every value
+         must live in a named variable. Every operation produces a result stored in a variable.
+         There are no nested expressions — only sequences of simple instructions.</p>
+
+      <div class="il-instruction-grid">
+        <div class="il-card"><code>x := v</code><span>Assign atom (variable or constant) to x</span></div>
+        <div class="il-card"><code>x := op a</code><span>Unary operation on atom a</span></div>
+        <div class="il-card"><code>x := a op b</code><span>Binary operation</span></div>
+        <div class="il-card"><code>LABEL l</code><span>Mark position l as jump target</span></div>
+        <div class="il-card"><code>GOTO l</code><span>Unconditional jump to label l</span></div>
+        <div class="il-card"><code>IF x relop a THEN l1 ELSE l2</code><span>Conditional jump</span></div>
+        <div class="il-card"><code>x := CALL f(a1,...,an)</code><span>Function call</span></div>
+        <div class="il-card"><code>RETURN x</code><span>Return value from function</span></div>
+      </div>
+
+      <h3>2. Syntax-Directed Translation</h3>
+      <p>Every grammar production has a corresponding translation function. The function
+         for a production walks its children, collects their code, and appends its own
+         instruction(s). This is exactly Gruner's SEQ example from the lecture:</p>
+
+      <div class="sdt-example">
+        <div class="sdt-rule">
+          <p class="sdt-label">Grammar rule</p>
+          <pre class="code-block"><code>SEQ ::= COMMAND ; SEQ'</code></pre>
+        </div>
+        <div class="sdt-arrow">&lrarr;</div>
+        <div class="sdt-attribution">
+          <p class="sdt-label">Translation attribution</p>
+          <pre class="code-block"><code>trans(SEQ):
+  head = trans(COMMAND)
+  tail = trans(SEQ')
+  code = head ++ tail
+  return code</code></pre>
+        </div>
+      </div>
+      <div class="sdt-example">
+        <div class="sdt-rule">
+          <p class="sdt-label">Base case</p>
+          <pre class="code-block"><code>SEQ ::= ε  /nullable</code></pre>
+        </div>
+        <div class="sdt-arrow">&lrarr;</div>
+        <div class="sdt-attribution">
+          <p class="sdt-label">Base case translation</p>
+          <pre class="code-block"><code>trans(SEQ):
+  return ""  // empty code</code></pre>
+        </div>
+      </div>
+
+      <h3>3. TransExp — Translating Expressions</h3>
+      <p><code>TransExp(Exp, vtable, ftable, place)</code> generates code that evaluates
+         <code>Exp</code> and stores the result in the intermediate variable <code>place</code>.
+         The <code>place</code> is an <strong>inherited attribute</strong> — the caller decides
+         where the result goes.</p>
+
+      <pre class="code-block code-block--pseudo"><code>TransExp(num, vtable, ftable, place):
+  v = getvalue(num)
+  return [place := v]
+
+TransExp(id, vtable, ftable, place):
+  x = lookup(vtable, getname(id))
+  return [place := x]
+
+TransExp(Exp1 binop Exp2, vtable, ftable, place):
+  place1 = newvar()
+  place2 = newvar()
+  code1  = TransExp(Exp1, vtable, ftable, place1)
+  code2  = TransExp(Exp2, vtable, ftable, place2)
+  op     = transop(binop)
+  return code1 ++ code2 ++ [place := place1 op place2]</code></pre>
+
+      <h3>4. TransStat — Translating Statements</h3>
+      <p><code>TransStat(Stat, vtable, ftable)</code> generates code for a statement. For
+         control flow (while, if-else) it uses <code>newlabel()</code> to create fresh
+         jump targets and <code>TransCond</code> for conditions.</p>
+
+      <pre class="code-block code-block--pseudo"><code>TransStat(id := Exp, vtable, ftable):
+  place = newvar()
+  x     = lookup(vtable, getname(id))
+  return TransExp(Exp, vtable, ftable, place) ++ [x := place]
+
+TransStat(while Cond do Stat1, vtable, ftable):
+  L1 = newlabel()    // loop entry
+  L2 = newlabel()    // loop body
+  L3 = newlabel()    // loop exit
+  condCode = TransCond(Cond, L2, L3, vtable, ftable)
+  bodyCode = TransStat(Stat1, vtable, ftable)
+  return [LABEL L1] ++ condCode
+      ++ [LABEL L2] ++ bodyCode
+      ++ [GOTO L1, LABEL L3]</code></pre>
+
+      <div class="callout callout--info">
+        <p class="callout__label">The while loop flowchart (from Gruner's lecture)</p>
+        <div class="flowchart">
+          <div class="fc-node fc-label">LABEL entry</div>
+          <div class="fc-arrow">&darr;</div>
+          <div class="fc-node fc-diamond">condition?</div>
+          <div class="fc-branches">
+            <div class="fc-branch">
+              <div class="fc-branch-label">true</div>
+              <div class="fc-arrow">&darr;</div>
+              <div class="fc-node fc-rect">body</div>
+              <div class="fc-arrow">&darr;</div>
+              <div class="fc-node fc-goto">GOTO entry</div>
+            </div>
+            <div class="fc-branch">
+              <div class="fc-branch-label">false</div>
+              <div class="fc-arrow">&darr;</div>
+              <div class="fc-node fc-label">LABEL exit</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── EVENT 5: WORKED EXAMPLE — GCD ────────────────────────── -->
+    <section class="section" id="example">
+      <h2>Worked Example — Translating the GCD Program</h2>
+
+      <div class="callout callout--info">
+        <p class="callout__label">Assumed environments (from scope analysis in Chapter 3)</p>
+        <div class="two-col-recap" style="margin-top:0.5rem">
+          <div class="recap-card">
+            <p class="recap-card__label">vtable (inside gcd)</p>
+            <pre class="code-block" style="font-size:0.78rem;margin:0.4rem 0"><code>a    &rarr; v0
+b    &rarr; v1
+temp &rarr; v2</code></pre>
+          </div>
+          <div class="recap-card">
+            <p class="recap-card__label">ftable (global)</p>
+            <pre class="code-block" style="font-size:0.78rem;margin:0.4rem 0"><code>gcd    &rarr; _gcd
+isZero &rarr; _isZero</code></pre>
+          </div>
+        </div>
+        <p style="font-size:0.85rem;margin-top:0.5rem">newvar() returns t1, t2, t3, ... in sequence. newlabel() returns L1, L2, L3, ...</p>
+      </div>
+
+      <!-- STEPPER -->
+      <div class="stepper" id="stepper">
+        <div class="stepper-controls">
+          <button class="btn" id="prevStep" disabled>&larr; Previous</button>
+          <span class="stepper-counter" id="stepCounter">Step 1 of 9</span>
+          <button class="btn" id="nextStep">Next &rarr;</button>
+        </div>
+        <div style="background:#2a3550;padding:0.4rem 1rem;font-family:var(--font-ui);font-size:0.75rem;color:#8fa8c8;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;">
+          <span id="stepPhase">Statement: temp := b</span>
+        </div>
+        <div class="stepper-body">
+          <div class="stepper-tree" id="stepTree"></div>
+          <div class="stepper-detail" id="stepDetail"></div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:2rem">Full Generated Intermediate Code for gcd</h3>
+      <p>Putting all the translations together, here is the complete intermediate code for
+         the <code>gcd</code> function. Click any line to see which source statement it came from.</p>
+
+      <div class="annotated-code" id="annotatedCode">
+        <div class="ac-source">
+          <p class="demo-label">Source: gcd function</p>
+          <pre class="code-block" style="font-size:0.82rem"><code><span class="src-line" data-group="decl">gcd(number a, number b) {</span>
+<span class="src-line" data-group="decl">  number temp := 0;</span>
+<span class="src-line" data-group="while-cond">  while (b > 0) do {</span>
+<span class="src-line" data-group="temp-assign">    temp := b;</span>
+<span class="src-line" data-group="b-assign">    b := a - (a / b * b);</span>
+<span class="src-line" data-group="a-assign">    a := temp</span>
+<span class="src-line" data-group="while-cond">  };</span>
+<span class="src-line" data-group="ret">  return a</span>
+}</code></pre>
+        </div>
+        <div class="ac-output">
+          <p class="demo-label">Intermediate Code Output</p>
+          <pre class="code-block" style="font-size:0.82rem"><code><span class="il-line" data-group="decl">function _gcd(v0, v1)</span>
+<span class="il-line" data-group="decl">  v2 := 0</span>
+<span class="il-line" data-group="while-cond">  LABEL L1</span>
+<span class="il-line" data-group="while-cond">  IF v1 &gt; 0 THEN L2 ELSE L3</span>
+<span class="il-line" data-group="while-cond">  LABEL L2</span>
+<span class="il-line" data-group="temp-assign">  t1 := v1</span>
+<span class="il-line" data-group="temp-assign">  v2 := t1</span>
+<span class="il-line" data-group="b-assign">  t2 := v0</span>
+<span class="il-line" data-group="b-assign">  t3 := v0</span>
+<span class="il-line" data-group="b-assign">  t4 := v1</span>
+<span class="il-line" data-group="b-assign">  t5 := t3 / t4</span>
+<span class="il-line" data-group="b-assign">  t6 := t5 * v1</span>
+<span class="il-line" data-group="b-assign">  t7 := t2 - t6</span>
+<span class="il-line" data-group="b-assign">  v1 := t7</span>
+<span class="il-line" data-group="a-assign">  t8 := v2</span>
+<span class="il-line" data-group="a-assign">  v0 := t8</span>
+<span class="il-line" data-group="while-cond">  GOTO L1</span>
+<span class="il-line" data-group="while-cond">  LABEL L3</span>
+<span class="il-line" data-group="ret">  RETURN v0</span></code></pre>
+        </div>
+      </div>
+      <p class="demo-hint" id="codeHint">Hover over any line in either panel to highlight the corresponding lines.</p>
+
+      <!-- Function header explanation -->
+      <h3 style="margin-top:1.5rem">Translating the Function Declaration</h3>
+      <p>The function header <code>gcd(number a, number b)</code> is translated by mapping
+         the parameter names to fresh intermediate variables and creating a function entry
+         in the intermediate language:</p>
+      <ol class="trace-list">
+        <li><code>newvar()</code> &rarr; <code>v0</code> — bound to parameter <code>a</code> in vtable</li>
+        <li><code>newvar()</code> &rarr; <code>v1</code> — bound to parameter <code>b</code> in vtable</li>
+        <li>Function header emitted: <code>function _gcd(v0, v1)</code></li>
+        <li>Local declaration <code>number temp := 0</code>: <code>newvar()</code> &rarr; <code>v2</code>, emit <code>v2 := 0</code></li>
+      </ol>
+    </section>
+
+    <!-- ── EXERCISES ─────────────────────────────────────────────── -->
+    <section class="section" id="exercises">
+      <h2>Exercises</h2>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--remember">Remember</span> Exercise 6.1</p>
+        <p>What is the purpose of <code>newvar()</code> in intermediate code generation? Why can't
+           we just reuse the source variable names directly?</p>
+        <details class="exercise__hint">
+          <summary>Show answer</summary>
+          <p><code>newvar()</code> generates a fresh, previously unused variable name for each
+             intermediate result. We can't reuse source names because: (1) multiple subexpressions
+             need their own storage simultaneously, (2) the intermediate language uses flat variable
+             names with no scoping, so name collisions would occur, and (3) different functions may
+             have variables with the same source name (like <code>a</code> in both <code>main</code>
+             and <code>gcd</code>) that must map to distinct internal names.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--apply">Apply</span> Exercise 6.2</p>
+        <p>Apply <code>TransExp</code> to the expression <code>a - (a / b * b)</code> using the
+           vtable <code>{a&rarr;v0, b&rarr;v1}</code> and place <code>t7</code>. Show every call
+           to <code>newvar()</code> (assume it returns t1, t2, t3, t4, t5, t6 in sequence) and
+           the code generated at each step.</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>This is a binary subtraction at the top level. Split into left operand <code>a</code>
+             (assign to t1) and right operand <code>(a / b * b)</code>. The right operand is itself
+             a multiplication — split again. Keep recursing until you hit variable references and
+             literals (base cases). Build the code from the bottom up.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--apply">Apply</span> Exercise 6.3</p>
+        <p>Apply <code>TransStat</code> to the while loop from GCD:
+           <code>while (b &gt; 0) do { ... }</code>. Show the labels generated, the structure
+           of the emitted code, and explain what happens at runtime when the condition is
+           false on the first iteration.</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>Three labels are needed: L1 (loop entry, target of the back-jump), L2 (body label,
+             jumped to when condition is true), L3 (exit label, jumped to when condition is false).
+             When condition is false on first entry: IF fires &rarr; jumps to L3 immediately,
+             skipping the body entirely. GOTO L1 is never reached.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--analyse">Analyse</span> Exercise 6.4</p>
+        <p>Count the number of intermediate instructions generated for the single source statement
+           <code>b := a - (a / b * b)</code>. Then explain why this is more instructions than
+           necessary and what a later optimisation pass might do to reduce it.</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>Count: 7 instructions (t2:=v0, t3:=v0, t4:=v1, t5:=t3/t4, t6:=t5*v1, t7:=t2-t6,
+             v1:=t7). The obvious redundancy: <code>a</code> is loaded twice (t2 and t3 both get
+             v0) and <code>b</code> could be used directly. Register allocation (Chapter 8) can
+             eliminate the redundant copies by recognising that t2, t3, and v0 hold the same value.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--evaluate">Evaluate</span> Exercise 6.5</p>
+        <p>Gruner's lecture noted that "guided by &ne; determined by" — the syntax tree guides but
+           does not fully determine the translation. Give a concrete example from the GCD
+           intermediate code where the compiler engineer made a design choice that could
+           have been made differently, and explain the trade-off.</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>One example: the choice to always copy a variable into a fresh temp before using it
+             (e.g., <code>t2 := v0</code> rather than using <code>v0</code> directly as the left
+             operand of subtraction). The trade-off is safety vs efficiency — copying prevents
+             aliasing bugs if the expression has side effects, at the cost of extra instructions.
+             The textbook explicitly discusses this choice in Section 6.4.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ── EVENT 9: NEXT ─────────────────────────────────────────── -->
+    <section class="section" id="next">
+      <h2>What Comes Next</h2>
+      <div class="callout callout--next">
+        <p class="callout__label">Chapter 8 &rarr; Register Allocation &amp; Chapter 9 &rarr; Function Translation</p>
+        <p>The intermediate code generated here still has redundancies — variables like
+           <code>t2</code> and <code>t3</code> both just copy <code>v0</code>. Chapter 8 (register
+           allocation) eliminates these copies by mapping multiple temporary variables to the same
+           physical register. Chapter 9 then expands the high-level function calls and returns
+           (which we kept as primitives here) into actual stack-frame management — prologues,
+           epilogues, and parameter passing.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>COS341 Supplementary Material &mdash; University of Pretoria &mdash; Based on Mogensen,
+       <em>Introduction to Compiler Design</em>, 2nd ed.</p>
+  </footer>
+
+  <script src="../js/chapter6.js"></script>
+</body>
+</html>
