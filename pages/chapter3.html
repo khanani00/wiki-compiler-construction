@@ -8,7 +8,6 @@
 </head>
 <body>
 
-  <!-- ── SITE HEADER ─────────────────────────────────────────────── -->
   <header class="site-header">
     <div class="site-header__inner">
       <span class="site-header__course">COS341 Supplementary Material</span>
@@ -20,30 +19,36 @@
     </div>
   </header>
 
-  <!-- ── ARTICLE ──────────────────────────────────────────────────── -->
   <main class="article">
 
-    <!-- breadcrumb -->
     <p class="breadcrumb">Chapters &rsaquo; Chapter 3 &rsaquo; Scopes and Symbol Tables</p>
-
     <h1 class="article__title">Chapter 3 &mdash; Scopes and Symbol Tables</h1>
     <p class="article__subtitle">&ldquo;Scope defines the boundaries; context dictates the meaning.&rdquo;</p>
 
     <!-- ── EVENT 1: GAIN ATTENTION ──────────────────────────────── -->
     <div class="callout callout--question">
       <p class="callout__label">Opening Problem</p>
-      <p>Your parser has just produced a syntax tree for the program below.
-         Both <code>x</code> variables are valid identifiers — but are they the same variable?
-         How does the compiler tell them apart?</p>
-      <pre class="code-block"><code>main() {
-  number x := 5;
-  {
-    number x := 10;   <span class="code-comment">/* inner x — different variable */</span>
-    x := x + 1;
-  }
-  x := x + 1;        <span class="code-comment">/* outer x restored */</span>
+      <p>Look at the GCD program below. Both <code>a</code> and <code>b</code> appear in
+         <strong>two different functions</strong>. Are they the same variables?
+         And inside <code>gcd</code>, there is also a <code>temp</code> that lives only
+         inside the <code>while</code> body. How does the compiler keep all of this straight?</p>
+      <pre class="code-block"><code>main(number a, number b) {        <span class="code-comment">/* a, b in main's scope */</span>
+  number result := 0;
+  result := gcd(a, b);
+  return result
+}
+
+gcd(number a, number b) {         <span class="code-comment">/* different a, b — gcd's own scope */</span>
+  number temp := 0;
+  while (b > 0) do {
+    temp := b;                    <span class="code-comment">/* temp visible here */</span>
+    b := a - (a / b * b);
+    a := temp
+  };
+  return a
 }</code></pre>
-      <p>The syntax tree knows the <em>structure</em> of this program. It does not know what <code>x</code> <em>means</em> at each point. That is the job of the <strong>symbol table</strong>.</p>
+      <p>The syntax tree knows the <em>structure</em> of this program but not what any name
+         <em>means</em> at each point. That is the job of the <strong>symbol table</strong>.</p>
     </div>
 
     <!-- ── EVENT 2: LEARNING OBJECTIVES ─────────────────────────── -->
@@ -56,19 +61,19 @@
         <li><span class="bloom bloom--understand">Understand</span> the difference between persistent and imperative symbol table implementations.</li>
         <li><span class="bloom bloom--apply">Apply</span> tree-crawling to populate a symbol table from a given program.</li>
         <li><span class="bloom bloom--analyse">Analyse</span> a code block, identify scopes, and construct the corresponding symbol table by hand.</li>
-        <li><span class="bloom bloom--create">Create</span> a symbol table for a program written in the unified COS341 grammar.</li>
+        <li><span class="bloom bloom--create">Create</span> a symbol table for a program written in the <a href="grammar.html">referenced grammar</a>.</li>
       </ul>
     </section>
 
     <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
     <section class="section" id="recall">
       <h2>Connecting to What You Already Know</h2>
-      <p>In Chapter 2 you built a <strong>parser</strong> that takes a stream of tokens and produces an <strong>abstract syntax tree (AST)</strong>. The AST captures the grammatical structure of the program — which expressions nest inside which statements, how conditions relate to branches, and so on.</p>
-      <p>But the AST is <em>context-free</em>. It was built using a context-free grammar, which means it carries no information about what names <em>mean</em>. Two uses of the name <code>x</code> look identical in the tree even if they refer to completely different variables.</p>
-      <p>Chapter 3 is where <strong>semantic analysis</strong> begins. The compiler now needs to understand context &mdash; specifically, which declaration each use of a name refers to. This is called <strong>binding</strong>, and the data structure that records it is the <strong>symbol table</strong>.</p>
+      <p>In Chapter 2 you built a <strong><a href="chapter2.html">parser</a></strong> that takes a stream of tokens and produces an <strong>abstract syntax tree (AST)</strong>. The AST captures the grammatical structure of the program — which expressions nest inside which statements, how conditions relate to branches, and so on.</p>
+      <p>But the AST is <em>context-free</em>. It was built using a context-free grammar, which means it carries no information about what names <em>mean</em>. The <code>a</code> in <code>main</code> and the <code>a</code> in <code>gcd</code> look identical in the tree even though they are completely separate variables.</p>
+      <p>Chapter 3 is where <strong>semantic analysis</strong> begins. The compiler now needs to understand context — specifically, which declaration each use of a name refers to. This is called <strong>binding</strong>, and the data structure that records it is the <strong>symbol table</strong>.</p>
       <div class="callout callout--info">
         <p class="callout__label">Key Connection</p>
-        <p>You will use the symbol table you build here again in Chapter 5 (Type Checking), where it becomes the <em>environment</em> passed to the type checker. Every <code>vtable</code> and <code>ftable</code> you see in Chapter 5 is an instance of what is described in this chapter.</p>
+        <p>You will use the symbol table you build here again in <a href="chapter5.html">Chapter 5 (Type Checking)</a>, where it becomes the <em>environment</em> passed to the type checker. Every <code>vtable</code> and <code>ftable</code> you see in Chapter 5 is an instance of what is described in this chapter.</p>
       </div>
     </section>
 
@@ -78,8 +83,8 @@
 
       <h3>1. Binding and Scope</h3>
       <p>A <strong>declaration</strong> introduces a name and associates it with an item (a variable, a function, a type). This association is called a <strong>binding</strong>. A <strong>use</strong> of a name is a reference to the item it is bound to.</p>
-      <p>The <strong>scope</strong> of a declaration is the region of the program where that binding is visible. In the unified grammar used across these articles, a scope corresponds to an <code>ALGORITHM</code> block — the region enclosed by <code>{ STAT }</code>.</p>
-      <p>Scoping based on the structure of the syntax tree is called <strong>lexical (static) binding</strong>. The rule is: a use of a name refers to the <em>closest enclosing declaration</em> of that name — that is, the declaration in the smallest subtree that contains both the declaration and the use.</p>
+      <p>The <strong>scope</strong> of a declaration is the region of the program where that binding is visible. In the <a href="grammar.html">referenced grammar</a>, a scope corresponds to an <code>ALGORITHM</code> block — the region enclosed by <code>{ STAT }</code>. Each function body is its own scope. The <code>while</code> body inside <code>gcd</code> is a nested scope within that.</p>
+      <p>Scoping based on the structure of the syntax tree is called <strong>lexical (static) binding</strong>. The rule is: a use of a name refers to the <em>closest enclosing declaration</em> of that name — the declaration in the smallest subtree that contains both the declaration and the use.</p>
 
       <h3>2. The Symbol Table</h3>
       <p>A symbol table (also called an <em>environment</em>) is a mapping from names to information about the items those names are bound to. For variables, that information typically includes:</p>
@@ -107,11 +112,11 @@
       </div>
 
       <h3>3. Populating the Symbol Table: Tree Crawling</h3>
-      <p>The symbol table is populated by <strong>crawling the syntax tree</strong> — visiting every node and recording declarations as they are encountered. The traversal can use either Depth-First Search (DFS) or Breadth-First Search (BFS), but DFS is natural here because scopes are nested and nesting maps directly to recursive tree descent.</p>
+      <p>The symbol table is populated by <strong>crawling the syntax tree</strong> — visiting every node and recording declarations as they are encountered. The traversal uses Depth-First Search (DFS) because scopes are nested and nesting maps directly to recursive tree descent.</p>
 
       <div class="callout callout--info">
         <p class="callout__label">General Pseudocode</p>
-        <pre class="code-block"><code>table = empty()
+        <pre class="code-block code-block--pseudo"><code>table = empty()
 
 populate(node, table):
   if node is a declaration:
@@ -134,7 +139,7 @@ return table</code></pre>
       <div class="impl-grid">
         <div class="impl-card">
           <h4>Persistent (Functional)</h4>
-          <p>The old symbol table is never destroyed. When you <code>bind</code> a new entry or <code>enter</code> a scope, a new version of the table is created that shares most of its structure with the old one. When you <code>exit</code> a scope, you simply go back to using the old reference &mdash; it was never touched.</p>
+          <p>The old symbol table is never destroyed. When you <code>bind</code> a new entry or <code>enter</code> a scope, a new version of the table is created that shares most of its structure with the old one. When you <code>exit</code> a scope, you simply go back to using the old reference — it was never touched.</p>
           <p class="impl-card__use">Natural in functional languages (SML, Haskell). Required when closures need to capture an environment that outlives its scope.</p>
           <div class="impl-card__structure">
             <span>Underlying structure:</span>
@@ -155,84 +160,138 @@ return table</code></pre>
       <h3>5. Efficiency: Hashing</h3>
       <p>Both simple implementations use <strong>linear search</strong> for lookup — the table is scanned from top to bottom until a matching name is found. For small programs this is fine, but real programs use libraries that define hundreds of names, making linear search slow.</p>
       <p>The standard solution is a <strong>hash table</strong>: each name is hashed to an integer index into an array. Each slot in the array holds a short list of entries that share the same hash. With a large enough array, these lists stay very short and lookup is effectively constant time.</p>
-      <p>For imperative implementations, a single auxiliary stack records all updates so that scope exit can undo them in time proportional to the number of bindings added in that scope, without rescanning the whole table.</p>
 
       <h3>6. Separate vs Shared Name Spaces</h3>
       <p>Some languages (Pascal) allow a variable and a function to share the same name because the context of use makes it clear which is meant. These have <strong>separate name spaces</strong>. Other languages (C, SML) have a <strong>shared name space</strong> where a local variable can shadow a function of the same name.</p>
       <p>Separate name spaces are implemented with one symbol table per name space. A shared name space uses one table for everything, sometimes with a prefix or tag added to each name to distinguish its kind.</p>
     </section>
 
-    <!-- ── EVENT 5: WORKED EXAMPLE ──────────────────────────────── -->
+    <!-- ── EVENT 5: WORKED EXAMPLE — GCD ────────────────────────── -->
     <section class="section" id="example">
-      <h2>Worked Example — Using the Unified Grammar</h2>
-      <p>Consider the following program written in the COS341 unified grammar. Hover over any variable name in the code to see its entry highlighted in the symbol table.</p>
+      <h2>Worked Example — GCD Program</h2>
+      <p>We use the full GCD program from the <a href="grammar.html">referenced grammar</a>.
+         Hover over any name in the code to see its entry highlighted in the symbol table.
+         Notice that <code>a</code> and <code>b</code> appear in <em>both</em> functions but resolve
+         to different entries — each function has its own scope.</p>
 
       <div class="interactive-demo">
         <div class="demo-code">
-          <p class="demo-label">Source Program</p>
-          <pre class="code-block code-block--interactive"><code>main() {
-  <span class="var-ref" data-var="x_outer">number x</span> := 5;
-  <span class="var-ref" data-var="y_outer">number y</span> := 10;
-  {
-    <span class="var-ref" data-var="x_inner">number x</span> := <span class="var-ref" data-var="y_outer_use">y</span> + 1;
-    <span class="var-ref" data-var="x_inner_use">x</span> := <span class="var-ref" data-var="x_inner_use2">x</span> + <span class="var-ref" data-var="y_outer_use2">y</span>;
-  }
-  <span class="var-ref" data-var="x_outer_use">x</span> := <span class="var-ref" data-var="x_outer_use2">x</span> + 1;
+          <p class="demo-label">GCD Program</p>
+          <pre class="code-block code-block--interactive"><code><span class="code-comment">/* ── main ─────────────────────── */</span>
+main(<span class="var-ref" data-var="main_a">number a</span>, <span class="var-ref" data-var="main_b">number b</span>) {
+  <span class="var-ref" data-var="main_result">number result</span> := 0;
+  <span class="var-ref" data-var="main_result_use">result</span> := gcd(<span class="var-ref" data-var="main_a_use">a</span>, <span class="var-ref" data-var="main_b_use">b</span>);
+  return <span class="var-ref" data-var="main_result_ret">result</span>
+}
+
+<span class="code-comment">/* ── gcd ──────────────────────── */</span>
+gcd(<span class="var-ref" data-var="gcd_a">number a</span>, <span class="var-ref" data-var="gcd_b">number b</span>) {
+  <span class="var-ref" data-var="gcd_temp">number temp</span> := 0;
+  while (<span class="var-ref" data-var="gcd_b_cond">b</span> > 0) do {
+    <span class="var-ref" data-var="gcd_temp_use1">temp</span> := <span class="var-ref" data-var="gcd_b_use1">b</span>;
+    <span class="var-ref" data-var="gcd_b_use2">b</span> := <span class="var-ref" data-var="gcd_a_use1">a</span> - (<span class="var-ref" data-var="gcd_a_use2">a</span> / <span class="var-ref" data-var="gcd_b_use3">b</span> * <span class="var-ref" data-var="gcd_b_use4">b</span>);
+    <span class="var-ref" data-var="gcd_a_use3">a</span> := <span class="var-ref" data-var="gcd_temp_use2">temp</span>
+  };
+  return <span class="var-ref" data-var="gcd_a_ret">a</span>
+}
+
+<span class="code-comment">/* ── isZero ───────────────────── */</span>
+isZero(<span class="var-ref" data-var="iz_x">number x</span>) {
+  <span class="var-ref" data-var="iz_out">number out</span> := 0;
+  if (<span class="var-ref" data-var="iz_x_use">x</span> = 0) then {
+    <span class="var-ref" data-var="iz_out_use1">out</span> := 1
+  } else {
+    <span class="var-ref" data-var="iz_out_use2">out</span> := 0
+  };
+  return <span class="var-ref" data-var="iz_out_ret">out</span>
 }</code></pre>
         </div>
 
         <div class="demo-table">
-          <p class="demo-label">Symbol Table State (after full population)</p>
-          <table class="sym-table" id="symTable">
+          <p class="demo-label">Symbol Tables (by function scope)</p>
+
+          <p class="demo-scope-label">main — scope 0</p>
+          <table class="sym-table">
             <thead>
-              <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Scope Level</th>
-                <th>Declared</th>
-              </tr>
+              <tr><th>Name</th><th>Type</th><th>Role</th></tr>
             </thead>
             <tbody>
-              <tr class="sym-row" data-row="x_outer x_outer_use x_outer_use2">
-                <td><code>x</code></td>
-                <td><code>number</code></td>
-                <td>0 (outer)</td>
-                <td>Yes</td>
+              <tr class="sym-row" data-row="main_a main_a_use">
+                <td><code>a</code></td><td><code>number</code></td><td>parameter</td>
               </tr>
-              <tr class="sym-row" data-row="y_outer y_outer_use y_outer_use2">
-                <td><code>y</code></td>
-                <td><code>number</code></td>
-                <td>0 (outer)</td>
-                <td>Yes</td>
+              <tr class="sym-row" data-row="main_b main_b_use">
+                <td><code>b</code></td><td><code>number</code></td><td>parameter</td>
               </tr>
-              <tr class="sym-row sym-row--inner" data-row="x_inner x_inner_use x_inner_use2">
-                <td><code>x</code> <span class="scope-badge">inner scope</span></td>
-                <td><code>number</code></td>
-                <td>1 (inner)</td>
-                <td>Yes</td>
+              <tr class="sym-row" data-row="main_result main_result_use main_result_ret">
+                <td><code>result</code></td><td><code>number</code></td><td>local var</td>
               </tr>
             </tbody>
           </table>
+
+          <p class="demo-scope-label" style="margin-top:0.8rem">gcd — scope 1</p>
+          <table class="sym-table">
+            <thead>
+              <tr><th>Name</th><th>Type</th><th>Role</th></tr>
+            </thead>
+            <tbody>
+              <tr class="sym-row" data-row="gcd_a gcd_a_use1 gcd_a_use2 gcd_a_use3 gcd_a_ret">
+                <td><code>a</code></td><td><code>number</code></td><td>parameter</td>
+              </tr>
+              <tr class="sym-row" data-row="gcd_b gcd_b_cond gcd_b_use1 gcd_b_use2 gcd_b_use3 gcd_b_use4">
+                <td><code>b</code></td><td><code>number</code></td><td>parameter</td>
+              </tr>
+              <tr class="sym-row" data-row="gcd_temp gcd_temp_use1 gcd_temp_use2">
+                <td><code>temp</code></td><td><code>number</code></td><td>local var</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p class="demo-scope-label" style="margin-top:0.8rem">isZero — scope 2</p>
+          <table class="sym-table">
+            <thead>
+              <tr><th>Name</th><th>Type</th><th>Role</th></tr>
+            </thead>
+            <tbody>
+              <tr class="sym-row" data-row="iz_x iz_x_use">
+                <td><code>x</code></td><td><code>number</code></td><td>parameter</td>
+              </tr>
+              <tr class="sym-row" data-row="iz_out iz_out_use1 iz_out_use2 iz_out_ret">
+                <td><code>out</code></td><td><code>number</code></td><td>local var</td>
+              </tr>
+            </tbody>
+          </table>
+
           <p class="demo-hint" id="demoHint">Hover over a name in the code to highlight its table entry.</p>
         </div>
       </div>
 
       <h3>Trace: What Happens During Tree Crawl</h3>
-      <p>Walking the AST depth-first, left to right, the following events occur:</p>
+      <p>Walking the AST depth-first for the GCD program, the following sequence of symbol table operations occurs. Each function body triggers its own <code>enter</code>/<code>exit</code> pair, keeping scopes completely separate.</p>
       <ol class="trace-list">
-        <li><code>enter()</code> — program starts, scope level 0 begins.</li>
-        <li><code>bind("x", {type: number, scope: 0})</code> — outer <code>x</code> declared.</li>
-        <li><code>bind("y", {type: number, scope: 0})</code> — <code>y</code> declared.</li>
-        <li><code>enter()</code> — inner block <code>{ }</code> begins, scope level 1.</li>
-        <li><code>bind("x", {type: number, scope: 1})</code> — inner <code>x</code> declared. This shadows the outer <code>x</code>; <code>lookup("x")</code> now returns scope 1.</li>
-        <li><code>lookup("y")</code> — <code>y</code> not in scope 1, found in scope 0. Resolves correctly.</li>
-        <li><code>exit()</code> — inner block ends. Inner <code>x</code> is removed. Outer <code>x</code> is restored.</li>
-        <li><code>lookup("x")</code> — now resolves to scope 0 again.</li>
-        <li><code>exit()</code> — program ends.</li>
+        <li><strong>Entering main:</strong> <code>enter()</code> — scope 0 begins.</li>
+        <li><code>bind("a", {type: number, scope: 0})</code> — main's parameter <code>a</code>.</li>
+        <li><code>bind("b", {type: number, scope: 0})</code> — main's parameter <code>b</code>.</li>
+        <li><code>bind("result", {type: number, scope: 0})</code> — local variable.</li>
+        <li><code>lookup("gcd")</code> — function call resolved via <em>ftable</em> (separate name space).</li>
+        <li><code>exit()</code> — main's scope ends. <code>a</code>, <code>b</code>, <code>result</code> removed.</li>
+        <li><strong>Entering gcd:</strong> <code>enter()</code> — scope 1 begins. Completely fresh scope.</li>
+        <li><code>bind("a", {type: number, scope: 1})</code> — gcd's own <code>a</code>. No conflict with main's <code>a</code> — that was already removed.</li>
+        <li><code>bind("b", {type: number, scope: 1})</code> — gcd's own <code>b</code>.</li>
+        <li><code>bind("temp", {type: number, scope: 1})</code> — local variable.</li>
+        <li><strong>Entering while body:</strong> <code>enter()</code> — nested scope inside gcd. All of gcd's bindings are still visible here.</li>
+        <li><code>lookup("temp")</code>, <code>lookup("b")</code>, <code>lookup("a")</code> — all found in scope 1 above.</li>
+        <li><code>exit()</code> — while body scope ends. Back to gcd's scope.</li>
+        <li><code>exit()</code> — gcd's scope ends.</li>
+        <li><strong>Entering isZero:</strong> <code>enter()</code> — scope 2. Same pattern: <code>x</code> and <code>out</code> bound, used, scope exited.</li>
       </ol>
+
+      <div class="callout callout--info">
+        <p class="callout__label">Key Insight</p>
+        <p>The <code>a</code> in <code>main</code> and the <code>a</code> in <code>gcd</code> are never in the same scope at the same time. Each function's scope is entered and fully exited before the next begins. This is why there is no shadowing or conflict — they are genuinely separate bindings that happen to share a name.</p>
+      </div>
     </section>
 
-    <!-- ── EVENT 6 & 7: EXERCISES + FEEDBACK ────────────────────── -->
+    <!-- ── EVENT 6 & 7: EXERCISES ────────────────────────────────── -->
     <section class="section" id="exercises">
       <h2>Exercises</h2>
 
@@ -247,25 +306,25 @@ return table</code></pre>
 
       <div class="exercise">
         <p class="exercise__level"><span class="bloom bloom--apply">Apply</span> Exercise 3.2</p>
-        <p>Using the unified grammar, write a small program with at least two nested scopes and two variables that share the same name. Then construct the symbol table by hand, showing the state of the table at each <code>enter</code> and <code>exit</code> event.</p>
+        <p>Construct the symbol table for the <code>gcd</code> function by hand. Show the exact state of the table — every name and its binding — at each of the following moments: after entering gcd's scope, after entering the while body, and after exiting the while body.</p>
         <details class="exercise__hint">
           <summary>Show hint</summary>
-          <p>Follow the trace format shown in the worked example above. Draw the table state after each bind, enter, and exit call. Pay attention to which <code>x</code> is visible at each point.</p>
+          <p>After entering gcd: table has <code>a</code>, <code>b</code>, <code>temp</code>. After entering while body: same entries are still visible (the while body is a nested scope that inherits from gcd). After exiting while body: back to exactly gcd's scope — same three entries.</p>
         </details>
       </div>
 
       <div class="exercise">
         <p class="exercise__level"><span class="bloom bloom--analyse">Analyse</span> Exercise 3.3</p>
-        <p>A student implements a symbol table using a stack (imperative approach) and forgets to call <code>enter()</code> before entering a nested block. Describe what goes wrong when the block exits and <code>exit()</code> is called. Which bindings will be incorrectly removed?</p>
+        <p>In the GCD program, the variable <code>a</code> appears in both <code>main</code> and <code>gcd</code>. Explain why these are treated as two completely separate bindings rather than one binding that gets overwritten. What would go wrong if the compiler used a single flat symbol table with no scoping?</p>
         <details class="exercise__hint">
           <summary>Show hint</summary>
-          <p>Think about what the stack looks like without the marker. What does <code>exit()</code> use to know where to stop popping?</p>
+          <p>Think about what happens when <code>gcd</code> modifies its local <code>a</code> during the Euclidean algorithm. If <code>main</code>'s <code>a</code> and <code>gcd</code>'s <code>a</code> were the same variable, what value would <code>main</code> see after the call to <code>gcd</code> returns?</p>
         </details>
       </div>
 
       <div class="exercise">
         <p class="exercise__level"><span class="bloom bloom--evaluate">Evaluate</span> Exercise 3.4</p>
-        <p>The textbook mentions that closures require a <em>persistent</em> symbol table. Explain why an imperative (stack-based) symbol table breaks when closures are involved. Use a concrete example with a function that returns another function.</p>
+        <p>The textbook mentions that closures require a <em>persistent</em> symbol table. Explain why an imperative (stack-based) symbol table breaks when closures are involved. Use a concrete example with a function that captures a variable from an outer scope.</p>
         <details class="exercise__hint">
           <summary>Show hint</summary>
           <p>Think about what happens to the inner function's environment when the outer function returns and its scope is exited. With an imperative table, what has happened to those bindings?</p>
@@ -273,19 +332,17 @@ return table</code></pre>
       </div>
     </section>
 
-    <!-- ── EVENT 9: RETENTION + TRANSFER ────────────────────────── -->
+    <!-- ── EVENT 9: NEXT ─────────────────────────────────────────── -->
     <section class="section" id="next">
       <h2>What Comes Next</h2>
       <div class="callout callout--next">
-        <p class="callout__label">Chapter 5 &rarr; Type Checking</p>
-        <p>The symbol table you built here becomes the <strong>environment</strong> that the type checker operates on. In Chapter 5, you will see two symbol tables passed through every function: <code>vtable</code>, which maps variable names to their types, and <code>ftable</code>, which maps function names to their signatures. These are exactly the persistent symbol tables described in this chapter — implemented using the <code>bind</code>, <code>lookup</code>, and <code>empty</code> operations you have just learned.</p>
-        <p>Without the symbol table, the type checker has no way to know what type <code>x</code> is when it appears in an expression. The work done in this chapter is what makes type checking possible.</p>
+        <p class="callout__label"><a href="chapter5.html">Chapter 5</a> &rarr; Type Checking</p>
+        <p>The symbol table you built here becomes the <strong>environment</strong> that the type checker operates on. In Chapter 5, you will see two symbol tables passed through every function: <code>vtable</code>, which maps variable names to their types, and <code>ftable</code>, which maps function names to their signatures. For the GCD program, the ftable will contain entries for <code>gcd</code> and <code>isZero</code>, and the vtable inside <code>gcd</code> will contain <code>a</code>, <code>b</code>, and <code>temp</code> — exactly what was built here.</p>
       </div>
     </section>
 
   </main>
 
-  <!-- ── FOOTER ────────────────────────────────────────────────────── -->
   <footer class="site-footer">
     <p>COS341 Supplementary Material &mdash; University of Pretoria &mdash; Based on Mogensen, <em>Introduction to Compiler Design</em>, 2nd ed.</p>
   </footer>
