@@ -179,3 +179,125 @@
 
 .src-line[data-group="decl"].active,
 .il-line[data-group="decl"].active        { background: rgba(52,73,94,0.1); outline-color: #34495e; }
+/* ── STEPPER TREE ROW STYLES ──────────────────────────────────── */
+/* ── STEPPER TREE ROW STYLES ──────────────────────────────────── */
+/* ── STEPPER TREE ROW STYLES ──────────────────────────────────── */
+.stepper-tree {
+  background: #0f172a;
+  padding: 0.8rem 1rem;
+  font-family: var(--font-ui);
+  font-size: 0.84rem;
+  line-height: 1;
+  overflow-y: auto;
+}
+
+.tr {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.32rem 0.6rem;
+  border-radius: 4px;
+  margin-bottom: 0.2rem;
+}
+
+/* call row — the function being invoked */
+.tr--call {
+  background: #1e2a3a;
+  border-left: 3px solid #5b8dee;
+  font-weight: 600;
+}
+
+/* nested sub-call */
+.tr--nested {
+  background: #252f3e;
+  border-left: 2px solid #4a6fa5;
+}
+
+/* computation step inside a call */
+.tr--step {
+  background: transparent;
+  border-left: 2px solid transparent;
+}
+
+/* emit instruction */
+.tr--result {
+  background: #1a2a1a;
+  border-left: 2px solid #3a7a3a;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+/* ── STATE: active ── fully visible */
+.tr--active { opacity: 1; }
+.tr--active .tr-text  { color: #e8edf5; }
+.tr--active.tr--step .tr-text  { color: #c8d8ea; }
+.tr--active.tr--result .tr-text { color: #a8e6a8; }
+.tr--active .tr-result { color: #ffd06a; font-weight: 700; }
+
+/* ── STATE: done ── readable but clearly secondary */
+.tr--done { opacity: 0.6; }
+.tr--done .tr-text  { color: #e8edf5; }
+.tr--done.tr--result .tr-text { color: #a8e6a8; }
+.tr--done .tr-result { color: #ffd06a; }
+
+/* ── STATE: pending ── visibly dimmed */
+.tr--pending { opacity: 0.25; }
+.tr--pending .tr-text  { color: #e8edf5; }
+.tr--pending.tr--result .tr-text { color: #a8e6a8; }
+
+/* no icons — removed play button and arrow */
+.tr-icon { display: none; }
+
+/* indent marker for nested calls — simple left gap, no symbol */
+.tr--nested::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-left: 2px solid #4a6fa5;
+  border-bottom: 2px solid #4a6fa5;
+  margin-right: 0.4rem;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* emit badge */
+.tr-emit {
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: #2a5a2a;
+  color: #7acc7a;
+  padding: 0.1em 0.45em;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* result value shown after a step — no arrow, just styled value */
+.tr-arrow { display: none; }
+
+.tr-result {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #ffd06a;
+  background: rgba(255,208,106,0.08);
+  padding: 0.05em 0.4em;
+  border-radius: 3px;
+}
+
+/* step row: show result value preceded by = instead of arrow */
+.tr--step .tr-text .tr-arrow + .tr-result::before {
+  content: "= ";
+  color: #5a7090;
+  font-weight: 400;
+}
+
+/* separator */
+.tr-sep {
+  height: 1px;
+  background: #2a3545;
+  margin: 0.4rem 0;
+}
