@@ -1,286 +1,150 @@
+// Tab switching for the "Creating the DFA" section (Step 1 and Step 2).
+// Works for any number of .tabs groups on the page — each group's buttons
+// and panels are matched by data-tab / id, scoped to that group only.
 (function () {
-  var steps = [
-    {
-      detail: `
-        <h5 class="mb-2">Step 1: Regex to NFA (_vname)</h5>
-        <p class="text-primary small fw-bold mb-2">Pattern: <code>[a-zA-Z][a-zA-Z0-9]*</code></p>
-        <p class="text-muted">We begin by converting the regular expression for variable names into a Non-Deterministic Finite Automaton (NFA) using Thompson's Construction.</p>
-        <ul class="text-muted small">
-          <li>Must start with a letter (a-z or A-Z).</li>
-          <li>Can be followed by any number of letters or digits.</li>
-          <li>Uses $\\epsilon$-transitions (epsilon transitions) to handle optional repeating characters.</li>
-        </ul>`,
-      tree: [
-        { text: "", state: "active" }
-      ]
-    },
-    {
-      detail: `
-        <h5 class="mb-2">Step 2: NFA to DFA Conversion</h5>
-        <p class="text-primary small fw-bold mb-2">Algorithm: Subset Construction</p>
-        <p class="text-muted">We convert the <code>_vname</code> NFA into a Deterministic Finite Automaton (DFA) to eliminate state ambiguity.</p>
-        <ul class="text-muted small">
-          <li>Each DFA state represents a set of reachable NFA states.</li>
-          <li>Calculates $\\epsilon$-closures for every transition.</li>
-          <li>Ensures every character input leads to exactly one predictable next state.</li>
-        </ul>`,
-      tree: [
-        { text: "", state: "active" }
-      ]
-    },
-    {
-      detail: `
-        <h5 class="mb-2">Step 3: DFA Minimization</h5>
-        <p class="text-primary small fw-bold mb-2">Algorithm: Hopcroft's Algorithm</p>
-        <p class="text-muted">We optimize the DFA for <code>_vname</code> by merging equivalent states into their simplest possible form.</p>
-        <ul class="text-muted small">
-          <li>Identifies redundant or equivalent states producing identical outcomes.</li>
-          <li>Combines states to produce the smallest valid state machine.</li>
-          <li>Reduces memory footprint and transition overhead during scanning.</li>
-        </ul>`,
-      tree: [
-        { text: "[ Minimized DFA Diagram Placeholder ]", state: "active" }
-      ]
-    },
-    {
-      detail: `
-        <h5 class="mb-2">Step 4: Minimized DFAs for Remaining Patterns</h5>
-        <p class="text-primary small fw-bold mb-2">Direct Construction</p>
-        <p class="text-muted">Since the Regex $\\rightarrow$ NFA $\\rightarrow$ DFA $\\rightarrow$ Minimized DFA pipeline was demonstrated above, we skip directly to the minimized DFAs for the rest of our grammar tokens:</p>
-        <ul class="text-muted small">
-          <li><strong>_number:</strong> <code>[0-9]+</code></li>
-          <li><strong>Assignment:</strong> <code>:=</code></li>
-          <li><strong>Symbols:</strong> <code>+</code> and <code>;</code></li>
-        </ul>`,
-      tree: [
-        { text: "[ Minimized DFAs Diagram Placeholder ]", state: "active" }
-      ]
-    },
-    {
-      detail: `
-        <h5 class="mb-2">Step 5: Combine All DFAs</h5>
-        <p class="text-primary small fw-bold mb-2">Master DFA Construction</p>
-        <p class="text-muted">We join all individual minimized DFAs into a single unified scanner system.</p>
-        <ul class="text-muted small">
-          <li>Creates a single start state ($S_0$) branching out to all token paths.</li>
-          <li>Resolves overlap between keywords, symbols, numbers, and identifiers.</li>
-          <li>Prepares the full transition lookup grid.</li>
-        </ul>`,
-      tree: [
-        { text: "[ Master Combined DFA Placeholder ]", state: "active" }
-      ]
-    },
-    {
-      detail: `
-        <h5 class="mb-2">Step 6: Lexical Scanner Ready</h5>
-        <p class="text-primary small fw-bold mb-2">Execution Phase</p>
-        <div class="alert alert-success mt-2 mb-2">
-          <h6 class="alert-heading fw-bold mb-1">DFA Ready for Action</h6>
-          <p class="mb-0 small">The lexical analyzer reads source code stream, transitions between states, and emits recognized tokens at accepting states.</p>
-        </div>`,
-      tree: [
-        { text: "[ Lexer Execution Flow Placeholder ]", state: "active" }
-      ]
-    }
-  ];
+  var tabGroups = document.querySelectorAll('.tabs');
 
-  var current = 0;
-  var treeEl    = document.getElementById('constructTree');
-  var detailEl  = document.getElementById('constructDetail');
-  var counterEl = document.getElementById('constructCounter');
-  var prevBtn   = document.getElementById('constructPrev');
-  var nextBtn   = document.getElementById('constructNext');
+  tabGroups.forEach(function (group) {
+    var buttons = group.querySelectorAll('.tab-button');
+    var panels = group.querySelectorAll('.tab-panel');
 
-  if (!treeEl) return;
+    buttons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        var target = button.getAttribute('data-tab');
 
-  function render() {
-    var step = steps[current];
+        buttons.forEach(function (b) { b.classList.remove('active'); });
+        panels.forEach(function (p) { p.classList.remove('active'); });
 
-    // diagrams
-    treeEl.innerHTML = step.tree.map(function (line) {
-      return '<div class="p-4 border border-dashed rounded text-center bg-light h-100 d-flex align-items-center justify-content-center">' +
-             '<span class="text-muted small font-monospace">' + line.text + '</span>' +
-             '</div>';
-    }).join('\n');
-
-    detailEl.innerHTML = step.detail;
-
-    counterEl.textContent = 'Step ' + (current + 1) + ' of ' + steps.length;
-    prevBtn.disabled = current === 0;
-    nextBtn.disabled = current === steps.length - 1;
-  }
-
-  prevBtn.addEventListener('click', function () {
-    if (current > 0) { current--; render(); }
+        button.classList.add('active');
+        var targetPanel = group.querySelector('#' + target);
+        if (targetPanel) targetPanel.classList.add('active');
+      });
+    });
   });
-
-  nextBtn.addEventListener('click', function () {
-    if (current < steps.length - 1) { current++; render(); }
-  });
-
-  render();
 })();
 
 
 //Scanning the input (token-by-token trace) ──────────
+// Traces the actual Program used throughout the site:
+//   main() { number x := 5; text y := "hello"; number z := x + y; }
 (function () {
   var steps = [
     {
       title: 'Start: scanning begins',
-      dfa: { states: ['S0'], edges: [] },
       tree: [
-        { text: 'scan("x := 5 ; y := x + 1")', state: 'active' },
-        { text: '  pos = 0,  state = S0',       state: 'pending' },
-        { text: '  tokens = []',                state: 'pending' },
+        { text: 'scan(the Program)', state: 'active' },
+        { text: '  pos = 0,  state = S0', state: 'pending' },
+        { text: '  tokens = []', state: 'pending' },
       ],
       detail: '<h4>Ready to scan</h4>' +
               '<p><code>scan()</code> starts at position 0, in state <strong>S0</strong> &mdash; the start state of the combined DFA.</p>' +
-              '<p>No tokens have been emitted yet. Each step below consumes one token &mdash; watch the diagram above light up the path taken.</p>',
+              '<p>This trace runs the whole Program, not just a fragment &mdash; 22 tokens, reusing the same handful of automata over and over. From here, repeated patterns get grouped so the trace stays readable; each genuinely new pattern gets its own step.</p>',
     },
     {
-      title: 'Token 1: x',
-      dfa: { states: ['S0', 'S1'], edges: ['edge-S0-S1'] },
+      title: 'Token 1: main',
       tree: [
-        { text: 'scan("x := 5 ; y := x + 1")', state: 'done' },
-        { text: '  \u251C\u2500 read \'x\'          S0 \u2192 S1', state: 'active' },
-        { text: '  |    (space) forces accept: S1 \u2192 _vname', state: 'active' },
-        { text: '  \u251C\u2500 read \':=\'          ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'5\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \';\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'y\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \':=\'          ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'x\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'+\'           ...', state: 'pending' },
-        { text: '  \u2514\u2500 read \'1\'           ...', state: 'pending' },
-        { text: 'tokens = [ _vname("x") ]', state: 'active' },
+        { text: 'read \'main\'   S0 \u2192 S1 (identifier path)', state: 'active' },
+        { text: '  \'(\' forces accept: S1 \u2192 identifier "main"', state: 'active' },
+        { text: 'reserved-word lookup: "main" \u2208 {main, number, text, if, ...}', state: 'active' },
+        { text: '  \u2192 reclassified as KEYWORD(main), not _vname', state: 'active' },
+        { text: 'tokens = [ main ]', state: 'active' },
       ],
-      detail: '<h4>Case: <code>[a-zA-Z][a-zA-Z0-9]*</code></h4>' +
-              '<p><span class="step-call">S0 \u2192 S1</span> on the first character <code>x</code>.</p>' +
-              '<p>The next character is a space &mdash; no transition exists, so longest-match forces an accept: <span class="step-result">_vname("x")</span>.</p>',
+      detail: '<h4>First keyword</h4>' +
+              '<p>The identifier automaton accepts <code>main</code> exactly the way it would accept any identifier &mdash; the DFA itself has no idea "main" is special.</p>' +
+              '<p>The reserved-word check happens <em>after</em> acceptance, on the matched lexeme, not as part of the automaton: since <code>"main"</code> is in the keyword table, it\'s emitted as <span class="step-result">KEYWORD(main)</span>.</p>',
     },
     {
-      title: 'Token 2: :=',
-      dfa: { states: ['S0', 'S3', 'S4'], edges: ['edge-S0-S3', 'edge-S3-S4'] },
+      title: 'Tokens 2\u20134: ( ) {',
       tree: [
-        { text: 'scan("x := 5 ; y := x + 1")', state: 'done' },
-        { text: '  \u251C\u2500 read \'x\'           \u2192 _vname("x") \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \':=\'         S0 \u2192 S3 \u2192 S4', state: 'active' },
-        { text: '  |    (space) forces accept: S4 \u2192 :=',              state: 'active' },
-        { text: '  \u251C\u2500 read \'5\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \';\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'y\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \':=\'          ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'x\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'+\'           ...', state: 'pending' },
-        { text: '  \u2514\u2500 read \'1\'           ...', state: 'pending' },
-        { text: 'tokens = [ _vname("x"), := ]', state: 'active' },
+        { text: 'read \'(\'   S0 \u2192 accept \u2192 (', state: 'active' },
+        { text: 'read \')\'   S0 \u2192 accept \u2192 )', state: 'active' },
+        { text: 'read \'{\'   S0 \u2192 accept \u2192 {', state: 'active' },
+        { text: 'tokens = [ main, (, ), { ]', state: 'active' },
       ],
-      detail: '<h4>Case: <code>":="</code></h4>' +
-              '<p><span class="step-call">S0 \u2192 S3</span> on <code>:</code>, then <span class="step-call">S3 \u2192 S4</span> on <code>=</code>.</p>' +
-              '<p>Space forces accept: <span class="step-result">:=</span>. S3 alone (dashed in the diagram, non-accepting) has no accepting transition &mdash; a lone <code>:</code> would be a lexical error.</p>',
+      detail: '<h4>First symbols</h4>' +
+              '<p>Every single-character symbol (<code>( ) { } , ; - + * /</code>) follows this same one-step pattern: no lookahead needed, accept immediately on the one character. Three different symbols, same mechanism &mdash; grouped here since none of them individually add anything new.</p>',
     },
     {
-      title: 'Token 3: 5',
-      dfa: { states: ['S0', 'S2'], edges: ['edge-S0-S2'] },
+      title: 'Tokens 5\u20136: number, x',
       tree: [
-        { text: 'scan("x := 5 ; y := x + 1")', state: 'done' },
-        { text: '  \u251C\u2500 read \'x\'           \u2192 _vname("x") \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \':=\'          \u2192 := \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \'5\'          S0 \u2192 S2', state: 'active' },
-        { text: '  |    \';\' forces accept: S2 \u2192 _number',    state: 'active' },
-        { text: '  \u251C\u2500 read \';\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'y\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \':=\'          ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'x\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'+\'           ...', state: 'pending' },
-        { text: '  \u2514\u2500 read \'1\'           ...', state: 'pending' },
-        { text: 'tokens = [ _vname("x"), :=, _number("5") ]', state: 'active' },
+        { text: 'read \'number\'   S0 \u2192 S1 \u2192 accept \u2192 identifier "number"', state: 'active' },
+        { text: '  lookup: "number" \u2208 keywords \u2192 KEYWORD(number)', state: 'active' },
+        { text: 'read \'x\'        S0 \u2192 S1 \u2192 accept \u2192 identifier "x"', state: 'active' },
+        { text: '  lookup: "x" \u2209 keywords \u2192 stays _vname("x")', state: 'active' },
+        { text: 'tokens = [ ..., number, _vname(x) ]', state: 'active' },
       ],
-      detail: '<h4>Case: <code>[0-9][0-9]*</code></h4>' +
-              '<p><span class="step-call">S0 \u2192 S2</span> on <code>5</code>. The next character is <code>;</code>, not a space &mdash; but <code>;</code> has no <code>[0-9]</code> transition either, so accept still fires.</p>' +
-              '<p>Result: <span class="step-result">_number("5")</span>.</p>',
+      detail: '<h4>The other half of the lookup</h4>' +
+              '<p><code>number</code> repeats the keyword pattern from Token 1. <code>x</code> runs through the exact same automaton and lands on the exact same kind of accepting state &mdash; the only difference is the table lookup this time comes back empty, so it stays a plain <span class="step-result">_vname("x")</span>. Same DFA path, different outcome after acceptance.</p>',
     },
     {
-      title: 'Token 4: ;',
-      dfa: { states: ['S0'], edges: ['edge-S0-S0'] },
+      title: 'Token 7: :=',
       tree: [
-        { text: 'scan("x := 5 ; y := x + 1")', state: 'done' },
-        { text: '  \u251C\u2500 read \'x\'           \u2192 _vname("x") \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \':=\'          \u2192 := \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \'5\'           \u2192 _number("5") \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \';\'          S0 \u2192 accept', state: 'active' },
-        { text: '  \u251C\u2500 read \'y\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \':=\'          ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'x\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'+\'           ...', state: 'pending' },
-        { text: '  \u2514\u2500 read \'1\'           ...', state: 'pending' },
-        { text: 'tokens = [ _vname("x"), :=, _number("5"), ; ]', state: 'active' },
+        { text: 'read \':=\'   S0 \u2192 S3 \u2192 S4 \u2192 accept \u2192 :=', state: 'active' },
+        { text: 'tokens = [ ..., := ]', state: 'active' },
       ],
-      detail: '<h4>Case: <code>";"</code></h4>' +
-              '<p><code>;</code> accepts immediately from S0 &mdash; single-character tokens need no lookahead. This is the dashed loop back onto S0 in the diagram, not a real "self transition" &mdash; it just means scanning resets to S0 for the next token.</p>' +
-              '<p>Result: <span class="step-result">;</span>. This separates the two <code>STAT</code> productions &mdash; it does not terminate the first one.</p>',
+      detail: '<h4>First assignment</h4>' +
+              '<p>Two-character literal, two real transitions: <code>:</code> then <code>=</code>. S3 alone (after just <code>:</code>) is non-accepting &mdash; a lone <code>:</code> would be a lexical error.</p>',
     },
     {
-      title: 'Token 5: y',
-      dfa: { states: ['S0', 'S1'], edges: ['edge-S0-S1'] },
+      title: 'Token 8: 5',
       tree: [
-        { text: 'scan("x := 5 ; y := x + 1")', state: 'done' },
-        { text: '  \u251C\u2500 read \'x\'           \u2192 _vname("x") \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \':=\'          \u2192 := \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \'5\'           \u2192 _number("5") \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \';\'           \u2192 ; \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \'y\'          S0 \u2192 S1', state: 'active' },
-        { text: '  |    (space) forces accept: S1 \u2192 _vname',   state: 'active' },
-        { text: '  \u251C\u2500 read \':=\'          ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'x\'           ...', state: 'pending' },
-        { text: '  \u251C\u2500 read \'+\'           ...', state: 'pending' },
-        { text: '  \u2514\u2500 read \'1\'           ...', state: 'pending' },
-        { text: 'tokens = [ ..., _vname("y") ]', state: 'active' },
+        { text: 'read \'5\'   S0 \u2192 S2 \u2192 accept \u2192 _number("5")', state: 'active' },
+        { text: '  \';\' forces the accept (no [0-9] transition on \';\')', state: 'active' },
+        { text: 'tokens = [ ..., _number(5) ]', state: 'active' },
       ],
-      detail: '<h4>Case: <code>[a-zA-Z][a-zA-Z0-9]*</code> (again)</h4>' +
-              '<p>Same path as token 1: <span class="step-call">S0 \u2192 S1</span>, accept on space.</p>' +
-              '<p>Result: <span class="step-result">_vname("y")</span>.</p>',
+      detail: '<h4>First number literal</h4>' +
+              '<p>Same shape as the identifier automaton, different character class: <code>[0-9][0-9]*</code>.</p>',
     },
     {
-      title: 'Tokens 6\u20138: :=, x, +',
-      dfa: { states: ['S0', 'S1', 'S3', 'S4'], edges: ['edge-S0-S3', 'edge-S3-S4', 'edge-S0-S1', 'edge-S0-S0'] },
+      title: 'Tokens 9\u201312: ; text y :=',
       tree: [
-        { text: 'scan("x := 5 ; y := x + 1")', state: 'done' },
-        { text: '  \u251C\u2500 read \'x\'           \u2192 _vname("x") \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \':=\'          \u2192 := \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \'5\'           \u2192 _number("5") \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \';\'           \u2192 ; \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \'y\'           \u2192 _vname("y") \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \':=\'         S0 \u2192 S3 \u2192 S4 \u2192 := \u2713', state: 'active' },
-        { text: '  \u251C\u2500 read \'x\'          S0 \u2192 S1 \u2192 _vname("x") \u2713',    state: 'active' },
-        { text: '  \u251C\u2500 read \'+\'          S0 \u2192 accept \u2192 + \u2713',            state: 'active' },
-        { text: '  \u2514\u2500 read \'1\'           ...', state: 'pending' },
-        { text: 'tokens = [ ..., :=, _vname("x"), + ]', state: 'active' },
+        { text: 'read \';\'     \u2192 ; (repeat: symbol)', state: 'active' },
+        { text: 'read \'text\'  \u2192 KEYWORD(text) (repeat: keyword hit)', state: 'active' },
+        { text: 'read \'y\'     \u2192 _vname(y) (repeat: identifier miss)', state: 'active' },
+        { text: 'read \':=\'    \u2192 := (repeat: assign)', state: 'active' },
+        { text: 'tokens = [ ..., ;, text, _vname(y), := ]', state: 'active' },
       ],
       detail: '<h4>No new cases</h4>' +
-              '<p>All three highlighted paths repeat ones already seen: <code>:=</code> (token 2), <code>[a-zA-Z]...</code> (token 1), and immediate accept (token 4, same pattern as <code>;</code>).</p>' +
-              '<p>Grouped here since nothing new happens &mdash; the point of practice is recognizing when a token type repeats, which the lit-up diagram makes obvious.</p>',
+              '<p>Every one of these four repeats a pattern already shown &mdash; grouped together since nothing new happens.</p>',
     },
     {
-      title: 'Token 9: 1 (end of input)',
-      dfa: { states: ['S0', 'S2'], edges: ['edge-S0-S2'] },
+      title: 'Token 13: "hello"',
       tree: [
-        { text: 'scan("x := 5 ; y := x + 1")', state: 'done' },
-        { text: '  \u251C\u2500 read \'x\'           \u2192 _vname("x") \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \':=\'          \u2192 := \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \'5\'           \u2192 _number("5") \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \';\'           \u2192 ; \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \'y\'           \u2192 _vname("y") \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \':=\'          \u2192 := \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \'x\'           \u2192 _vname("x") \u2713', state: 'done' },
-        { text: '  \u251C\u2500 read \'+\'           \u2192 + \u2713', state: 'done' },
-        { text: '  \u2514\u2500 read \'1\'          S0 \u2192 S2', state: 'active' },
-        { text: '       end of input forces accept: S2 \u2192 _number', state: 'active' },
-        { text: 'tokens = [ _vname("x"), :=, _number("5"), ;, _vname("y"), :=, _vname("x"), +, _number("1") ]', state: 'active' },
+        { text: 'read \'"\'        S0 \u2192 S5 (non-accepting: string opened)', state: 'active' },
+        { text: 'read h,e,l,l,o  S5 \u2192 S5 (self-loop, still non-accepting)', state: 'active' },
+        { text: 'read \'"\'        S5 \u2192 accept \u2192 _text("hello")', state: 'active' },
+        { text: 'tokens = [ ..., _text("hello") ]', state: 'active' },
       ],
-      detail: '<h4>End of input</h4>' +
-              '<p><span class="step-call">S0 \u2192 S2</span> on <code>1</code>. There is no next character to check against &mdash; end of input forces the same accept behaviour as any non-matching character would.</p>' +
-              '<p>Result: <span class="step-result">_number("1")</span>. Full token stream is now complete &mdash; this is exactly what Chapter 2\u2019s parser receives.</p>',
+      detail: '<h4>The one text literal in this program</h4>' +
+              '<p>Different shape from every other automaton so far: opening the quote does <em>not</em> accept, the loop in the middle stays non-accepting the whole way through, and only the closing quote flips it to accepting. This is the only point in the whole trace where this automaton fires &mdash; every other token in the Program is a keyword, identifier, number, assign, or symbol.</p>',
+    },
+    {
+      title: 'Tokens 14\u201321: ; number z := x + y ;',
+      tree: [
+        { text: 'read \';\'      \u2192 ; (repeat)', state: 'active' },
+        { text: 'read \'number\' \u2192 KEYWORD(number) (repeat)', state: 'active' },
+        { text: 'read \'z\'      \u2192 _vname(z) (repeat)', state: 'active' },
+        { text: 'read \':=\'     \u2192 := (repeat)', state: 'active' },
+        { text: 'read \'x\'      \u2192 _vname(x) (repeat)', state: 'active' },
+        { text: 'read \'+\'      S0 \u2192 accept \u2192 + (NEW: first operator)', state: 'active' },
+        { text: 'read \'y\'      \u2192 _vname(y) (repeat)', state: 'active' },
+        { text: 'read \';\'      \u2192 ; (repeat)', state: 'active' },
+        { text: 'tokens = [ ..., ;, number, _vname(z), :=, _vname(x), +, _vname(y), ; ]', state: 'active' },
+      ],
+      detail: '<h4>One new case, buried in repeats</h4>' +
+              '<p>Everything here repeats a pattern already established, except <code>+</code> &mdash; the first arithmetic operator in the trace. It follows the exact same immediate-accept mechanism as the symbols group from Tokens 2&ndash;4, just a different literal character.</p>',
+    },
+    {
+      title: 'Token 22: } (end of input)',
+      tree: [
+        { text: 'read \'}\'   S0 \u2192 accept \u2192 }', state: 'active' },
+        { text: 'end of input reached', state: 'active' },
+        { text: 'tokens = [ main, (, ), {, number, _vname(x), :=, _number(5), ;,', state: 'active' },
+        { text: '           text, _vname(y), :=, _text("hello"), ;, number,', state: 'active' },
+        { text: '           _vname(z), :=, _vname(x), +, _vname(y), ;, } ]', state: 'active' },
+      ],
+      detail: '<h4>Full token stream complete</h4>' +
+              '<p>22 tokens from 6 automata &mdash; identifier/keyword, number, text, assign, operator, symbols &mdash; every one reused multiple times except the text literal, which fired exactly once. This is exactly what Chapter 2&rsquo;s parser receives.</p>',
     },
   ];
 
@@ -293,8 +157,6 @@
   var dfaEl     = document.getElementById('dfaDiagram');
 
   if (!treeEl) return; // stepper not on this page — do nothing
-
-//   if (dfaEl) { dfaEl.innerHTML = DFA_SVG; }
 
   function stateClass(s) {
     if (s === 'active') return 'tree-line--active';

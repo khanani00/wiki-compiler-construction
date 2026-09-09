@@ -6,7 +6,6 @@
     <title>Chapter 1 - Lexical Analysis | COS341 Supplement</title>
     <link rel="stylesheet" href="../css/style.css"/>
     <link rel="stylesheet" href="../css/chapter5.css"/>
-    <link rel="stylesheet" href="../css/home.css"/>
     <link rel="stylesheet" href="../css/chapter1.css"/>
 </head>
 <body>
@@ -17,7 +16,7 @@
         <span class="site-header__course">COS341 Supplementary Material</span>
         <nav class="site-header__nav">
             <a href="index.html">Home</a>
-            <a href="#">Chapters</a>
+            <a href="index.html#chapters">Chapters</a>
             <a href="grammar.html">Grammar</a>
         </nav>
         </div>
@@ -29,28 +28,28 @@
         <!-- breadcrumb -->
         <p class="breadcrumb">Chapters &rsaquo; Chapter 1 &rsaquo; Lexical Analysis</p>
         <h1 class="article__title">Chapter 1 &mdash; Lexical Analysis</h1>
-        <p class="article__subtitle">&ldquo;Scope defines the boundaries; context dictates the meaning.&rdquo;</p>
+        <p class="article__subtitle">&ldquo;The pattern defines the boundary; longest match decides where one token ends and the next begins.&rdquo;</p>
 
     <!-- ── EVENT 1: GAIN ATTENTION ──────────────────────────────── -->
     <div class="callout callout--question">
         <p class="callout__label">Opening Problem</p>
-        <p>Here is a fragment from a program </p>
+        <p>Here is a fragment from a program:</p>
         <pre class="code-block">x := 5 ; y := x + 1</pre>
-        <p>To you, these two statements are apparent to you: assign <code>5</code> to <code>x</code>, then assign <code>x + 1</code> to <code>y</code> separated by a semicolon.</p>
-        <p>To a compiler, this is source file with a stream of characters.</p>
-        <p>Before the parser can build any structure, something has to scan these raw characters and group them into tokens: <em>identifiers, operators, number, variable etc.</em> </p>
-        <p>This something is the <strong>lexer</strong></p>
+        <p>To you, these two statements are immediately clear: assign <code>5</code> to <code>x</code>, then assign <code>x + 1</code> to <code>y</code>, separated by a semicolon.</p>
+        <p>To a compiler, this is a source file &mdash; a stream of characters.</p>
+        <p>Before the parser can build any structure, something has to scan these raw characters and group them into tokens: <em>identifiers, operators, numbers, keywords</em> and so on.</p>
+        <p>This something is the <strong>lexer</strong>.</p>
     </div>
 
     <div class="callout callout--info">
         <p class="callout__label">Why do we need a lexer?</p>
         <p>
-            A compiler's job, broadly, is to turn source code into something a machine can run. 
-            That happens in stages — lexical analysis, syntax analysis, type checking, code generation — and lexical analysis is the first one, 
+            A compiler's job, broadly, is to turn source code into something a machine can run.
+            That happens in stages — lexical analysis, syntax analysis, type checking, code generation — and lexical analysis is the first one,
             because every later stage needs to work with meaningful tokens (identifiers, numbers, operators), not raw characters.
         </p>
         <p>
-            A lexer groups characters into tokens, discard what doesn't matter (whitespace, comments), 
+            A lexer groups characters into tokens, discards what doesn't matter (whitespace, comments),
             and hands the parser a clean, categorised stream to work with.
         </p>
     </div>
@@ -71,202 +70,528 @@
 
     <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
      <section class="section" id="recall">
-        <h2>Connecting to What You Already Know</h2>
-        <p>
-            You should already be comfortable with regular expressions or pattern matching before this chapter. 
-            Everything here turns that familiar idea — a compact description of a pattern — into a program that scans character by character.
-        </p>
-        <div class="callout callout--info">
-            <p class="callout__label">Key Connection</p>
-            <p>
-                The tokens produced in Chapter 1 are exactly what Chapter 2's parser takes as input. 
-                Every token category defined in this chapter becomes a terminal symbol in the grammer used for parsing.</p>
-        </div>
+      <h2>Connecting to What You Already Know</h2>
+      <p>
+        You should already be comfortable with regular expressions or pattern matching before this chapter.
+        Everything here turns that familiar idea — a compact description of a pattern — into a program that scans character by character.
+      </p>
     </section>
 
     <!-- ── EVENT 4: CONTENT ───────────────────────────────────────── -->
     <section class="section" id="content">
         <h2>Core Concepts</h2>
-        <p>Two thing sneeds to be made clear before any construction can happen:
-            What the lexer needs to recognize (token types/categories) and how each one is described (using regular expression definitions).
-            Everything else in the chapter builds on these two things.
-        </p>
-        <h3 id="regex">Regular Expression</h3>
         <p>
-            A regular expression is a compact pattern language for describing a <em>set</em> of strings —
-            not a specific string. Each token type in our grammar gets exactly one regular expression,
-            and anything that matches it is a valid instance of that token.
+            Two things need to be made clear before any construction can happen:
+            what the lexer needs to recognise (token types), and how each one is described (a regular expression per type).
+            Everything else in this chapter builds on these two things.
         </p>
-         <p>Token types in the <a href="grammar.html">Reference Grammar</a>, with the regular expression that defines each:</p>
-        <div class="op-table-wrapper">
-            <table class="op-table">
-                <thead>
-                    <tr>
-                        <th>Type/Category</th><th>Examples</th><th>Regular Expression</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Keyword/ <code>_text</code></td>
-                        <td>reserved words: <code>main</code>, <code>if</code>, <code>while</code>, <code>return</code></td>
-                        <td>matches the literal word, e.g. <code>"if"</code></td>
-                    </tr>
-                    <tr>
-                        <td><code>_vname</code> (identifier)</td>
-                        <td><code>x</code>, <code>y</code>, <code>total</code></td>
-                        <td>code>[a-zA-Z][a-zA-Z0-9]*</code></td>
-                    </tr>
-                    <tr>
-                        <td><code>_number</code> (numeral literal)</td>
-                        <td><code>5</code>, <code>123</code></td>
-                        <td><code>[0-9][0-9]*</code></td>
-                    </tr>
-                    <tr>
-                        <td><code>:=</code></td>
-                        <td>assignment</td>
-                        <td><code>":="</code></td>
-                    </tr>
-                    <tr>
-                        <td><code>+</code></td>
-                        <td>addition operator</td>
-                        <td><code>"+"</code></td>
-                    </tr>
-                    <tr>
-                        <td><code>;</code></td>
-                        <td>statement separator</td>
-                        <td><code>";"</code></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <p> 
-            These are the six token types this chapter's worked examples use.
-            The same style extends to the rest of the grammar's terminals when needed.
-        </p>
-
-        <div class="callout callout--question">
-            <h3>Pipeline</h3>
-            <p>
-                The problem this whole chapter tries to resolve: regualr expression tells you what a token looks like, 
-                but it is not a program, hence cannot be executed by a computer.
-                Getting from "description of a pattern" to "working code that recognizes that pattern" takes a couple of steps.
-                This is that path:
-            </p>
-            <h3>1. Regex</h3>
-            <p>Human readable specification describing a pattern.</p>
-
-            <h3>2. NFA</h3>
-            <p>
-                Built from a regualar expression (specification), one construction rule per operator.
-                The problem with NFA is that it can be in several states at once, due to epsilon-transitions,
-                this not something a simple loop can track directly.
-            </p>
-
-            <h3>3. Subset construction (NFA to DFA)</h3>
-            <p>
-                Solves previous problem bytracking sets of NFA as single DFA states. 
-                The result has no epsilon-transitions and exactly one next state per input character.
-            </p>
-
-            <h3>4. Minimisation</h3>
-            <p>
-                The DFA that subset construction produces often has more states than necessary. 
-                This step merges any states that behave identically going forward, and removes dead states (ones that can never lead to acceptance).
-            </p>
-
-            <h3>5. Combined DFA</h3>
-            <p>
-                So far this covers one token type. 
-                A real lexer needs to recognize all token types from a single scan, 
-                so this step merges every pattern's automaton into one, with each accepting state tagged with which token type it matches.
-            </p>
-        </div>
 
         <div class="callout callout--info">
-            <p class="callout__label">rules</p>
-
+            <p class="callout__label">Rules</p>
             <p>
-                <strong>longest match:</strong> always consume the longest valid prefix, not the first thing that happens to match.
+                <strong>Longest match:</strong> always consume the longest valid prefix, not the first thing that happens to match.
             </p>
             <p>
-                <strong>priority:</strong> when two token types could both match the same longest string (a keyword like <code>number</code> also matches the <code>_vname</code> pattern), 
-                a fixed order decides the winner - usually keywords (reserved words like <code>if</code>, <code>return</code> etc get first preference)
+                <strong>Priority:</strong> when two token types could both match the same longest string (a keyword like <code>number</code> also matches the identifier pattern),
+                a fixed order decides the winner — usually keywords (reserved words like <code>if</code>, <code>return</code>, etc.) get first preference.
             </p>
             <p>
-                <strong>error handling</strong>
+                <strong>Error handling:</strong> if no transition exists at all from the current state and no accepting state has been passed through, the lexer cannot form a valid token from the characters read so far — this is reported as a lexical error at that position, rather than silently skipped or guessed at.
             </p>
         </div>
     </section>
 
-    <!-- ── EVENT 5: WORKED EXAMPLE ──────────────────────────────── -->
-    <section class="section" id="example">
-        
-        <h2> Constructing the DFA - from regex to lexer</h2>
+    <!-- ── EVENT 5a: CREATING THE DFA ───────────────────────────── -->
+    <section class="section" id="construct-dfa">
+        <h2>Creating the DFA</h2>
         <p>
-            Everything so far has described the pipeline in the abstract — regex to NFA to DFA, in principle. 
-            This section makes it concrete: it actually carries one real pattern through every stage, 
-            so you can see each step produce the next.
-        </p>
-        <p>Click the next button to follow the process step by step</p>
-        <div class="stepper" id="constructStepper">
-            <div class="stepper-controls">
-            <button class="btn" id="constructPrev">&larr; Previous</button>
-            <span class="stepper-counter" id="constructCounter">Step 1 of 6</span>
-            <button class="btn" id="constructNext">Next &rarr;</button>
-            </div>
-            <div class="stepper-body">
-            <div class="stepper-tree" id="constructTree"></div>
-            <div class="stepper-detail" id="constructDetail"></div>
-            </div>
-        </div>
-
-        <h2> Worked Example - Using the Unified Grammar</h2>
-        <p>
-            The previous section built the automaton. 
-            This section uses it — running the finished combined DFA against a real fragment of source code, 
-            one character at a time, exactly the way scan() would. 
-            Watch how the same two rules (longest match, priority) from the Pipeline section show up concretely at every single step.
+            Turning a pattern into something a lexer can actually run takes four stages: regex to NFA,
+            NFA to DFA, combining every token type's DFA into one, then minimising the result. Each stage
+            below is broken out per token type — the diagram areas are left blank intentionally for
+            hand-drawn illustrations.
         </p>
 
-        <p> Let us tokenize the fragment from the opening probem, using the unified grammar's terminals </p>
-        <pre class="code-block">x := 5 ; y := x + 1</pre>
+        <!-- STEP 1: REGEX TO NFA -->
+        <h3>Step 1 &mdash; Regex to NFA</h3>
+        <p>
+            The NFA represents all valid patterns that
+            can belong to that token group. An NFA can contain epsilon (ε) transitions, which allow the automaton to move
+            from one state to another without reading an input character. An NFA may also
+            allow more than one possible transition from a state.
+        </p>
 
-        <p>Click the next button to follow the process step by step</p>
-        <!-- Interactive stepper -->
-      <div class="stepper" id="stepper">
-        <div class="stepper-controls">
-          <button class="btn" id="prevStep" disabled>&larr; Previous</button>
-          <span class="stepper-counter" id="stepCounter">Step 1 of 7</span>
-          <button class="btn" id="nextStep">Next &rarr;</button>
+        <p>
+            The final accepting states represent valid matches for the token.
+        </p>
+
+        <div class="tabs" data-tabgroup="nfa">
+            <div class="tab-buttons">
+                <button class="tab-button active" data-tab="nfa-keyword">Keyword</button>
+                <button class="tab-button" data-tab="nfa-identifier">Identifier</button>
+                <button class="tab-button" data-tab="nfa-number">Number</button>
+                <button class="tab-button" data-tab="nfa-assign">Assign</button>
+                <button class="tab-button" data-tab="nfa-relational">Relational Operator</button>
+                <button class="tab-button" data-tab="nfa-operator">Operator</button>
+                <button class="tab-button" data-tab="nfa-symbols">Symbols</button>
+            </div>
+            <div class="tab-panels">
+
+                <div class="tab-panel active" id="nfa-keyword">
+                    <p>
+                        The keyword NFA was constructed by following the characters of each keyword
+                        in sequence. Separate paths were created for keywords such as
+                        <code>return</code>, <code>main</code>, <code>if</code>,
+                        <code>else</code>, and <code>while</code>.
+                        After the final character of a keyword is read, an epsilon (ε) transition
+                        leads to a common accepting state.
+                    </p>
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:350px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=keywords&dark=0#R7R1Zk5w2%2BtfM43QhcT%2FaTtbrXe%2BRyl55crWnGQ9JTzPpZmxPfv1yiUZCAj6EJAZIpWrcNKjFd9%2B6sd89fn9%2F3j89%2FC05RMcbbB2%2B39g%2F3GCMbexkf%2FIrL%2BUVhH2rvPLlHB%2Bqa9cLP8d%2FRNVFcttzfIgu1I1pkhzT%2BIm%2BeJecTtFdSl3bn8%2FJN%2Fq2%2B%2BRI%2F%2BrT%2FkvUuvDz3f7Yvvrf%2BJA%2BlFcD17pe%2F3MUf3kgv4ys6pvHPbm5unB52B%2BSb41L9o839rtzkqTlv%2F59ic7%2F%2BPxr%2FhLYOu4%2FZ5As7q3e5RRnK8bJqbrov73B3u%2FP%2BcNvr9%2FVl27sN9QtlzTKAEZ97b6l7njI4Cx%2B%2Fi46HtvP15%2Fj%2B08pbnyN310%2F%2FDV5%2Bcebf%2F%2Fl4%2F5ff%2Fr60%2FHv6P1%2F%2F%2FNw6wSCu7OVLgiyEupYKQWt5PgdK9mglUSwyN8OBKecf7h37%2B%2Fuoqf00yXdpxFkQTsU3B0dLxEQYK4I9OlDdAKuFYjWOkfp8xm6GvJEcDs9P36OztDlQhHULpbgi28P8REKTyTE9iGBLuWIbn%2Fcx1BoZvJO9Prp%2Fpx%2BKoTVJxivuZ1kCOIRT%2FTLxVowaeKKfrncl2jX%2FLVE2CzXAkkUT4SB8h1B8HK9zrVE%2Byp3LXon%2Fq5FbMO%2Fu%2FOXL7BfFr1jKZpA8ApEb1GsBaMvX%2FQW5b5A9OV3vyOIvvxOUQ6jr0AkE8u1RPsqdw3CcgB6x6AT9jD6CkSwr%2BQ%2BCGDIEkG%2FXA1oEKEenQQiMoR73hSEAoREUK7eFAY31L03IalVWwdhHCGQMEO4GwswckNYBJhqNRFOqzcVwYmv7i3R1gV7EwEmt1pgCBWqgGwpIBfYIpDku4IRrS1yDPJdAZcSwYqYuTB4OSIqqpYDwswR0QnZHUx0CJ08shwMdq6ILMnLwmAnNPUEt4s2S14GxtCuCJTkZXp%2BDig%2FhK4aWa5nOzAJgmCGHxJa8GR3fXQpYlD%2Bz%2FlAoSSCHfElYcsJTcBqOSDPCq1AsjsYzwoNQbIcjGeFtiB5WRjsAtHtZDnR7sjuYVwTwGAnNArJ7oC%2F3oMKIc%2BSl4XxbAgMifShoo8uYTwbwlARin49vi%2FDFYKvC1ez64bCV%2Bi6obS4uu7IrIauryuZ1nVLBcKuW4owT%2B8NMNGFhdZ7sRhMcGGh8V7uDCRnsDAKXO4M9ppC071cTLSzct8gHscY9prCAGG5s85vhYrg49OHD5dff%2F%2F0Pvlopz8d%2F3i5R%2BgWCDERLrlrN292f7jxi%2F%2Bzp5oJh2%2F7OG3cZr9BVuaWtO97Sp4%2BdOQ9evIWwvDtNIFN9wea8aPj%2FoXajFO%2BE%2Bf146dI4r3kch%2Fjty2HDbncj1Fgj09%2BmQT2%2BFSUUWCPz8WZAvbk2bpeudpj80jgb6Bgls0nc3asgp4kM2umCEoyHmaMfSVDgibBLRHoMwpuiVjnOsUlxz%2Bbubjk71gFQclWiZiiKNlSAGMcLFsPYRbg4%2BsSDAN8fHGGWYDD9j2Nap0E4OPrSswCfHxVimGAjy9lWqdVwI0Mz9wuEO1ZBVXJ1nyaoipYNapsyZcxppetezOFHtn6M8MAH1%2BEZxbg4wvrDAN8fP2gWYCPrz40DPDxJavrtCO4CeSZ2xGiPaugKvnGCVN0JV%2Bsa4yV5auWDQNdom7YNNAlCqgNAx22czwnSpco%2FTYMdIm6cdNAl2g8MAx04M5nkfuRL%2F1fp4HGL%2BCTrVOSsr%2BAW5KjG%2BkGUVNkI12EaIxVpWsxzYJcorrSMMglikzNglyibNQwyCXqY82CHLjxGQmW0YW%2F6zQAuKXzM4%2FQiPasgqgmmMhhirAmaIs0xssTdIiaBrtEg6ZxsEv0qs4qtdnbyHqZRuVOBHaJrlrT1C7RoWsc7BKN3qbBDtv6RMVyE4FdosvaNNiBW58VtUu0j6%2FTRBb0qM7cSBbvWgVxTTBpzhRxTTCJwBhPTzCUwTTYJWYiGAe7xHgI02AHbn1W1C4x18I02CWGYhgHu8RsFdNgB87TmJWQkRhsYhrswK3PSshITGxZp5ksmNMyczN5G5EzFNeDiwKcCk3XB%2FKZ7mQA%2FnUa%2FOP3dxlubvCfyo%2FZPxpT4ak7rJidY3%2BOTmlz4Hy1RiIcKU9WqOZXMFuwokNrMv71J6pLl%2BT5fBfVy1zI5fSFzM8%2FJ8%2BnQ5T%2FkpWBIjmnD8mX5LQ%2FfkySp%2Bwiyi7%2BGqXpSzX5f%2F%2BcJjn9po%2FH6tvoe5z%2Br%2FHvX%2FKldm716Yfv1crFhxfy4ZSeX%2F7X%2FNB4Kv94faz4RJ67pOfkt3rOv13QQ3HiwP78JareXDgbo4bf%2Byh5jLJlswfPGWun8VcajvvqSIIv9X31o%2F9M4lOOq%2Br8BI88Up2e4LohvUS5seop3KSbxjaulwrMko9JF1UJ55Y0zlrYfyZIttoEUhMVRQ05TX0s6bCJ4%2F0x%2FpIfbHCXPR6dswtfo3Ma3%2B2Pb6ovHuPDIV8j4%2FxL%2FEf1w1ahHbJXL4DhFuxIMPZ1f3yOCLF7x5wN75MCtNfdEP7Mv7i9FPT3JrvBCZ6%2BF%2BtcZYL3pbiPrJQBr1ysvF79Yrbl6HsD0QOpoXrk1tohz%2FMHUwi5Jbm%2Fv0RA5A8SCZfmS1TUwZMADeQej%2FHTJSoFfBr9%2FLQvRMO38%2F6JRvflYZ%2FbI5dcSVUEcHkqD%2B%2B4j7%2FnwuLtfXw8vkuOyblY2s60uHt%2FX3No4xvbs0P70MG7A%2FDy0DjAw6to%2Bdv1sA9yqVrECcNd2PyPYlHHc8Q4pFAkyYwoEEvlK06yV09p4PNwQ0P1lJwiBgXVJQCfUmJfyJOXp%2F1pCE8iEU%2BiBk%2BWiwF5sol7Wxb3fgjG%2FTD1zOFFqHpmJpqxvHs6vMlPy8mRe9xfLvEdTTU0Psfo5DZ%2FjtXSA3VyySDdGCfH%2BHAlc4MMyH1CwZwBL7fh6xsqvdTAe0u5I0JbhHrYHymx11LurYWcgF7ItZiFNFsJPsxK4BDja7YSYsVWAsZEQFTovsU33bTZIhjboRcgqkS5TZFHh2XlWIf93SKin6uPlfoy4ot0yb2dZXm07LM91CP9ik%2F%2FjM5xhoucCwQikQ58yPsmIwSc69Hei41HCjjEikrXMyvhMEzC2cuScNnf%2FWNuNp4%2BX%2FI%2FN%2B9%2BvHnrKhd7%2BQC7Bg0Ml3rqXSVO9GRzlbJ%2F%2Bb67o7GmzT0iGmHd7hHW6x5x8K3EJRIoNyDrFbyVXTwkz5kg%2FXEoS86HARFyWxipr9W602V0J8IER6p50A4XwIND1SV2BDyYW9tyqpHnsTaZ0N%2BxOPftnU8zouuMQXs%2FK9YDIRXHJ7RZ83hcasFXlltwMZ8qBtvvU7K0C0gBNEhjOcZvpNLOzRxC22K8e3DSCDEL2Da9ghozuB7%2FJi0HLC7BaGH%2BEZzf566PZntfNqU4JdsHALZvUMJy2D5V7N5aXl5PKBXVI1E8soCjhe8bzYCvjPOvgbtfGt%2BMCOK5TXlg9ciDNvc3ehIVlBAghzb%2FAzYIpzd0hoj%2FP0SSULS1HFlyVl1HgJANJxOKSjATpVEjOxodEq9EdnDkQC1NPMe%2BaToSltfjSWQf%2BuP4jVYMFdIBMznIYFiIXpV0IAn1IdKBop7lSIeTYgcjwIyd0BEV4BMNXfSgKXt4aRdJzjrG%2Fph8rQgIMQRVllOk%2B7Tx%2BRAdo%2Bbn6BA3Px6Tu99qsUXzBl8qDSYWWDwf2UwsEUtHEvsxfx0I%2BkqUBM%2B17DYvtderFmNHZ%2BNdIgwwCpvksByp%2F021fxmSspzR%2FmW3f6pG6lens73C2PJIjr6ak6FHWZOBj8HW5HjxUOba5yIeHDRcPNQUsxzZcFDtL9qIlg3D3Qj%2BA2pkQT2X8rWYAXwRMFgAeL5DSYDQ9TolAN837fcwxYMxZyMBMAbEnxt0shwZ8KjWK8ycOtorBFsHt0wE6VZZ9Hmi0hirszSmdjtZywHigc6jsuEVeqL9lUYtT9SxxBQ7pShyKo93kNIZ3V%2Bh0B%2Fk2MKUwNLWMtF2MBiUukxwYWi5MNMO4SBmndEZj6HVME0oTlnl7uIWXc0mD64wWOHKmiICcmMSpo7ZzJgHcHIaZLYcE%2BeovIKcTbGD%2FZxbpMXTqQ8rfk0B74lUv%2B%2FsQrulTBpXSQ9TQHOvHWoyAIgQfg2mn5BZpa1nW29huR3S3oWD8M7paJaXLGdtRr%2BmVOCexxXZegpb%2FYn6c3vUfFupT92K1tLkPlPi7jghW%2Bs8uNXMChkr1GwzrQvIjDRodzlWwdZs1hZPqrpoXZPiaWYTfTwbQDmqbQ4PXHW%2FsJbTi2qGp7h95o4BJ7ywAsegvzrFZQI%2FdjDKSBynpz2x2F2PV%2BDo9QpaCA99hV7BhaN2N767ybt%2BVfDdUGPIaWNlGl%2BNr0LnbAxhddbQnLLBHqBIuEEjy7GGlPYgZtaQUw8iHF0sxtYIMwuMMY8GEoe9KWKbcpC1zH3Qqog5In9TxDnToXyi1PU%2FZvySrgi5t9nC2V9PLwt2496xVMx%2BKDt9Oe7oJAaY39baa8h2B7KV%2BaLiClpEY7Mj1AKADdcgs%2BXYcA%2Bqi3od1gYb3hOqYVLESrPb%2FTrcZoZz2kiT1ibidt1a29ec12axPaKhbqieVpXUDl5D1miHg7omv2rPtn2wCjc0e7Wd8GaUuTs%2B4R0geimH9RL02gW%2BB7ULtnz3gvPdJYpV5btJ%2BmDWkkuX2zGncVM%2BeNzUwvLdqiO8mOJ2QL5bh2vACShsrkGh5dnpujjUNMk14DDe%2BpyDQHN6u4XvMc7gUK7bstuC3AbTljQBzw21e1SltgN%2BPnTGdo8yq2dOee3Ahlo9C8trKx19NU1em%2B1yZhZQl9cOtvBc9jfUnNdmZL9K%2FbsltQWJzQlwME4cb2ns7C%2FqnpMwfR6bRbeSiHg1RIzjaUINrHKl1R58jKTnxPD1rOvkA1QpSvC8YEfSJYaGF1uAuFSTxJZjoq03bd1k9E1NtzOZTErKszWFphDaYlO5nkaaM9csvrvmvcjqaVWpa4T54nnGkRCFqryUvNMnq5FXD2%2BoiCWw%2FF3AqPLBCWvcWs53jFsGGJC3bhL1ciwD1Skr5PfEXgxbBsqy1JWJvQmpktFmNbiakCSA7ReWqVZ%2B3DnN83PJVFfeACeAsHkDN%2Fk5ImzqMvMHeP0J6jl0i%2BLl3gHW6x1w8O9y%2B1MUeAtbJluAFM9uuejTsuRgU0lVYrs%2BzmgzlWrndjamEqDjp0kmyzGVVA%2B4fM3pbcQjgxXqac1zFVsqQZ%2BW3vLdfJQEaC6mM0HcyllS81AjDv71MSUn0L4x5U1%2BOsbk2a3BxrLXxslExnI4W2N56DDavtPX26ay8t48hJhptK7PZMb0piYwSdQBDG9%2BwPnVGt5GeuqQ74HN71ta8E9xhs5QXR9uuj7T9ZrnJrXUipIken4kHidQPY0SsdtpzJWEV2w16XLbD3cOnd%2F22MONhubKfc%2FpXUtzotwDNDnUhLscVZQo1jpW4DIxIAdKgCToU6fcmBWUnfS61dYJsynhLmz%2BR0fpXHaUk7KIABH267YSsOaS%2BD70%2Byoq5HPZq6yixX79nme%2FZdG2I9TPhUFMyfxYwwEh9jA%2Bs2NhkO3DzIaFVdmsewpMbhtsSX3R6F02XKzRHNiCBrk5oLnynoNxJRbAOUqfzwrnuyKnHWZUovLJv%2BcSOHAxnwwklb8TsnQRGlbaDqA6lqK25Shu5VXxs%2B2XqxC6OfWiE8yZmfk%2Be9y1MrXtbCWxudrGetV2C99sWnBSpa2sY84NuAJ6Dq67fk3uQYQ2YFZ74O5seoA%2Fsixn7IhXP2wtFzrMWrotA0AjPUXSy7EMzqvtlyMIVRZeJEd0r0xGEYtrTieX1sUwEE5fWPAuXWeLHCFHTvxgcwAKkzHcBbRaDtjDxtWxJRbL1xX5AJrL7XkoR3C3byiOBx2FN1Nua2JbCfvlWdUJ2G%2B4uTNB0xul4Vdn33Q5pLMxd1y4ubOwNrfnVba58eXAVHqquweFtbjAudJZ6XkV5TMTKF1w%2BwbBxtboJug9nEYBj5TTwWb%2FZnJFc707D%2BUjWHE47239bIImw1AF7w23hZX1tHkclM7ENIaE8NQM1Q3x3CoEPMBQCIp2lmMuqz70wAowY%2B12HMw%2BYYBwKAV0cPuKFLHm08J58l%2BpIuYI%2FE0R54tYTKG1H2hUw768GqYQbEbvArXuNUS181DQDFOhnWWFPYGqaCZHwCIL0arcZ8%2FF0KzKfQxX5f6yVLmRPnPL9WlBrikBOFS%2Fb452rt81nyveVisjTq3r1yOn58fP0XmSEvFqKSUHqQhyEr66pESA%2BViUPRWFGS2C2ZpR3TIfUOBN0cpyZL7qbMd8C7wpjt1M%2B5YMxsxwj5orlAe3%2Fa3AO9e5mo%2FrbeF7xIyw4SpXWYF38PoKvLE6RR6qUeQ%2B0wyAgnBsdXfAkB2yDfuBgNJuipiXYxPM%2BSgU5SUPPGGlrNI74FuTcxZWCp2OOR1mjYhYgsiBhRV%2BP8618Fs06UmjTNjKwkXlSg5jRuo677gWpit3G0LN051YfCs58Jhw3TZGRVCZhCbnuuHmkbLjUILt5DjWsZ2NeQQoFKfoZDnm0edVFooPpY8thpf9tTWPWmypAaXKeKsMF1QnWcZM4C1bnXOd5olmLXwr5bqtJlwwjJ5NLsvnq4abwMoKwsP5RgiHmLKEaBUVhLMpK8P1BGH1BhCjeGHl4OcZl4OTRGfn8wptYsLLK9fOWK92bukFlXntrVBcWNEXMmjQUShOhOwEheIUgrXpY2vnOzalk0PXB2rl%2FGu24rtRRF5HrH5pfjefofAIM06tw1KObi0%2FIvS1VYovvlI83CJeuXbXPJKorVcmqxSHQQQ7Yl45knBxcSG%2Bb4DoM3tb54SM%2BP5TuUWgkTEPqkuyn4tTWpVMTxA2e36l%2FGBivfQRHS%2FRaArJH95oZPE0kj5Ep9E0kj%2B80QicRhQ5LKpopDgMdzSRlEfpblSydElySEaTyCHZ6GPx9FH2Oo%2BmkapVeqOTpWubMtIxmk6qQMlGJ0uXJ4%2F7eLw0yR%2FeaARMIx5mu7NUBNsL5Cg7bg0jTcetkcZ6I0es8l%2B9jCxPHlln2%2FEDs613dbXikMB6g9iWE1bfK46gZyimD9idzWELBTq3VnxRa3ZIo81H1s5q%2FKep6LsWwa9B1Qq5VDrFgTQPu2thH7uS2B%2Bqy1X1vdYSfYZVbdobOzB2%2BFRipLEDI0D%2Fe4NKlqOEY9VKeM4amGO9bxo4N5UxV%2BPWEllTgT%2BXC1eogTWPo%2BvBvpKCwpIft35XwSHyrVHgE%2FDgULNIVb8rJqXNm1mUA2NO40AwtqFm0cK6XVXPeX%2FN3a41465cLWueWMdRAgpV8dbtOqy%2FQqMiVjVEsNI96hXxtQofe5hWrGHogFXrbIa7I4fNQOnKLHx8%2BvDh8uvvn94nH%2B30p%2BMfL%2FcIEUUwXHcvbKCflvJ87CI6Tjmn6vyao1euoTUPh2rphsn0s6ryhN%2Bil2%2FJ%2BVA8NrJIgSuCwH2B8yBFTQULzLR%2Fd8QABUYxZB%2FPSZI2pUgGsYe%2FJYechn78Pw%3D%3D"></iframe>
+                </div>
+
+
+                <div class="tab-panel" id="nfa-identifier">
+
+                    <p>
+                        The identifier NFA accepts names consisting of letters followed by zero or
+                        more letters or digits.
+                    </p>
+
+                    <p>
+                        The first character must be a letter, represented by
+                        <code>[a-zA-Z]</code>. After this, the identifier may contain letters or
+                        digits, represented by <code>[a-zA-Z0-9]</code>.
+                    </p>
+
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:294px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=identifier.drawio&dark=0#R%3Cmxfile%3E%3Cdiagram%20name%3D%22Page-1%22%20id%3D%2276LU4VSdVLubTwvVCcVi%22%3E7Vtbb6M4FP41vKyUEZeQtI%2B5dGcrzWhXW412Oi%2BVAw5xh2AWnJb0168NNthcEsiFSbeRKiU%2BPj7Gx5%2FP%2BY5pNGu2Tj5HIFx9xS70NVN3E82aa6ZpWPaIfjDJNpOMh0Ym8CLkcqVC8IDeIBfqXLpBLowVRYKxT1CoCh0cBNAhigxEEX5V1ZbYV2cNgQcrggcH%2BFXpP8glq0x6Y%2BuF%2FA%2BIvJWY2dB5zxoIZS6IV8DFr5LIutOsWYQxyb59i2H05%2BKZLcLUfbCgjkx1%2BVoCRC0iHHDheKqZo383bPC06MtFmjVRVGICqcOUbnuqaKyon5vHO9D3q%2BPzNnKfYl3qNmdyHwwIWiIYPRGjQcdbfF0%2FT5docR9%2Fm5NEN3V0P7jtomw2KMcEROQpRUKL5xt2mdK42W8xblqxPGvTs9fP2smHdovprU7TN2nLi%2B60oPFug9QecBwYkk5PKa%2Fbnmvj9I8OkzH9CpBs1JrQs6vX6aEQ3u84W3vORj0Cmx4qxOERc%2B06h3uPTaOfjlv%2FSc7%2Fudy1%2F6DuPVY9uO3wAHF%2Bvx181nvw2%2BGR7WPjbdiXJ3oM7jYP7sUARqsEBy0I2TqZ0UfXzN%2BzJv0iETNFQ0dlKhnRRcmcj9vAjaxOWOBxu%2FQIikU%2BSUy2gppSHcqCIVvsChH4EAKH9bxSIs74HFmzqQyWgVaAQSNmDC%2BTgDjMyPISJZA%2BA3Wx78%2Bwj6PUtEX3xF4u0%2BQV4Z9Q6rFG1q3l5j2CE1tUssYvYOGLKSIYoze5jQkgUpsWClBuQxfJTR87P9mTzXUGpozcS92ZM15gRGAi%2BYe77zPEa0iiLVVZSeR8xJn4a0HkhSivV3ibVyuWIO%2BAlxFebtmUIcJ3TDSxhJY2m68kyDIIoFupUKqowJvI4VpNeb6MHmr2gTdxRFbYwwHw7wop3bFN4OZ7UOh8wTjk2%2FAMCdnyog1sCC7h7gIgQsmXB8kOz9j1uImgT0uqF9Xzh6OgEjOaGI9Uy%2FK1FBWkvPEV0FQ290uGN3lDgI88VkA6dCykB3rKDhCixe6Ed6yR62Z7X9qaEKOApKu305hb2cpznG7gb6A4MCOfxfElDoiyUhHgWccgToE4oQrGTZikdoqsMvKyfDEFg7fJ4AdbBDdKtyqzy1XahpZaiPAhA%2F2TYY4tJZgMdqCIW%2F%2BLuVlSwctlTNFbhln%2BEHXIawc1szmWFDCiHiAqguoyjZojAhzAUkLhog7oUyLPL8grVeTFIQiOQp4uwS0z1hFuciazumcyy%2B4cw%2FanLqW2PShxSTErcCepIYoQH8QxclToqaCghqLtd7nxyBqfbNGcJ3LnfMtb7yInmfsRIC4ga4OQBAt7B4EpBZ1EBZIATtlCxjX4oAI7FTs3qp38RlfYybxQsbM%2FwB1FsIbHE6xSFdc%2Fr4IJIt8LtNPWo9RTAJ81BO6L81IckUflhLyP81ItHC%2BGvbH74EPo2%2FDD0Le2SdQcNtE3cwTWjHMEi5h9aLM7bWofm1n3EDlTjWO9kLhOQS2uqRqvVwc9Xx1Yhq3mzb6vDswqCE5ydWBX0HOyBCa%2B54moRfp6z8mr6U78clKY%2Bja9dQqrv176P6aw091A6IPb819C6MPxSAlLg2Hr%2FNUw4nx3EnZzkLreSZzjTsLo906ikiLPcidRegF4lpw4PkNOFBkubzzKjYYMl5eCrQvBd5ETL%2BlS3rAOy4nWh8mJ77Oso7s7vvjKrobUXyu7nis72zz5S%2BF2kWd85UP98iGzXz5UAdY5%2BVDdjWnHiJKGDCp08Ybuxl3bSHONK%2B3o8HDXu5qTMpprodVzYLF%2BbaE1HJ0qsJzIH8LQQgj%2Bht7GBxGrz5KQ7nKc%2FtKB2VD%2BY0O9O%2FlN8uqibLrW0zUUK4Ie9X3HmHgZZ%2BNU6Mlf8Qort6VXt8cTHtosfumSkeTi90LW3X8%3D%3C%2Fdiagram%3E%3C%2Fmxfile%3E"></iframe>
+                </div>
+
+
+                <div class="tab-panel" id="nfa-number">
+
+                    <p>
+                        The number NFA accepts positive whole numbers and decimal numbers according
+                        to the chosen lexical rules.
+                    </p>
+
+                    <p>
+                        The automaton separates numbers beginning with <code>0</code> from numbers
+                        beginning with <code>[1-9]</code>. This allows the grammar to control which
+                        number formats are considered valid.
+                    </p>
+
+                    <p>
+                        For multi-digit numbers, transitions labelled <code>[0-9]</code> allow the
+                        automaton to continue reading digits.
+                    </p>
+
+                    <p>
+                        A decimal point (<code>.</code>) moves the automaton into the decimal part
+                        of the number. The remaining transitions ensure that the digits after the
+                        decimal point follow the required number rules.
+                    </p>
+
+
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:445px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=NUmber.drawio&dark=0#R%3Cmxfile%3E%3Cdiagram%20name%3D%22Page-1%22%20id%3D%224MgkJZr-1Oa12_wpDFJJ%22%3E7V1bc5s4FP41fkwGJAT2Y%2Bxk291tZzuT7XT71CE2tuli5AWcOP31K0BcBIIgQBi3zHSaICQhzuU7n86RnRlcHc7vPPO4%2F4g3ljMDyuY8g%2FczAAxlTv4PG17jBlXRUNyy8%2BwNbcsaHu0fVtKRtp7sjeUzHQOMncA%2Bso1r7LrWOmDaTM%2FDL2y3LXbYpx7NnVVqeFybTrn1i70J9nHrHClZ%2B3vL3u2TJ6sKvXMwk860wd%2BbG%2FySa4IPM7jyMA7i3z77lvfX0%2FfwJYDimE9EkFFf%2Bi6uTWa0sUsbjeUM6P%2BdwsHL7F7aNIN3TBc%2FsIjAmNtoyfTYEzlXj19bjlMen167p8O3AOTug1V2MX%2F2tT8fDsZH7%2F3q5Nqf%2F4Z%2FfL7R1IreZKony%2FvmK9X3vwVVg7mPAmK9q14jWVhgekHt2sQeh%2BrmqrrJFymsm0oXmmpeM5Wv1d2sGsl9DhJ6QVj3gr4hNFWd2P0aEyD6FbJzXewN6%2BQeCL0hqnMgX8ywqnrP0H00W5VtRateCK1ayExRraKqzJSvp1rbqrrJX1WtEoWm0ustsUrF%2FLmqzCd6QyHQ0oV0aggt0xBaiZEXELqfGdE%2FMiwfvF5MO4%2FY8I4EaYXXzz5av9cE0beDIC9AVK3qiI89PExItqCRtDpLoUt8liat4Uy8sRlCvhl2YmIdljdZf0%2FW354IS7R%2BoUUxPESmqNpHQ3TPDCD7TvOVeZgWO5cUYbbnA%2B2X3Ye421Oii4p7nLbbYSMg0c%2F72Qb1SLaGi3JNltdP3JmCXE8pmPHGy37Y4ojhq8fcUoeNqEQNCgU7CAcSe%2Fs8nERRtU8HyRRV%2B3zXr2ZVHbKuckT1Vmbw7XTeZYly%2B6TlRYlyJ%2BO8nLi7me9FxN2LgcsjZ%2B1rUFe6NWnCCktbE0S3JtmAsNSa1KWzIu3hvCKvNwO%2FxZfkl1yxlumh2MXysme5Qb4OTOfAlZXeZIaEGhfWoFibUsU6ewZt8vHJW1vpPMk2IroVvCa17XCmR3qJvWCPd9g1nYesdenhk7uxwgUp5Crr8wHjI2lUSeN3Kwhead3ePAWYNO2Dg0PvkoV5r%2F%2BE429RcvmVThdd3J%2BZq1d65Qce%2FjetuMPIBqLav%2BntrCATkJ8X0DsLHywyC%2BnnERwI7GdWUCY9C7BL%2B4G8TqmEk0tcp97KrUnuLIL5lAhaKSsq025JJR9ii8iL0XTsXVj5X5Pxlkcani0vsNemc0dvHOzNJtaY5ds%2F6JOVyG1tN4jeG0WOkQjy2XROVmJ2uhM6hH80XWY1iadssRvc%2BJGK70gHdX48R%2FNk7qnvYsdbqjeLCJLjGYkU40np%2FfjJZOnWOaeYhtqjQ26UW9pAj5TcgGrt0qk%2FhULIdcHbrU%2BsqKj%2BdAU8i2jksJmjsWbDc9Gc0h3HPvqh9l72dmA9Hs3Id18888iagb83w9jgh6kTahj%2BMT71srXPoZ8ut7bjrLCDvWhquF5baLtNHSp3B%2BpwATc1rtZAT%2FvcyRedGvlLdkomaUomMRRGcVBTuvplQxRVyxoRRdHKZMslMZVB1AxgO2BqZXajE8gW3JDaA1gg1h6Mgj3EC6OjRHy1FXoDUfTmOPIVoDfQKtBbkY3awIAscDe3mC7A3VD7oBoGMgUTEQSsbnmIzWKti12rAMy0ScAuGMyQF8E720A%2BIkDxiICQcERoHpfjpH2rQJBzcXdzFx4rDdXmmL5vr1l7YDU1OFSDCj6c10tydpXrrzlloZrwzEf0eUGdRUCPA2oJ0EvzpIdo6USpKfUdGZryhx4IRC5hUDCpi22yrLMd5IaRq6%2FJjOT3bFB4IbwxM6RwBl1lOYMGmpmYLM6ARDnDT0YayE%2FzEMY898kPf8xWD7MlkswkAAsOg7CIhkiBugNFDQUffKdBAULNwUMGFnyAGDzkQSgFaVIuIhjMJCGNBgWRBo0KaEI8aQI0WhUzvc1hSjxZv5iiAMVg9H0DG1tMmogqDJGIM3p3nEkKRr2zkYRV5EGjBWSoPQBGUtweT4p4LujGZbp41XxBapKBeDFC89GSg9jZpsRwKQ2QkvihE8P%2BXBJdg3A8dA2042tAGmFDFTmKiwAyEtzB%2BfOrBOSL1%2BxSetWcgasFE5CX%2FE3c9ddO%2FmrDJn9LqC8r%2BcvmogQDbxRZSeMGn4iDPjQNyNcUflEhbavNO4ffhm6HJreDS2NYtytpeyHN7fJxfuK7s8qyVw8O17SQwVFJP4S3TIuu75wDHFOmQBcuLYCrZKbjKi0oxSzgmM4oJE72a8dLMGy8LIG1tHgZcGhqq6QuP%2FV%2FgeRDfSk5xfcU7Hs9GazxtX%2BZLIMiCObGhOXdD5ypsHBSeBgwb8iOOaXiiR3PynmB1Emk12am7Sj52dkru2WBAJQRXpnDV5PPvZkUGO5o%2FqKskV42pKi8G5JS2W5DcfqobMs5CtMr59EFOQ%2F%2FiNPEecT2r7BwQHIQytPQIsAUYOFSv2y%2BV16ZJeCcb2i1fy0Xz3%2B%2BQ0mAr9vLpBpFzxaWT41NSC2E1ASoF7rG%2BOWo9qZ5HjHx5OpkoK4MtDdFU%2BqX%2FISXTf2mHz7pP3RyHK5V6JS46xlNYndMmxwdCIZO%2FsHAsR%2FLrzs%2BphSPj8k4ng%2B0xYLxRTCicBmonK98GG9ZnXdKtCEVvoUQitDh6OqT5dlExKERX28FRzcEHT35AzYj8fSmsbfRB3Bk8OE5ZPmwwNe6JDCRHBhNyz2FcC2RMHM%2BIDydMKz%2Bpo%2Fu6eWGXruYaDNcqsPS5pK2W2ScmqnX4IDv1am3OwejEz1xZyn3vyPQcCRhAyjxN2OQX%2FIfy3oqztuW0r1hNapWSFQuCpXAFiDR0GwafdPHZDZVZrOx1vbBdPIG5J%2FW%2B1hVxJhuFSVcNA5vqADdAijbvFSOeSHWvIrfHAGKn%2Bfuz7zAZF5dzOtlj0nvnHEBNAJ4KtlPOw6T%2Fb3HmHtmfzUTPvwP%3C%2Fdiagram%3E%3C%2Fmxfile%3E"></iframe>
+                </div>
+
+
+                <div class="tab-panel" id="nfa-assign">
+                    <p>
+                        The NFA follows a transition on <code>:</code> and then a transition on
+                        <code>=</code> to reach the accepting state.
+                    </p>
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:154px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=assign.drawio&dark=0#R%3Cmxfile%3E%3Cdiagram%20name%3D%22Page-1%22%20id%3D%22M6_KHtuPpzHqKcHC5K4f%22%3E7Vldj9o4FP01PE6VxCQwj3x1WmlWu9Wo3e6%2BVCYxxK2Js44p0F%2B%2FdmITOyGQBBhtV5VGI3x9fWPfc33ODQzAbLN%2FYjCNf6MRIgPPifYDMB943nA8FP%2Bl4VAYxuNxYVgzHBUmtzS84B9IGR1l3eIIZZYjp5RwnNrGkCYJCrllg4zRne22osR%2BagrXqGZ4CSGpW%2F%2FEEY%2FVKXyntL9DeB3rJ7uOmtlA7awMWQwjujNMYDEAM0YpLz59zBD7fflVHsJzCFyKPOa%2B6iwJFhExTZRxNB14wT9buXhazh1NAzCxXDKORMKsaX9qecQiz83rQ0RIfX25gyzD6%2BRL5hgu3qw2z92G%2Bb835O2akQ%2BL58XHd18%2BTVYEPT2ALs7D80%2FOOGT8gkunzY0unNTrEuzxfDAYhiht2v3JgK55Fn8%2BGOV%2FYpmJ6Q5ibkEqatc55YdT9P5MbbWsjQoCTbtKaXqDhzUV4sXaaUzWTZLQ%2FwLcN129S%2F%2FO6ep9i%2B6arte6j4%2FqPpYLpBJo2Sw1ZLOfiX0PvLfFUHwwtMTycHBV%2FRhKuClTKgZtFCIdwbhplW1YUdWDMn7Qiip8hHgjeeAYc%2FSSwlDO7ET7IGWIb%2BTjXKlZMZRFlElhKiwwSwuNX%2BE9EvuYrjAhM0ooy0MDgYu%2FWuVyx%2Bg3ZMyAADyC6DijpRzk6MkNfkeMo72xZ3WkJ0Q3iLODcIkNnQ%2BUqO%2FKnkCbVBBPNwKq8QG6D4CqI1kfI3smdCqLekgNFFuDwt06KCiqNTp1lOiWhcqriSmraIqwL2pIGY%2FpmiaQLErrlNFtEkm05o4YlT7PlKYK16%2BI84Pq%2FeCW00odNEAmBGWN%2BJndjk7jyBAR3dJ3Oxv9UandrSYuN9pUuNT5c%2BpgWCDWkv1cYG8mCBLhLz6HIgQSBT%2BVxYxFDztRExscRQUWKMM%2F1MOdnA5xwvOT%2BzkvHW8DJFukCywgeQeZwsTajSaqFU34Q5aDNxEO3jDd53FKdgzWmkxVLJHBIpyaaXsDTyKnljw4b1xvBKw793AGXBX9D5kBI8pjJUBgR6CrVSZqrlocxz2eqpd2BTJsvpVlAYgEcRv7Uxxqs19CE1ShSmXqUDfWHb66RtxxQ40411aIydGgO0cDvzMbtFfKogHuxcsGBSTRRL7WStiIjBza9WAjJQKxw2dz8JccvPH1cL43J%2BcHNepNucPLsOhX55OX2cDKP6OXpy%2Bv61fgrIYo9E2tKhGtBwJ2oOO3ETpQkYdaoMtc0FfRsxOK%2FqvNytsq%2F9ZtVju%2BHv3iazB1X5eva2Dfk6%2B515OsLzXRo1qZXN0i9%2BV5tMf8s44hPhurxKhcJAdXa4Pbpatrz%2Fr%2BsELWQTvW70zW7XhBNZBdGn2vTt4%2FdaPvBXAjeS1ZZmne%2BM%2Fv3Ph7dgG0riDd5Y%2FtFX2a%2FNa0or886qvmuVwLY0S3At5FW5X%2FmTR9GNz8q5N2d9dt1YL%2F30Xde11Rr6F9M1EvTiGPfVU%2BdKClNkzyK5yJNXKlxW7L6iJhKzZg5rBCCcWmOzLCf6oKr66J45u4fjMfVUQdXE0BYlj%2B2FoQevmLNVj8Cw%3D%3D%3C%2Fdiagram%3E%3C%2Fmxfile%3E"></iframe>
+                </div>
+
+
+                <div class="tab-panel" id="nfa-relational">
+                    <p>
+                        The relational operator NFA begins by branching according to the first
+                        character read: <code>&lt;</code>, <code>&gt;</code>, or <code>=</code>.
+                        These operators can form valid relational operators on their own
+                    </p>
+                    <p>
+                        After reading <code>&lt;</code> or <code>&gt;</code>, the NFA may also read
+                        an additional <code>=</code> to form <code>&lt;=</code> or <code>&gt;=</code>.
+                    </p>
+
+                    <p>
+                        Epsilon transitions connect the completed operator states to a common
+                        accepting state.
+                    </p>
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:404px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=relop.drawio&dark=0#R%3Cmxfile%3E%3Cdiagram%20name%3D%22Page-1%22%20id%3D%22nYx6Q6Nl5D3I6Gu5lt8n%22%3E7Vxbc5s4FP41fkwGJDD2Y%2Bx4285mp52mu22edojBNi1GLMiN01%2B%2FEkhG4mZkwJfUM51pOEgHcS6fPp1DMoDT9fZdZIerv5Dj%2BgOgOdsBvB8AoOs6IP9RySuTaIaZSpaR5zBZJnj0frl8IJNuPMeNpYEYIR97oSycoyBw51iS2VGEXuRhC%2BTLTw3tpVsQPM5tvyj96jl4lUpHppbJ37vecsWfrGvsztrmg5kgXtkOehFEcDaA0wghnP70d%2BxGH5%2B%2F05cAmm8%2FE0smY9m7BB7R6KGACa3JAAz%2F29DJk%2BzeTjSAd9KQGLvEYNJtcyKNWBE7V8%2Bfu75fnL%2B7jlwfhf9iIIwA0%2BxCc%2BDnDz%2B%2BTGbzr19A%2FKf1%2Fh%2FwcENNWzo6VRZrtbdx1ezSZ0GVwUb9urAd4fqlVSkoX9oeMyi957h%2BYUMVXXr9wuz53A2rDFGusMoL7E2Voke36l%2B16na5sj12UwofUP%2Ba2FSKjiqjMJuprazq0WxlIyVlShaGSqEH1XQrrRtW%2BbocC0QUMu8HVvKPTBPB8cX2xESAd2QT0MrGeaH7oQakG4FsHn%2BqFhWisP2zqjB4L25WmqoLExyO%2Fb0a62Ck7tdYh4N%2Bn9bqcPvYDziNExeWJ24rbtRieVe86CYFDuelvVrrcMLTr7kO504XjRiNDHw6xDia%2F6%2BI0Ybx92qtw%2Bl%2Bv%2BY6%2FORw0YgxamLg0yFGo%2BVdEePEZ5JO6w3necDptHDRrxu7rN21KPVceefvwzuPUJAy2Z6TTaA9Bd6AyboR6%2B2UmGQA%2FkgvyQ9CV0IaoXn5PkrkBlhseDAdqLKlwTVkh7TcKjTXKTRnsqcwUYw20ZyNqtoCknH4lfd0IrQJHJc%2BXSPmQRFeoSUKbP8BoZAIdSL87mL8yrpR9gYjukHjtc%2FuulsPfxN%2BfqKqbk12db9lmpOLV34R4Oj1m3ghzKKX2bTkis%2BLcYR%2B7HpPMAmSpAtmR0sX17w3TdydQd%2B5aO0StWQiMbeNvZ%2ByYW3WJlvuxgExCphH%2BCWqC4jKQ7XQprOfuS%2B0omPFeJD8RsPhIY0i0Ru27y1pW2xONLgREfx0I%2BzNbf%2BO3Vh7jkN1kISOvV%2Fs2VoCD16Akzc3k2Titv1p%2BxuXh%2BrQp0kUh3YgrYZn1wIF%2BCZOIuWODABGuE30ZCk9XKZZeM91EQum6tid9Jlk0e5WcEpDz7Ep2q2mm1YqYr3WG1DtW6b8EzWAMEPPTUGLRUyCLB8MuzWVxUfThI%2BLsFOa34L%2Ffd8LY%2BrIl5WH3cfQThL%2FJbJDOSLilU33o5hSahYjcZh2hxfelmb%2BZOH5%2FhT5KEpUQ4Lx5mKxSzfhDhzCMXRqErGB41ZCh3jIIv4l6yZzEVcy0iQ%2FQktrm6SNQVgv%2BkQVhEXvHgF2zwt0x2eEuVAZcktS7qIhFwztNYUGhrr9oe%2BNdqsDC8rwW%2BPmHPxyLbqR09ABHDeLFaM6tbNgIBbCchyU4bCMoAEK3BzcMpFCDEnAIeem0UUE6aOKCNLaBo2I%2FFAd%2BUemMlQ03n7Tms1BaC%2FgQ%2BDc0a%2BsqB99O469uRwgsuuODsfGfq%2FwL7lK01twlVmzCZensw5kbxpaTkW6a7JZmUOLinRZ0S5suKLUDgVF%2B8HhUJpgHBg4RZpQvuU8ssuMJMwy6aQzIpGd2Z6EO%2FuoRBauT1K0Hh67WV3mfMiD%2BoGteNC%2BbPbQ74GNUAZtNB6pc4Rc7vd6RCs5DlyPaHRjNnOIbLQ%2BojVLy%2FGl8jTYRa5W8jT9uDyt4H6zP55Gv9%2FqpS46LsTNieuit5o1lHmhbhl7dtfk6pMbecTcNDgVt1xe22%2B17ZYDtTkcSTEC88DdlP0ZY1mRAXpif80QSFcnBsM3Rgx4WSF4jul%2Fg%2BlsMDF75gpABpzG0bgrJcDj0YZCVilSh4QbEKGDNsTDs6aU4pIIhAk7r%2FE2TF94OQyiP74Aj8sXCt7us64jniKvnL2atB0v5axrysEJOC1F7zPlsNhp75Ki88g5H44%2BOE7dNt2lOufkFq9qcRqVh4CmnNzaB%2BhH5uTsLKfAyYuRdeXkyvU7wL%2B4UKnfjeUpfRJxLKbR2bbztVsLiGi0pw5PLvIH%2Fip8Ar0BFDB7ASiQ6%2FQY%2Ba5TBUD1hCtA%2FRMC%2BEZxhV%2Bd%2BycEcq0otyv1ijViRrTDmvIYOklPsOnnRXJPUO8Ads6xJwiU4cB8Y3CQTOoVA%2BABpebjZXlcwiguq7oQcu5AV%2BIFy4F08O276GDmuwC9fXBtViPu71N0ME5bdDDzqdll0WHUfr%2BtjZzzKTrcQghVttfzbQoOYa6Xl%2F9uoGkBIt9d3FWYT1OAAJYyMxi9MWZwSU1B%2FtDeiEP61tR2reCbK3rmgs%2Bzh4%2Bf0knUp1TnlP4sf%2BhdEC%2FLxcw1Wvpbd%2BJQU6R5z%2FnlEFn6aqI3ZXROraFIlc5qN269N%2B5qGby2kfu4WT9W%2FwUOr1SoJJfukm0uLkmI2sjvg0aN5UgZ8r8R2qJ30zA0rq25PaEB9yHh24qH0TUemkFFPgzefmhc0Ke357CLnAQ4dD0fHu2%2F%2BWj4C3QlJ51reFQjx2nCQ6tHj8JvaDWjpNnf8E7PS9mfQoez%2FwE%3D%3C%2Fdiagram%3E%3C%2Fmxfile%3E"></iframe>
+                </div>
+
+
+                <div class="tab-panel" id="nfa-operator">
+
+                    <p>
+                        The operator NFA accepts the arithmetic operators
+                        <code>+</code>, <code>-</code>, <code>*</code>, and <code>/</code>.
+                    </p>
+
+                    <p>
+                        Each operator is represented by a transition from the start state. After
+                        reading a valid operator, an epsilon transition leads to a common accepting
+                        state. This allows all arithmetic operators to be represented within one NFA.
+
+                    </p>
+
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:315px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=operations.drawio&dark=0#R%3Cmxfile%3E%3Cdiagram%20name%3D%22Page-1%22%20id%3D%22nDyoSED_mjQ18DzEA-w1%22%3E7Vxtj5s4EP41fDlpV2AHCB%2BX7LY9qaerWt317r5UbHASegRTcLrZ%2FvqzeQnYQBbDmr1mkSIlHsYG%2FIznmRkcNLjaH98mXrz7Dfso1IDuHzV4qwFgGABo7KP7j7nEMmAu2CaBXyhVgk%2FBD1QI9UJ6CHyUcooE45AEMS9c4yhCa8LJvCTBD7zaBof8WWNvixqCT2svbEo%2FBz7Z5dKlqVfydyjY7sozG3pxZO%2BVyoUg3Xk%2BfqiJ4J0GVwnGJP%2F1R4qS3%2B%2B%2FspsAeujd04nMdIt7iQI6YoCjQmi7GrC%2BHVhntzp2EmnwhlNJCaITxh02XU5jR%2Be5u%2F8ahWGz%2F6mN4y%2BpXjsMVlUjDg%2FpF2J0HD386Tqrb1915%2BP2H2ez%2FXDlvft4BWWUFx3K7JqIl5Bzl5VKXZYto7yUUXZklI2umW7XlrpFA0hpSwFldCHVrm1KaVtS2lJIGlJQGlJYAiksgRSWQApLIIUlkMISSGEJpLAEUlgCKSyBFJZQCkso5xGlsIRSWEIpLKEUllAKSyiFJZTCEtaxNG81O%2FvQbnWaewhi9OsZGh1Bg2O5S9Elq2ZnlYSi1HkOdxRdSMU4HguUwnhFJTurZKIRXlfRkpo6HFQY%2Bqik%2BRGUpmaFTR9sqwwsFQZRc8BQuQovIJxFmbquM72qA8vey1JHlffvjytqjRp4kzfpj1r%2Bz2nogVixSFBE6qWFYgzcWTwoRyjiE%2BESuBGLk6TksayAUJ0gThG72V1A0KfYW7MjD4kXU9mO7NmpDPoz3XnMb6askJBLvDTOazKb4IjoNbibIAxXOMRJNjRcr5G52bCuJMH%2FotoRaEEH%2BqcjZekFZsixC%2FyOEoKOtWsubuktwntEkkeqsqvVZayiCPNQ1XBKUTmIU7SLQtXpuFdUkLankUEdtmIWyyauIfg0IKfoS4QE%2BY2yVBMjfEjWSECWgy7Bh8hnE3%2Brs6AyITu8xZEXvsc4LiD6igh5LMpu3oFgHlJ0DMhfrPu1Q4kjb%2F%2BdtQENefL27bEYP2s8lo2ITlXeVTeXpSDvuzSMUlB1zlpc7w8oCeiMo6Q2vijrMg8aPG8RqU1y2mEkCQo9EnznJ3s45I1F2xVB12qW3n2Jl97EumYh%2FKqkBvI%2BN6s6YF4YbFmJcE0HYJPksnUSrL3wpjiwD3yfjeEmKA1%2BFKfWM%2B4MIpLdt5m5u9NC88IDKm3XCpmbS2Mv4q6m9H8bHJGrNDOmG6oAFvExG6dyutY2%2F3bLsej85cOVR3ou7lbcii5X%2BrUBbMgt56sz0Bajf2AzUFPBm01KbUjE%2FnQRbebQD%2F9F95quEKYzQHhw2%2Fwv7zkjHCHBzRYiCcPgnMZoIzCWHUagjzWBun%2BH8v7dNqUXez%2BGzRP3QR69tr4j%2F4Y9vmCQhV6aBmveFniUKm%2FLe1rzCT%2Fbx312W%2FB5SMpHJK0rtYaTeYZnhZVZQqkLUDrCEDkzFr0qNJsDAX4gQ7yWfB4aAz3tB4ZFAmlLJDAHZ2x5mwJQYHRw1s9T27Onhq4xradugA1VeOquKs3YSPycGT1raD7Q5ZchfRne13p1BvODacIYG3W3%2B23TMjkLEVO1Dv8v7bb7%2BQhH6x3NdxvdJQX3lrdnDi%2B6T%2BO83e48VJ1vdae5puL8AvABSG8DHpNbDPRpxoiKTxY1UKGPD9SY7voGGz9TaLFY8r5kstDC6JUHXHpsMXqhysUWDbSniy0MoCi4WCgILlqDBKAqSjCVRAnA4bGG%2BouGCYZE1e%2BMAV1OoHB1oTXAof6hXlOZk%2F%2FufPC0N1g5Q5szQ0MXvGz2D8B0DG0pYujSkF5f%2Fu8oYXYx%2F2%2FUbSdmdnsss1uXxexzSv6EwbTUGeeUvDNJm47wnZnwoWu9bEo%2BIeG37Mf6H%2B68WfBUbVuLs2Tdtk2mK1gAyh4QA6iE%2BaHw6Hfxsjm98O9DeeYHTdP5qZn%2FlzmnFze%2Bzzl9W5a34NcxtCeieABniofuYuKcXkR7OR3Ft1TVniWnLw3p1eX0wFbC7KYpVOvFoH9iZjfHMnvzscxPzexzTv%2BEwbQUD%2BecvsrybGF5T0b48xY%2B%2Br2cOKcX0Z6Q8J9hD5%2FinN641o2SnHOqtqQz%2BsH0DdVsyVtAIcTruSdbFX2P3ZQHLm5X3ps5NRf%2FNz6n5m3JmvgA1oHTMDWcN8TRb%2Fiyj9uhvpyKqWFLcexZUnPYtJrXkZpDNRvpxMftAAoeYVpuh2M30kFwadw%2Bp%2BZnDWbEzrrXkJqLD2AnI%2Fx5fx39tl%2F2cfsQwu8JrzXDm7%2B3S2PUNPqVB0%2FgbCzsa5OD2hT%2F3jzgzw49oZ6LbPR7H0QZ1qM3tssjbQg524A%2FMfVEejkjDV0%2F%2BJ69Lll%2FhrLKaLAVevB5Pxxb1gf2uvGQYTV6e8t4sAdU0mmzes14HmVXL2uHd%2F8B%3C%2Fdiagram%3E%3C%2Fmxfile%3E"></iframe>
+                </div>
+
+
+                <div class="tab-panel" id="nfa-symbols">
+
+                    <p>
+                        The symbol NFA accepts punctuation symbols used by the language, including
+                        <code>(</code>, <code>)</code>, <code>{</code>, <code>}</code>,
+                        <code>;</code>, and <code>,</code>.
+                    </p>
+
+                    <p>
+                        Each symbol is represented by its own transition from the start state.
+                        Epsilon transitions are then used to connect the completed symbol paths to
+                        a common accepting state.
+                    </p>
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:456px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=other.drawio&dark=0#R%3Cmxfile%3E%3Cdiagram%20name%3D%22Page-1%22%20id%3D%22_yurgwNn3UwB3d35iXRP%22%3E7V1bj6M4Fv41kWYeqoVtro%2BVqpqZlaa1I7V2Z2ffqIQkdJM4C1RX1fz6tY0BG0KCIXY6KaRWJxwbQ%2Fydy3eODTVDD9u3X9Nwv%2FmMl1Eyg9bybYYeZxACDyDyQSXvhSRAbiFYp%2FGSd6oFX%2BK%2FIy60uPQlXkaZ1DHHOMnjvSxc4N0uWuSSLExT%2FCp3W%2BFEvuo%2BXEctwZdFmLSlf8bLfFNIfceq5b9F8XpTXhlYvGUblp25INuES%2FwqiNDTDD2kGOfFt39lUfrP56%2F0R0ArCZ%2FJRLK%2B%2FLfsYjJijHdc6M1n0P3fCz15XrdVohm6l7pkeUQmTGp25lKPDZnn7vMXUZK0z6%2BOvz3%2Btkrdu7v9K44%2B%2Fxf9G2%2B%2Fgjs%2FEE6ADyd6B0Cpt6XUG6r0VroRpZGRSmdbpbOj0tlV6eypdPaVUFECRQlwoIQhUFMPJRSBEoxACUegBCRQQhIoQQmUsIRKWEI1e1TCEiphCZWwhEpYQiUsoRKWUAlLqIQlUsISKWGJ1JyrEpZICUukhKWnhI6nhI6nhI6vhI6vhI6vhI6vhI6vhI6vhI6vZGm%2BWvxTC4BKcxIozUmgNCeB0pwESnMSiHPiPM489o%2BcJvLL13gf%2FeMIfx3CP5W0eTDbMvmLrpVR6yPJOqmbVpoyPCR3Kdwe78%2Btb%2FoSBZ20WCcF1El3dNKGEeHXqINT8kFKKqQxV9KZF%2BjkwFq55HBOZtDBaa0q6MygNWaLOjMjrRnGxNSNMPUwziUrsy3Lov3qE2i9uizu15Xu7dsDsdAZ%2FKU4JF%2BEirfUw4qbNfo02uViMf2XjhM6WTMdJlq2Sv31uFyU4Zd0ER0ZzOb98vdyhSDFL7tlRG%2FAIhOC03yD13gXJr9jvCdCQIRfozx%2F52sb4UuOiWiTbxPeSu4hff8PPf%2BTZaFS8BcT2JZdCh7f%2BCWKo3fx6I8ojbdRHqWl8C3OixEDG%2FLjYsCAOIPiuB6PHrwLB83RsjzF36rlD8R0iS3EhOk6yo%2FNvC2g%2F2uEyaDpOzkxjZIwj7%2FLaIR8pWZd9YOisnCsFXAP5KWh8LlEzGrDf1RxBLCpDv1erM2IEIZJvKYrMwsyIJ22%2BfcozeNFmNzzhm28XNIx5mmUxX%2FzW7FYUIt3OfvlDrO5cm6%2Fh8lLVC4AuQm1tWwf7qS7KY1whXf5XcbU6550gPb%2BjY1TW767Lox1Xo5FJrQYjrcU1yQ3Hb0JoPREjp9C1Ne1j4DJR%2FuD%2FmLShS8I3jXOwKtVRpSqCX51DyP0wTqjHwAt1TijH5B9ACGMx13AYPukOcQF7ROOtM8S0CuzT%2BR22SeL0Nrs8876BFzAA1iH9R2x1zEGijvXtY9qiPgjuUYdslUB%2FiSJ9xnF8XUT59GXfciM%2BDUN97JCZJuQZq8ZXfTmKpLti%2F0Dq%2FiNWvF8FSfJA05wyoZGi0XkrFaVtQktyEUBWh6xwx64bYQ9BC5X69d6v0Ep4oPAcpMBRxGVuyUUbJQcYoF7DUQIthH6Yd1rxYk8UHKgv0TW1c2JBILm%2BLJz9kHlulUJ2tlolqvHizc0pJ9TRyN9OrxKl95JuX7S7dChhy7h0Pspg93tAGp8yQzkMrSHfLfsdXd4FzVcNBcpqIXkUEarAPA7VMAaqwJibEDqsYHWGxUtf2AwcAYGA8HWd8t7ummPApiEWRYvZM2QMesizNr4ckc6KwJUbgw8aLcCas6RiN2w01I7QANYuzFEEVT5WWKRpDkQkgeqNKYcqJiH1kCnvcJ5OIXbVqOJ9VHAXRk3AEezvn5u3JvcOJoDs268BTYy5sbFosA5Ob3X0hltJZNTEaDMBcq8QDirMwsYHDWACrXrHw8cz5E0xO0XDpS9eM9izmwc7%2FfbXv2aeT%2F5DLfU4e2es%2F3sSN1V1%2FUenmZzR3PyAWUa0VuBL1FJaq9D9SYVjDUQ4RK%2FEGV66ks2rolaOEj2JcaoBeiVFtw6t%2FDMcosW2ua4BbjKgqEvr6ECUB4bWEMFzmHIR7IHZMk6gJoJqVn6AMbWDcGNFQ5%2FvtHC4VC%2FIZZepqKAmCfKdgwtdV8%2BzGKdKXKjOTRdFWigPYCnDbXAA2W580RuR0Povoq6QKAlsrsQfjrB5g3Hdm9sbHdvK7ZPyfoJhTlQgZyS9c70zVzID6aQj%2Bb%2BZZN1gyH%2FwObtH3cT9YDIbXz9GCItER81Vobty%2BbyjVfyDNgD9GPt66SOYVy8pw9FVD6jGO5DZ%2FPwQBVwyuapJXuNPR7NRT1doR2iKbSjuW04m2%2Bi7Rmrw8MD9bSzhPZSkT5cNg89LbHdbVZ8%2FIaOGI7tztjY3uZ%2BUy5%2Fw7k8HLGb7wPm8uYC%2FrSpj3wCw5uzW3AbjPi6tvVpTOatT4HrSsEbwBMp%2FTmX3pGejXu23UjXe27k1hXSx27dg7e2d8%2FT%2Bpj09aXraMTmudtO132vsdQGA0PxG00b58gnMpywt%2FBGA9ZehlrhgaLZWQI4auvNx0jZkZ6tdW6jrAObT2ebje9o7NY6BG8svk8p%2B3GFGbHX7kOk7A3zNhbypx135DMwnbE3avTmAr4nVpQn2j3rfDbSGf%2F6k54PwvqTBaK5e9knYR1zLzTwxB2aZ30Utl0y%2BRiU24eHVWIs5QZyWmZflnL71kjK7d3amwcnyn1cYUa86ewjUG54oYDvwyngozmAhjl3E25zEd8Xd2hOnHvW%2BeSRjUyZ4PQSMfI5OlaOe87Mts1Z4NC3iJ3i3L6Oheqr4Nxj3%2FLbr8yNnIvuTPPdkZzbbz%2BHOHHuW%2BbcI8prH4FzNwqf5gL%2BVGSjnNvw%2B%2BZacA%2BI%2BD3fFHYLjxr0fSaoE1%2B8j6iCPKfh4ht1eJb4puBBjwidwBvY1d6FMoBbrQfFB9h4T9AnFk8%2BFwkmYUJEffRrXpRRdwLZ0Ic8T9oT82m9UjZ0Cv0ZNheqQ%2B43IA%2B0%2BXZ3glw28wLzx07MT1xyUfxWerl0%2FRz%2BZLG%2FEWI1Pn5mQ1ns%2FlbhNk7ei1O2eIezYlar9vr%2BLX77FsXjjk%2FjPbuNMC3uzmLA3PExaNsOc3gOJRwO01TSvvmMl4SKE8ETk6aY9KyOSl1ymDYRySP9Tv2QQ1FwiAqe6guqvqWuDRoGdg8jXKGApWph6kuOCgWmYsAOBSWmQjZPVC4qMm1geksbamWWxAUSVMRVmgplpaaNXK1pY6nYVGwxSX3zhYJXN0%2F%2FozrHrs9oRusHFriWHQqFIUf3rCtT%2BvIKdU92tC6%2BFx7PEcKcw%2BhNfWEGTnn18jThlgsf2IaiArP2hk7lD6vuqNYA7hfrkQrfWLYK13BsKLa8C%2BdYwnjEY1YNa%2BEmmvrGDiulE4WyKfB%2BLZsxTgrGP5fSM0JMzx3RAaJtzGpV221IAwS6PCnQmPBNCT2L5Bzr8X%2FkSx1rR8baGcD5Z9x1CUW52mmhp%2F8D%3C%2Fdiagram%3E%3C%2Fmxfile%3E"></iframe>
+                </div>
+            </div>
         </div>
 
-        <div class="stepper-body">
-          <div class="stepper-tree" id="stepTree">
-            <!-- tree updated by JS -->
-          </div>
-          <div class="stepper-detail" id="stepDetail">
-            <!-- detail updated by JS -->
-          </div>
+        <!-- STEP 2: NFA TO DFA -->
+        <h3>Step 2 &mdash; NFA to DFA</h3>
+        <p>
+            The NFA is converted into a DFA using epsilon-closure and subset construction. 
+        </p>
+        <p>
+            The epsilon-closure of a state is the set containing that state and all other
+            states that can be reached using only epsilon (ε) transitions.
+            An epsilon-closure can be understood as asking:
+            "Where can I reach without reading another character?"
+        </p>
+        <p>
+            A DFA contains no epsilon transitions. For each input symbol, the DFA has
+            only one possible transition from a particular state.
+        </p>
+
+        <div class="tabs" data-tabgroup="dfa">
+            <div class="tab-buttons">
+                <button class="tab-button active" data-tab="dfa-keyword">Keyword</button>
+                <button class="tab-button" data-tab="dfa-identifier">Identifier</button>
+                <button class="tab-button" data-tab="dfa-number">Number</button>
+                <button class="tab-button" data-tab="dfa-assign">Assign</button>
+                <button class="tab-button" data-tab="dfa-relational">Relational Operator</button>
+                <button class="tab-button" data-tab="dfa-operator">Operator</button>
+                <button class="tab-button" data-tab="dfa-symbols">Symbols</button>
+            </div>
+            <div class="tab-panels">
+
+                <div class="tab-panel active" id="dfa-keyword">
+                    <p>
+                        The DFA was obtained by removing the epsilon transitions through subset
+                        construction. The extra accepting state reached through epsilon transitions is absorbed
+                        into the corresponding DFA states. Therefore, the state reached after reading
+                        the final letter of each keyword becomes an accepting state directly.
+                    </p>
+
+                    <p>
+                        The resulting DFA has no epsilon transitions and follows one deterministic
+                        path for each keyword.
+                    </p>
+
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:370px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=keywords&dark=0#R7V3bcts2Gn4aX1qDA4%2BXcdJms%2Btu28l2215lGIu2mNKiStKJnacvT6AAEKAIiYBoip3OxIQgCMR%2F%2BP4TgCv89vH5fRrsNj8l6zC%2BQmD9fIXfXSEEXYiLf8qWl7rFx07d8JBG66bTvuFj9D1sGkHT%2BhStw4zpmCdJnEc7tvEu2W7Du5xpC9I0%2BcZ2u09i9ld3wUPYafh4F8Td1t%2Bjdb6pWz0b7Nv%2FFUYPG%2FLLEDSfPAakc9OQbYJ18o1qwj9c4bdpkuT1X79lYfrz5y%2FlSyAQB5%2BLhaz6Nu%2ByjYoRo2TbNLo3V8j5%2B6n88s3%2Bs7bpCr9humR5WCwY87F9w%2FTYJbsPPQPchXHcHaB9ju4%2F5Yj6GL3dP%2Fwnefn5zW%2F%2Fvg3%2B9%2BPXX%2BP%2Fwve%2F%2F39zbXmS3sVIGVQZCfaMlCuNZLmS3mGchYpj2bJZ5ZtwqziWJxsrDfOnVHU06FiS7tunx89hqjqc70u6Z0DywbdNFKuuJ0SyWa8T1aEsWffHIFJdzUIXyF4%2FD9L8UyXIn9TY0O5lQyUxc2S%2FXI2lJmi27JfreWGleclWrZ6X0jvaTu9YsnnVs5ZxlXjWMlYX95b9cq0ClN7Rk%2F1yNZYaHV3ZO9fzUqKj26vm1OjoyfRFPVb%2FairR0VN6R082dqPHlF4SAtmK1aMpYh88oGNlqkSiY2WS1IymtGwQ9q%2BbGnNA2D83KXs0U1fiDwiVBB2ifipkaj%2BOZAtTIp3aoklVUDGUIqdhGSsRI0RtZpZsTZrhFGdnybiDzE5NEKTWKRlOTRJsGX%2BQl1VbOykQS7rLJkteRo097QOMIJVE8rnizx0gRXaIL2WcIZEYNcmX2lfEllYjlRSam%2BEUpcKVvTuZnZpUSMGeDKcmFVK8Jy%2BrtnaerDsZTjY7Mns1vvTU1s47QApFqZC6hGQ42ezIy6pJha%2FoEspIUTtYSnRFUjOiGkxNIpDUiqhnpsTASBp5qGem9ppSG6IeTDazet5KzIOQ2mtKPe%2Fb3YcP2Ze%2FP71PbnH%2Ba%2Fz95R7CQkso9ZYtobi3TDkLe0tXVNxbxkji3jLiinvLFlzcW2m9kUzSxb1l%2FC%2FurURLaSRE3FuJlliJlliJlpimpf3uyq3%2BL%2F6gvxknyY7qht%2FcB3EWNn2rCC0JZ%2B9ju4%2FPb8M4vkI%2F1o%2FFH1SMl%2BkBIj4qnYbbnA4fN2Mk0gAxGaGJxHJTAOG6E%2Bfe%2F0TTlCVP6V3YDpOR5vyFRMPT5Gm7DstfAsUqJGm%2BSR6SbRDflquD38Gi8UuY5y9NHD94ypOiaZM%2Fxs2n4XOU%2F0H9%2FWc51Mpunt49NyNXDy%2FkYZunL3%2FQD9S3ysf916on8r0sT5O%2F2qg9rnihXZb3YfIYFr2L90vDOMijr%2BzyBE3e4KHt1371lyTaliRochyWD4upVF9qchxtyJ8MkgfpQ5g330M0Q1AT2TdVJCOPSR%2B7SEPrVEok%2BEyoB7qUb7mFIXPJLLc1g9HEC%2BLoocw%2F3BVfD9Oi4WuY5tFdEL9pPniM1utyjML2zqLvzQ%2BXpNiVr14thl2JWE0KBL4G8VNIuNiJS9G6T6rF3c%2BGyFz5wXVWMdabooPl7Z6rcfaC7jxU%2FchIxeLVg9XtzS8WUw6fKVIP5IfmK9dgBR3HHcwjpEtyf5%2BFisQfJOsZ%2FRINd4hEmyJuHEe7rKTSt02Uhx93QSXz39Jgx5I72wS78MM2i9YhYYBsV%2BfY7qPnUgvc3Edx%2FDaJk7QaGt%2Fdhfb9fSt61CfYwT5eS4VyEF02VJ7NaXj52z4nR5qaQSpTjxJK6AM51RiinCh%2B0JMr2D0VipfN2eUWUYNdx22yDblFb5oUJJPR4FIpzHbBdogUQpkUQkoK68EUpZCmNlamNgK2MrWHYatA3gZhKyWA2%2FWbMjNd0isOsiy6YxmBJVFXYPZ4uEJOC4IlJsIVANYBVKyefgnTqFiOklUoPqhhSqxaJJQheXChzqTIZfcIX%2FULxYoEL1SHBjEoanWAFxIeaGhu87Bb2zMd2O0MVFiA7Egtw50JwF01ABew2GsG8EgzgJcGGkPua3TVz5xdjoHcCA5nNurB%2B7YO4VTrnstNC7jnY%2FPYAIwmwx%2BZtPxZBdcmwE9yCcY0HGwFu53ihPkIfqhT8MEKYMBJrbKvx4s9xibEvi0ZOlnsgZBhjMj6EYIORxBzaQXEZMTeUxB7ihPmI%2Fa5ZrwHjsc6B%2Bp4DyE7gGUE7qnyvlcm%2BfuQ3p%2FUJ2LZ73NwGNg%2FoA26sk%2BVEmiI%2B0GLdRq880b9qrLOoXqE4az5aJJUd%2BgPQqzOJgyXIMuE5qAqeV%2BJ5hBogVaXOBa%2Bor0G4BxwG4qHwxEOqqRCh3bgQgqWNyw4oUs7lFXaQ7UDwz3z0Q5bze6FhzzWSugJQcrCCpyd4phQFlk3YznpFMJj8rXhIMhxVB09zYOcel6HcUg%2Fh%2BuIfoyTu79avcUKh1gtDeYWtXQFxHwwUz2AzWmGw5Tfb8R4JSgh8iz7rUudISR5SfZknEuIFKxCmh3mo%2Fa%2F6XYvfRKvP9q97HdP9Wj9ZtvUqbksHUI%2BUjBob0Bii7MfRzAfmwp6LY6lu4I2aP9jjQIb%2BSu8%2FxBwzGLYrCSBkCHqpeW4%2BeiWtW6HE0NWtygz0zXnf147nB%2BiR7u0Oylfi2FxVMiJclFdVsX4dr%2BOEWurw1pHXtU8GZMDIYWANsUn89EKj3odTYR81tFUtjc6SkFbGmukaiLQW03UOrJ8VlvFp51GQdYr9G0PF2d1fFurpxpoTFVkNT601gItnR6moE6DUVjGyrO6LgtHUpsLVwytvfK4MCnkxjk6iTK0moZexSNtFKqUZG7V8gOsD%2FtU40PMGJbn80qjcNz8%2FX8j8clRisVRcHsoNpuPiRNrr9Hjc%2FbDGaj9hrmavAutwnetlY87YEK1kupsm5NlWMhyzyaKUavq0BDIn4b1J5XXkw1o23A5vsPuiLIxWtmWMsGHYjg%2BHcN7oO1MtbETg3kHixnjLDEGR7lUFs8LfzPd%2BPuawFdgwl8A%2BB7OKVs2lzqAjpyOo2Kus2AuvnHMYm6H2lhdGQ%2BVOAHgLhJXPlqjS9xQG8jqkmQUG8gRI%2BeUbSA0kZMBXI%2FjBstZAS7UbjhuoVAFSLHVfOwmrVuMCrvJag8HOLoYhHWV252GpxhSA5kDL6iNb1yzqN1BDC2o3Z44qwUi3K6SmMweMo0esXdqoZ9Y%2Fm2Ldb6wM1ZK5LjtaQqQQbHZfCBjo7vGx%2BJV%2FvA9Jgb2nV5oaHvAATMum6HopC51eddE3V42TvuGI9o8tfkjQkbEaV3hbM9QLd1rCGd7U9oC7ipvAZ9ZOFu3W3Z0ONsEwC7ha0lA03O5gxUtYKhwzBMI3uVBLOwvuxw%2Fgt0l%2BBE21VCxW2LYYiq43Ck5IwjdUMNHVwzbE0cxJ2z4HGX2jB6K8HlWOO%2B5eB5WNZNmFr3WuoN9nOg1v7PAWPTaW7ziErKhWcjugIUWwN5ftHUqPOwv2TISsJ6a1wtP3ikmiVk7drmrluYEx0LlvtszwkV11dpQvKBZbD6Acbmxa1rQFyO%2Fo7cxYh0tB%2Fhywo16IAVcXOsSpw2nmTv05s8hGxOn7dNxWn4z4uvy46ZySYlrwXZTRsMCrgdXHscFQ3ftQQA4fsJn3Y8FyREqClBvzwvqdYfQoXvAtTsz1GvLmkG47AJhr7qdTN4MEpZUEPuZZc60X5bAyvxUMmf7K6QX815g7pUbLDsG%2Foo6NQoYk9BlK0hp7ntmzX0B%2FZF1Iv0HC%2BWSWJOU%2BtqaRXKwqaQrz9YeeryYSq23OhlTSaGOl2aT%2BZhKus%2BseM3ZMyhigwvEacNVpR1IMIfSAgxYULr4y7OmYjoTwl22SCLDRWgC%2BhsQyvJsXIEzO45VhruhzhmYYOMnsa2VRZ%2Bs7LBgjABYcWcWDQ2XWzbPU7BocWmmOuseL%2BgoVFa1rDofyzDRbBkCz%2BYsw57sm5iFiCnYBuK4EbQdEr%2Bk0GWnmnJnXBUmNK8ftJkGRKNftmmAzVoGHYJj%2BwiCD7%2F2T5s9YHUTWhdxM4t9akBGVvwGV9wBh757Xjy3FPJiDLvNB9O158MnW%2FomuvZyAe498RB3cafrGtpV1irey4ZtZBi3O%2FT2dNSoEzWqrfiNXA%2B%2F5FZKh1VFaSuUySFnRQ7gIVDuW6tjz7bH3dHwmQ0DhZJ4hqPnYxikF1soRwiqrVKOnLV9FhXlnk9HEYtrSkckQ3Knh4qoz6w4Lr%2FM4jjCjoIAwuIAlCaja69Y3%2B0Yk%2FBIqURy%2FXpBLoBlePtLh%2BLeEacaDCXxoHM0Jypr7O1SOkpTMVhx5%2BK6vo6ztAimjVDsxuD74oFR7uhkjB1b3diZWXnb00WWt2m9dhL1X5vD21vKhc%2BTgvnRa9C7it7jyxx01DgTaiwFbpIjO8YB4CP1tLeYv4VeMXw1iIDkx4jicNkTBMEX2Sv%2B8i0dsjfcFna6dBkn8ucISDoR09hQ9SCEAKz2t5O6iDWWPMSR2XSFn8L2D4Zb5mMg6z49DXiIs297qoNGDAgO5YAe%2Bb4g6DV88IpA4%2BuB3u3T4%2BcwHaVqrBlKyylpkjiFqy9Q4SExHU%2Bt%2BoJsVQE%2Bc2aX3AowRMEzvDIfBa87AjLdki9GYhe7%2B2AJEDZ1kDh0l5KvEnVN39bB01vLsaREjWor%2BfJeX8nXkXcvDgFyXw%2BQu5jlFeT4Rxd8cWyH4HmdPpV7RRhmno9NMOVj0bSnQUTKSlvxlye2JqesrDQ6HaeeszyqEUKuM1HRAzMrBXucaimYbH%2BnQZ2wFIrJLqQBHJ4by5MRZXrZbgM2fQER4N1EjW7Dck6arHDAHV3qhptH2o5G85ZTZHnHdjLmkULxGMMn8zGPPl9k8dhQ%2FlhieCUYQ7NgzMOAXjBeqsUkpUPO2UzgpVSslDpkVup4euuVuqVOTFI1wCeXTdzBSUwbbUVi%2FnQjhKaKxIAFVgA4jmX7PmhLBtoSArByMLRw8RF0PXTeggIfqlvFM6sYSydcMUYynb3f12gUE2G%2BcHg2fJZJBxi0JLYfg0jj%2BWNIcKHOec4E6Gr9Y0MhV8MCH%2Bjk63MkxWiOx7CFd97EM1K5l4ditvkgR6A73YQ89rrVyRw%2BUJFzKUSTbUTnoliOD85xtjharuUp%2F4WG0Zunvgts7SeL1%2BpVV9VHq9En6NMZT2sgZIm55CxpDQQVqr8oLpkPCF%2Fo3Xg1Agus9wWBS1MZeyKd22pkQ%2BFtoRReIAIbPgjoAPX1edNLtYcs4WBh7m6MEWRwqFmkq9oDkbje7M2i0UMZPhfKaMvzzxTKQApXo1BMNR8rSve26ddcGtLK%2BYWjeP85SeMnqbuYoQW5b3cfPmRf%2Fv70PrnF%2Ba%2Fx95d7CK%2BhezySV1BdNK6Tp0KYfxiK8K8Jzy2btan0XIsjpsxSMVL8a9ii7tBb0604Yor7iyz20cZns4VQQ%2FGWkC6Lc1v%2BiwxLIkdtpKV0S0zvE%2FI9FyCHEFisktRx%2FoCYMGgRRHyDDWNil97mzFN0QqDpAkTRB%2FxVrJYxWVx8xdJXNIyKAoIbFMYTCpwvQBhdj6eNzR%2BTqE0YlwKI4l%2FPcNymS2%2F%2B1DSNsrjEbfptFtA5qdABviFpXCI3pb9oeIedkOTESjEgkEvwptdw4fY%2F6ihNENIFL8Gb0k41fEZ7h9zmrFS8RG961STky0RMhVHxEr0pYdGwldqh95HXlqRJktPp5oIOm5%2BSdSmYP%2FwD"></iframe>
+                </div>
+
+                <div class="tab-panel" id="dfa-identifier">
+
+                    <p>
+                        During conversion to a DFA, the epsilon transitions are removed.
+                    </p>
+
+                    <p>
+                        After reading the first letter, the DFA enters an accepting state because a
+                        single letter is already a valid identifier.
+                    </p>
+
+                    <p>
+                        The DFA remains in the same accepting state while additional letters or
+                        digits are read. This creates a simple loop for
+                        <code>[a-zA-Z0-9]</code>.
+                    </p>
+
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:220px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=identifier.drawio&dark=0#R%3Cmxfile%3E%3Cdiagram%20name%3D%22Page-1%22%20id%3D%2276LU4VSdVLubTwvVCcVi%22%3E7Vxtc9o4EP41fKRjWzaQjyFJe5lprzeT6bS5LxmBBag1ls8WCfTXn2TLtuQXsAJ2IPVMZkCr1Vovj3YfrRUG4Ga9%2FRTCYPWFuMgbWIa7HYDbgWWZxsRhH1yySyTOFUgEyxC7QikXPODfKG0ppBvsokhRpIR4FAeqcE58H82pIoNhSF5UtQXx1KcGcIlKgoc59MrS79ilq0Q6cYxc%2FhfCy1X6ZNMQNWuYKgtBtIIueZFE4G4AbkJCaPLtW4TCr7OffBCW4cEZm8hYV4zFx8wiJr4QjqcDa%2FTfhjee5nWZaACuFZWIIjZhSrUzVTRWbJ7r28%2BR55XbZ%2BXl7Mv653SBZ%2FfRt1u6NSwD3w%2F53GUNrJtD2paWNtDStrW0HS3tiZb2lY42MLS0teYbyPPt3A7G8R9rJi%2F7Arro64a%2BGhfYfYrqxsDw5lO8wCh8olo915rCOlRFFIb0KfYQDfqnhR%2BzDhGSxahuxPJTtXaEqTWHdRCXH6%2B1xcw6bXnQWgMa7zfI7MH5HAVUq5cNxh2iJdo22BsBCe73eNzeY%2F6RHvMFYtVdMkLAKAFTzFvweJ6Sn5wJrLc3DDID62NSZF8kRqBoGLjIYUKGXplsCBuklk6kFoSDLnRBsSgeEtFdyomYDqNfiI92hSl6COCc17wwBsiJBF3zR5ncya5ggO79iFOLRAKjIGFpC7xFLo8w2PNuiEfC2DRgO9pZLGL%2FHJJfSKoBI3AF3KwmJWOASdbkGc7izhmsFKII%2F5bLhEIqlRlDRXIZuVguemT%2Bi%2Fcs7q5glVJ1MhnPKKRoK82PmL5PiKwRDXdMZSWxwpGggC85g0xFqREgyoImg5Q1QsFfl5llS4aIWLG0SCS0NFl8JQIXQYDcEjUuo4JswrnQqou%2FRfQwsw%2BiSEK6IkviQ%2B8ul7IV2%2FhuvAZ8xnOdz4QEYmF%2BIkp34rQAN5QUcHcGEGH8YononplxqnETIo9x%2BWd15l%2BPgpLPqKNU0iFKjCU%2FusgLXwJNaXE%2FJ3iTFwR6eMlPLnPWFrENPeUbCLNT1rWoWGPXTda%2BsDQBwT6NR%2B%2FETre0lG3sbuhtULphRl5MhIlPlZFmDJlVDKMYiNdMwZwE29hOHlZGyyRgTOHw9%2FXwXz4IYZQtVWJXqDR1LZUQEU2GxgfTGgPFmQz3oEhY%2F4dPs6RCFouIobcIs6wTVchrBjWr3pfkMGIzQFUEVUUaNUb4xEeFgCJEGuhTPM8bxJUy8qIA%2Bkchz5DglhjThJscyYB%2BJAOOtg87HLqU49urApfks3z3OjbEEOLBKMJzFXoqKJihcPdDLjzywgcnLd5u5crbnShdREyyDiMgzXxVOiEJFs4eAlNwOlsVSClwihYSriEa5dgp2ZmodrJUYmonmYWSncMO7iiCZR9PsAr5g%2B55Fdpi%2BiNHOys9SjU58HkhxX2%2BX%2FIt8qjskMvYL%2BW0w9mwN55weg19s%2F8Y%2BtY0iFp2HX2zRnDNOYc%2Fi%2FjH4OZuMHWOjawHiJyl%2BrFOSJyWU4sqTo196qDj1AEwHTVudp06sMogOEnqwCmh52QBLP2eBaIG4euSg1ddgv18Qpj6GrdxCKtOL73HEHa6DIQxvGo%2FCWHY45HiloZ24%2FhV06K9nIRT76T6nEQbOQmz25xEKUS2kpMovDttJSaOW4iJaYTLCo9yoSbCZUfBxgfBi4iJ55SUN8HrYiL4Y2LiZR7r2OqOz%2F5kV0Hq%2B5Ndxyc7xzr5S%2BFmnmfc86Fu%2BZDVLR8qAatNPlSVMdX0KLHLYEKXbNhq3DX1NL1faUaH7X3vak7KaPqDVseOBbztQcsencqxnGg%2BUkOzVPD3x2tpimZFvcppq%2BBL4tKonoM7D6CfCgqTwj2A4mtY0EFauvZW7XvhsmbBF5kFX2QWfJGp%2BiJT9kVGyReZ7cWcN7ngWHttup2rjtXvU9%2FwrmM3aDkiXVJ9gaOUrivyk1Pd4Gh4Y00jD7MHce1lZHjLfRmZ1pxEf0%2ByxXuS9iVy5c7iU39R8pgQKKe5L%2FXSZFdQO3xp0j4Mh%2F7W5LGsbXI0ZC%2Bcah3mkvNN%2BJxlGTBrH%2FKhfYe7jBycirKxrQ93koJ4QC1I7aKvs429YCzpj4wC6JIe1PDHMfhgTWxrbFr22B6ZV5XP1t4hB8yO3pakavwLz54N1pPUc7lK0zwCmOpeGRZP1u28LKz999v3leS%2F2IRLC9dCm3ki0CgY9weX0x1c3s1tqraS%2FLdHJPlrfwqgz%2FW3metnxfynkZJ4lf%2FAFLj7Hw%3D%3D%3C%2Fdiagram%3E%3C%2Fmxfile%3E"></iframe>
+                </div>
+
+
+                <div class="tab-panel" id="dfa-number">
+
+                     <p>
+                    For the Number NFA, letters are used to name the DFA states instead of
+                    numbers. This makes it easier to distinguish the DFA states from the
+                    numbered states of the original NFA.
+                    </p>
+
+                    <p>
+                    The DFA state names <code>A</code> to <code>G</code> therefore represent
+                    sets of NFA states.
+                    </p>
+
+                    
+                    <div class="op-table-wrapper">
+                        <table class="op-table">
+                        <thead>
+                            <tr>
+                                <th>Nr</th>
+                                <th>Current State</th>
+                                <th>ε-Closure</th>
+                                <th>0</th>
+                                <th>[1-9]</th>
+                                <th>.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>A</td>
+                                <td>{0}</td>
+                                <td>{0}</td>
+                                <td>B</td>
+                                <td>C</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>B</td>
+                                <td>{1}</td>
+                                <td>{1}</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>D</td>
+                            </tr>
+                            <tr>
+                                <td>C</td>
+                                <td>{2}</td>
+                                <td>{2}</td>
+                                <td>E</td>
+                                <td>E</td>
+                                <td>D</td>
+                            </tr>
+                            <tr>
+                                <td>D</td>
+                                <td>{4}</td>
+                                <td>{4}</td>
+                                <td>F</td>
+                                <td>G</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>E</td>
+                                <td>{3}</td>
+                                <td>{2,3,7}</td>
+                                <td>E</td>
+                                <td>E</td>
+                                <td>D</td>
+                            </tr>
+                            <tr>
+                                <td>F</td>
+                                <td>{5}</td>
+                                <td>{4,5}</td>
+                                <td>F</td>
+                                <td>G</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>G</td>
+                                <td>{6}</td>
+                                <td>{6,7,4}</td>
+                                <td>F</td>
+                                <td>G</td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    </div>
+
+                   
+
+                    <p>
+                        Each letter represents a DFA state created during subset construction.
+                        A transition marked <code>-</code> means that no valid transition exists
+                        for that input.
+                    </p>
+
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:494px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=NUmber.drawio&dark=0#R%3Cmxfile%3E%3Cdiagram%20name%3D%22Page-1%22%20id%3D%224MgkJZr-1Oa12_wpDFJJ%22%3E7V1tc6M4Ev41%2FpgUkhAvH%2BMkM7t3O7dbNTe1t5%2B2iI1j9ojxAc7L%2FvoTGGwEiNCAeLGZmioHIQSou59udbeaBbl%2Fef%2FqW%2FvtN29tuwusrN8X5GGBMSJUYz9Ry8exRVfRseHZd9ZJp3PDd%2BdvO2lUktaDs7YDrmPoeW7o7PnGlbfb2auQa7N833vju208l7%2Fr3nq2Cw3fV5ZbbP3dWYfbY6tBlXP7T7bzvE3vjJTkzIuVdk4agq219t4yTeRxQe59zwuPf%2F0IbP%2FXp7%2Bil8CKaz2xiYz7Ju%2Byc9iIjrdLGvXlAmv%2FO0QXL8%2FnTk0Lcsd1CUKbTRh3mi65Hls2z%2BLrV7brFq8%2FHRuvgfrPxxf9m%2F%2FT%2FWHn%2FPg3%2BcePG13LXIDvP%2Butg3oboN4mpLehgHojUG8M6k1BvUHzbYDmxATNiQmaExM0JyYB9VZBvUHzbYJ4ECmgB0cKiJpIAZETIRA9EQIRFCEQRRGCzQwC0RQhEFERgs07AsEWQjCeQTCqYhhVMYyqGEZVDKMqhlEVw6iKYVTFMKpiGFVJlkz0YaHH%2F9l1WY27sdb2r4ewsUreHV7%2BDEEUU0XswIZ6sv0%2FAxF3xbcC8RKM84SMlz5YaPlh5bPBbidirXgsEN%2BpIhmIhwLxpCrisWioQCQ88UkQd1LQC5KqFwxAUkSqpj2oYAFGXxCfa7A3rJr3EPSGtEqAAhhjiXozPIlHE%2FFW%2FNQgrUJBbEorCQXCeK2St0DahVYSETSUVs2JIA2sidgnfkMQaGlAS8HkWKZcBe29%2Fc8Va8p5TSjsPa8J5zXhvCac14TzmnBeE9brXmtN%2BGY5%2FIIQKexf1PF8ReQsTj3rZzfzy%2Fs909YL%2FOV4yP7IuJu5HoqTd5D79i7MerKTMTyhrzodIV2C5p5BsdcFn%2Fv5HklT4B38lX0aJ11%2FxqfCj9Q7H430PTn0%2FHDrPXs7y308ty5977Bb29EDKezo3OcXz9uzRsQa%2F7LD8COJPFiH0GNN2%2FDFTc6yB%2FM%2F%2FhNdf0vTwz%2BS4eKDh3fu6CM5CkLf%2B%2B8pZkBiLoijF5b%2FbIfnCQqyE%2FTV9l5sNgrr59uuFTqv%2FERZSTTj%2BdQPZ2mazHB66FWRV%2BgCyERTrKd0opUioc7ULZDklyNHZKfRcp3nKHaxYtfbPmt4tf3QWVnuXXLixVmvjxSzA%2Bfv5M5KbIU6uzB%2BbxpLRjqRr5Z7sFO209xIIoK9teOeJhWVjbcLb4KYxHesAzL27%2FE4ZwHVno%2BSt0Q3ZnSXZEQ2i8dBk%2FPHO7NHt98zhKlJveSSG%2BU2aUhiYjdYTN1k6N%2BiSch08TabgHFRnvynJyjjiFoCexY0nm3KRDRDdNd19kFEvbetE9rf91Ysu2%2B%2BtefZINhae%2FvnXRAFmxLGCPbHuN3GeY%2FkdLlxXPfecz0%2FHpqsVjbdbE4ClTlDNGKSdYWo1aDTNhO70xImfzvH%2BdKmUzhT4QhH0ihlc7msiaKoSBEoigpda0NiKoeoZ4BtganC1XErkM2JYcIPOHKWZflBzfHD8cGSqyCy2gi9MRS9SwR5AuiNVQF6K7JRG%2BuEB%2B76HNMGuGtSH4th4ExgNgUhT9syxOaxduft7BwwJ00AvuAwQ54Gb80DWY1A4BoBU7BGqK%2BXj3GORoogI%2BK79V2UGBORzbWCwFnx%2FMBTqneoxgJ7OEuXNPumVF4zxKIV6rkc0dUcOfOAflSoBUAvjKPx42BFkmKoaz50YD9kIgs5jhpsjWW%2FO2HmMnb0Rzoi%2B%2Ft8UXQAXpfpUkwGqudMBrMeh8kyGSjUZLgwm4H9Wi%2BRyts9BdHP4v5xsaSSDQnMg0MvRkRNpKDtgaLCAu99oZEABMrAwxksygGid41HiBSkIeiTxUm%2FSKMSINLQUQFNhCd1gEYVGaa3GUw5DtYtpihY0Tl635DaHHPyQ%2BUukYgzWnucSRNfOrdGUqsiCxoNIAN1ABhpZsh4PMQGUIyL5uKk7QWpPgYmxZQaozUOjsI2%2B4ULXgBiDOQXDgxJ5hoh4zHXcDN7DUsz2KjARTEIIFPgCi4wJgnIg4fsTuZVfQsc5VhAnu83Fdfr9v2q%2Ffp%2BC6gvy%2FfL%2B6KAijfWrKxx7R2YgD7WVchTUr8057VVq%2Fy%2BXWIvobPYkaXer9gVqK1JE7usnp%2Ft3YUw6tWBwNUNZJSQpBuDt2gWTS%2FNgYzJU6CBQwt4kpbpuEILSt4LOKYUhVTIrltf4n71ZQGspenLsMRMbeTULXf9D%2BB8qA4ln%2FD9BPadJgar5dQfxsugAMFcn7G8fb4ZIrlE4X7AvKZ1XBIqnq3jRdEvgPIpHtJiM%2FNylP22lsp2XiCsyFCvXPLVLHOfOgX6y8w3ixTpZEFKi6shKZHtJiZOF5FtOakwndo8GtDmKU9xmm0e2PqV8GlLai8mT02OwLOCJUttWH%2BvvDBLWJLf0Gj9WgyeX15SEi6n7TCuRmhuYTFrbEZqEFIzoDY1lZPLUa1Ns3bEbCeLnYFU72ltSmfXL%2Fslw7p%2BqSFNdZYIXCPVKXHVMxrH7pgWORoGqs7yxMCxp%2BVXpY8p%2BfQxGen5WDVNThbxiNRliEoqPow3rF6WJVrTFL4lhEDM4fjoN9t32BRHTDzdCI6mAwU99aCNRNLr6t5aG3Bk2MMG4e1hQFWXFCbShNFTuCenriUazCUbhOcMQ3Ghj%2Fbu5ZpSa85mM1mifs3mArWleJyE9VGlKGK9PO1%2FwsXThNU6R6NydYDKreCGyangwfdqjLS8WoVgzq6qcRRbE5aKlgLKRnkxjUurvhbXz5VQ4WBk5dfSRJDmcH9hAeTrrsdmVADD9Zjud5dYj01Yxr%2BRlphMaTajBonklWbTc5Sdfmk24fcdpBgbiRYeQ1r96EowmVnZvdgSTAYgoa2CN0djoMw1meQuTY2Sdc%2B8NF0MVO9F%2BA0eKdrCxAXiXocqiD%2ByMxoXoolaQrY5zSievPrOUy7zkgrldS8pHy6xzIvwu2ZzVFZIGdXkKdNb3RdTneWQLL%2F2K4cFakvZx%2F55VHE2hMXutv4kcE4nZr%2F3l1hJQvylzFkES4giYedrPRFMFkrXLoNfLnE3nPh7srMMlhAFD2WIIlTiB7g%2BGXzsOT9wOEsUdfEln0qL6vocftzmh6EdfiitgtfY44dG9omeeYuOlOBM%2FIV0OYFipZiH1N3%2Bde5TXdXbdponKpgABpAv0WpriR7Xprtr2IqDeRV%2FY%2FAj9CroLbxPV%2BAFHmxvzimh5rqN7%2BXVbM5BqIMCpxUKS5bGNRijZg1wMz2sq3aj0%2FlNsC01bDnsqsi4NXTz%2FI8ntWbemmbhLDQBkJl5txQzK8c0iKFoCuWVhUq1W4x0RVcNrGlqKuTD5JQjBPjeVhXTTs54GHwT0UCZAI2xSdYmlcT1LgucNE3PgBP0271lyNSsesei3tLClPOxTpoPreCcEVMX3CjN%2B6YG3ROD0vdogV%2FT3BUz4xcMv7A0x6YE%2BCoHIqh%2Foybk8LHPDjEHdYQ5Wn6g%2FAqsb8xp7UItW1NPGXNGmDV5w9v2N2i4PHeE5blS%2BwGfT7fxrA7%2Ba3zPaACHiYUf3e536%2BPEhah3QLrzfesj0yF5FCHHaFS5VfgNnyQxm4TIVHIJVXJMdXwOAUbmq7vna%2FnXxsjPBuobI1s7pfE0ndJTwshB7TFZ%2BxDT5NlpQGK7TxKDqubXRF%2BzbVW5RuBbWFfqNEVW8UZb3PoSM3%2FJZ3hdfMxmeF0YyMwN1Ddet927ifC4Nm%2FO62hJuN00RjEJOB4C%2BlQF541I1ai2O0suoQrE7iR5%2BDEa2p35gaiscgd1cax1PAPP8Yzp41hXc5cM9JQ2%2FOtLtuDMU75f6dR%2BwrDgpOdRBfxbh99P9VHSUfJft8vXtOhq77ssFnnonEVIySb8mUU6ZRF26HtemAUdNkfbb946YpjH%2FwM%3D%3C%2Fdiagram%3E%3C%2Fmxfile%3E"></iframe>
+                </div>
+
+
+                <div class="tab-panel" id="dfa-assign">
+
+                    <p>
+                        Since the automaton has no epsilon transitions and only one valid path for
+                        the token, the conversion from NFA to DFA is straightforward.
+                    </p>
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:162px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=assign.drawio&dark=0#R%3Cmxfile%3E%3Cdiagram%20name%3D%22Page-1%22%20id%3D%22M6_KHtuPpzHqKcHC5K4f%22%3E7Vldc9o4FP01PNKxLWzoIwSS7kx2djtptx8vHYFlUFdYXlkE6K%2FfK0vClu0k5iOZtpOHBOtKupbvOffca%2Bihq%2FXuRuBs9SePCesFXrzroWkvCPwABfChLHttiUYDbVgKGptFpeGO%2FiDG6BnrhsYkdxZKzpmkmWtc8DQlC%2BnYsBB86y5LOHPvmuElaRjuFpg1rZ9oLFfaOgq90v6O0OXK3tn3zMwa28XGkK9wzLcVE5r10JXgXOqrjzkRf82%2Fq4cIPIbnEMhird5tg1XuXO%2BuCINgX%2BshXFQ8OCs8Wn9mQVJZPZzxwZ%2B8Pc5zuky%2F5c1jOF7NjXK5t3GENQAZDCbbFZXkLsMLNbMF1oBtJdfqdj5cQpgy8keaA%2BzGgvNMI5vQHYFzTBLK2BVnXBSu0WJBwiRRW6Xg%2F5LKDIrQWxQfZiyACCz6gPdESLKrnNk80g3hayLFHpasKuhGBsptyQRrMk4CC7%2BhO7LoY8PD5cFzUIXORNEOeQXFzqBIvwkKiRv0bqLEN2JhVn1ds%2BulYO9nt7OP7779M04YuekPmmiC2zsz5EKu%2BJKnmM1K60TwTRortKYejMo1t5xnBtfvRMq9yXi8kbzGgwcgk1gsiXzktMN2HAVhWNJ7Nxqno9LIrdazIEec8NzGz2uC4YDYCPatxr4aIMxgPVwvwAUBwk8UmSko19hMrGkcayxITn%2BYmys0Mk5TWTx5OOmF0zIbMNsQS7CISYVChlPnNNF%2FGyVYk4Snsp8X4I1hQTDIdoUfOw9Xy%2BJTTWtfEEHtzsx0zcBW5MyWvvfGD4bIybn%2BI%2BAa73%2BrCFS8vK05iFwPPEly4FydHIcztvGlG0EGD2dlSQAIkHSxb9NQV%2F1SnpKaVBrTEbxxcvhsjvijBzjincuQqkaj4zUahUerQfdKCXolT9TligSk8Vg1Mwo2pjwvXD64SIEjsf9cHXxRgzehHU531cnp3oxOltzB07DYhqk1mStYhY%2FUy%2Fbk9cManHUXur6ZXSWiTUfIdXToQa0jHYeGo6e14NSKnrdU9Nc2q2irwku3Wd30eviq12jiv6xeN8B%2BTr2WwYli%2FVQTPWzQ5OwW%2BVSdJzsqP1sfcF3ZBaNykxqcXRv8Y7q67qofDmpiHXVT%2FaPFupsumAbymEY%2FaIr3L93oBxFeK11L53lWNP7TZ278A5cAnRlku%2FyRu%2BOUJr%2BzrGConllLH9i1mhflGowx3wC8s65V%2Fleq6YPo4l%2BddMtdv1ML%2FrsX9eBli3oD7YsVdf0U6rHPiod1NLeGcZHCOexROx11m9c3gU0foBrDmiToQx%2BpCD8VC8%2FmxOFN3L6ZD2tFHT3Tt6cXypkGRz6sqCJI8Q8zQXCsooDhb3o9dr8Ka%2BOMm3faHNP7uuny5%2B7D6pgAB9Y0pTlQ4ISDgrnlrC9z%2FJSrNj3LKePKtRQY3mwlVYOzn6Oauq31Ixi9ZrEj7aNaFg%2FOzmIYlj%2BU6bas%2FLkRzf4H%3C%2Fdiagram%3E%3C%2Fmxfile%3E"></iframe>
+                </div>
+
+
+                <div class="tab-panel" id="dfa-relational">
+                
+
+                        <p>
+                        Each row represents a DFA state created from one or more NFA states.
+                        The initial DFA state is numbered <code>0</code>.
+                        </p>
+                        <div class="op-table-wrapper">
+                            <table class="op-table">
+                            <thead>
+                                <tr>
+                                    <th>Nr</th>
+                                    <th>Current State</th>
+                                    <th>ε-Closure</th>
+                                    <th>&lt;</th>
+                                    <th>&gt;</th>
+                                    <th>=</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>0</td>
+                                    <td>{0}</td>
+                                    <td>{0}</td>
+                                    <td>1</td>
+                                    <td>3</td>
+                                    <td>2</td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td>{1}</td>
+                                    <td>{1,4}</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>2</td>
+                                </tr>
+                                <tr>
+                                    <td>2</td>
+                                    <td>{2}</td>
+                                    <td>{2,4}</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>3</td>
+                                    <td>{3}</td>
+                                    <td>{3,4}</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>2</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+
+                        <p>
+                            States whose ε-closure contains the accepting NFA state <code>4</code>
+                            are accepting states in the DFA.
+                        </p>
+
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:404px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=relop.drawio&dark=0#R%3Cmxfile%3E%3Cdiagram%20name%3D%22Page-1%22%20id%3D%22nYx6Q6Nl5D3I6Gu5lt8n%22%3E7Vxtc5s4EP41%2FpgMSOCXj7HjazuXm3aa3rX5dEOMbNNixIFcO%2F31J4EwEm9GtsHY9UynMYu0GO3us49Wkntwstq%2BCyx%2F%2BRe2kdsDmr3twcceAKY5pP8zwVssGA65YBE4dizSU8Gz8wtxocala8dGodSQYOwSx5eFM%2Bx5aEYkmRUEeCM3m2NXfqpvLVBO8Dyz3Lz0q2OTJX8LU0vl75GzWCZP1jV%2BZ2UljbkgXFo23ggiOO3BSYAxiT%2F9HaLg4%2Bt39hJAc61XOo5RW%2F4unkM1OtjjwsG4B%2Fr%2FrVnncXpvJ%2BrBB6lJSBAdMOm2OZZabBwffVyTchUz5Lp5FbvrALnY%2F5f0hRZgkl5oNvz84ceX8XT29QsI%2Fxy8%2Fwc83el6SetYmTWbIZ8oKYSVCslASdmoWtlQRRkQH20%2B9gbRP9pNHOK5ZZ%2FABmHZqBZ%2BseqXDIHSiJWNL1dWZp3iETPlERM7UJCx3qRxYHFXOKY%2B9j9UBMaeES1xW03Ny5UMoutqY17q8yXNDbXmGSsUjvHGckjWGrE90h4MxBLET%2BFvtZ1QA%2FTAH%2FEl%2FSDAoNRCc7LAHSCPiAjLdeBSDE008PgFuW%2BhITuXDdKncFGI18GMtyocM4O3I29JEgnw2rMRe7pGxwcHZIkX2LPcJ4x9KtSp8Dsi5I2nP2tNMBUtycrld9HWId%2BEzy9M1b3Jrx63XHN08ZZceCR4%2ByZeCL3YZdotukr6hSTAP3bJDkZuEqVdK1ggUvHeLPp3A%2FoO4RWiamlHOtw0O%2F2UB9bieXmxawdEL%2BAWSS5xlUMUo4fMC6zXxBZa3rCiP0h2Y%2B7wFHuRaA3LdRYsD8%2BoBhRQwU8UEIdyhgd%2BY%2BXYNtNBcS90fvFnaxEYOR6J3tyMoikZ25%2BWu0aJq%2FbdKGP7lid9m12SwB65CyNPeaANgOFvIz1pUPcXcRg%2BJrroCMbq%2BJ34mfRLo61glJqW4120e003B7GIc7s7UG5brvwTGwChh57pgufzkDpZ1hl236nIP%2BoGfJiHncL4FuzvupRnMkNulg5Bz74VBf6GMl3ZIyi389EHL6RcNfGR0I%2Fp6NzZssgfzx3XnWAXB5FqSKmNOZ%2Fvwk24A%2FtwBO2KQKxhuKVASfvc4zcpfU1EiRJDk%2BwIB9qxQVobhPW8TVRBWLRuC7DbLdAddQhzoTLkFoTcRUMu6FsrBg0cdZtD3zvtXgcDKMNvhZkz8Jto0Y2MhhPAcT1fMcpDO3UGOkJE9oMiHJYR1MMeysAtFyn4kAQccmwap%2FAgfVjiQdqxTiMiP1RH%2FqGpDBW10y%2FFMnIg2gv44NkPrKzD7OhaYejMZAeRTdc6HBv7rZKUjgrDWzCVWZGEi8N5KBvT0DIa4qTJO6X2zOkZyHp2TpPoiUchp2c%2FNBxKEowD3SZPEooTzjO%2FTCnCNJWOT0Yj0hnbi3BnH5FInfVF8tXDPTct7XSHOqhP1%2FLT7MvmDs1O1yhh0IajoTpDyMR%2BoxO0gsnAbYLG0rKeQWTj6AlavbAcXSpLg6eI1VKWprfL0nLmN5tjaWwBp5Gq6CjnN2euit5rg77MCvWBsSe7RlefUODQ4WbOqZhykwWto9JuMVCbYCj5CMwCd13yZ5iyIgM0xP7qIZCuTgz6V0YMkqKC9xqyP73JtDc2G%2BYKQAac2t64KyTA9mhDLqoUqUPEDajQxmtq4WldSnFJBMIYnbzCWzN84eUwiOb4gtEuX8hZu8mqjjiLvHH2ctLWXsgNbiEHx%2BC8FL3JkCPiOvspKXriOd3h6L12qrZxljo5J%2B%2BPdJlGZSGgLifv7wP0ljk5n8spcPK8Z904uXL9DiT7LVTqdyO5S5NEnIhh1NnFfO1%2BAEQ02lOHpxfZCX8ZPoHGAAqYjQCUnlnpMbJrTiUA1RCuAPUNBPBKcSW56voGArlWlMlKjWKNGBHHYU2xD51lTbDu5iJ5TVA%2FAex0cU0QKMOBeWVwEHVqFAPgAaXm9qI8LGAUl1Vd8BPuwL6J4y160sS36aKDmV0FaGy7tVmOuL9P0QGet%2BhgZkPzlEWH4fH5ttJzulN0uIcQqqTXDi8KjjJredl9A3ULENnVRROedVEQDJSZwfDKmMElLQomD22MOMRvzcbuKPhOFL0mgs%2FTp4%2Bf4k7MpkznhH2Wt3nnxItiMTeNFp%2B6E5uaIs17zX4dKotfTbSmjM7xaChSpU5l46Nz4%2B7EONeS3Q2rt3Gopbhcqp3gkEuJ5vxehyuo2J88D2aJUm5ndMv1c01hZlvlUleUz5qd6V7SYcUSg1%2F8TPggoO%2Fo4cUSG53gnEKV9a%2FrcGPjKJ9bbm0b5c2jUf7azjjczkfW955%2BOV50jcPfTkgeWWMrcYFDN%2FpczHFJ7uXVRrodmDyamDRVvG2UmHRuo0Zn9l%2FspT4mhM14YN3kpbBDrMplr5D63HZ2KIKXfsTP9vwGRztys57s0kxj%2B8z1WgykGwy1OT567rOgRnt8NJ793CKxcyc%2Bbqes2F9w3khsc2aoF1Qab5F4%2Fm1Qun7bB9W7yH1Q9DL9Ke6YzKa%2FZw6n%2FwM%3D%3C%2Fdiagram%3E%3C%2Fmxfile%3E"></iframe>                </div>
+                
+                <div class="tab-panel" id="dfa-operator">
+                    <p>
+                        During conversion to a DFA, the epsilon transitions are removed.
+                    </p>
+
+                    <p>
+                        The states reached after reading <code>+</code>, <code>-</code>,
+                        <code>*</code>, or <code>/</code> become accepting states directly.
+                    </p>
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:315px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=operations.drawio&dark=0#R%3Cmxfile%3E%3Cdiagram%20name%3D%22Page-1%22%20id%3D%22nDyoSED_mjQ18DzEA-w1%22%3E7V1bb6M4FP41vKzUCttcwmOTdi7SrGY0o72%2BjGhwEroEM0Cm6fz6NbeADSQ4BNImlqqmPtgG%2FJ3Ld8whVdBsvX0f2sHqd%2BJgT4Gqs1XQvQIhmuj0dyJ4yQQGgJlgGbpOJgKl4Jv7C%2BdCNZduXAdHTMeYEC92A1Y4J76P5zEjs8OQPLPdFsRjzxrYS1wTfJvbXl36l%2BvEq0w60dVS%2FgG7y1VxZqDmR9Z20TkXRCvbIc8VEXpQ0CwkJM7%2B%2BiPC4efHp%2BQmoOrZj3Qd0775vfgundElfi40pwo0fmySwdPy2E6koDumSxRjumDMYX3K9FjRdW4fP8eeVx%2B%2Fa2%2F%2BnFqzH0%2Bq9XX5r7VYfrmxP3y90dTKADg71BsI9YZCvZFQb02oty7U2xDqbVZ66%2FeKmf7QYVVont0Af97Ep8VuInKZlkhnILQCwBTpDYWQg0LIISGNQ6gDcgEJTg4cEDI6IGR0QEgrgJBaQCG1gEJqgYTUAukdoFvYTi%2BjC7xN9D0SWn2hWwZCtwyELAEKWQIU8r1ISH0RYKGqDqA8xH5hAEhCc5sdftwTO2Xse72xz3ZjHuMM5XJEwp4KqlnyrvV2RmFV4LusSf%2Bo8C%2Bmh%2BryjDHEflyldvkcpJW8FTOQ4HtUvwRmxvwkUfxSMFDah5JdnNztyo3xt8CeJ0eeKd1OaFu8Tk4FEo63sgP80Y8SIpdJ7CjIOPHC3WIncVuu582IR8J0ajSfY32xSOlhSP7DlSPIQBZydkcK6otS6JIL%2FInDGG8r15zf0ntM1jgOqeWpqwovNnIS%2FFxy6EJUTGLl7TxR2B23cwa%2F3M0Mq7Dlq1g0SQXBw4CkbjgGdUiwU0sL6hiRTTjHHLIMdCHZ%2BE6y8PcqXTgSxiuyJL7tfSIkyCF6wnH8kqc99iYmLKR468Z%2FJ8NvLcqEsvY%2FaRtCK2%2Ffb%2FP508ZL0fDpUmVDVX1SCLKxEwAKQTk4bTGjv%2BDQpSuOw8r8vKxNPWI7XOK4sshRi5KE1E3H7k92sY%2BHvGa0zXGDyRntxwIvtY51RUNYq6QK8ilTqypgtucukxRtTidIFmma2IlL08m7%2FMDadZxkjmmII%2FdXfmo1DUKuH6f3raf%2BbmdotrfBhe4aXprMBbbPXM2OlRA%2FvolSZbqjHaAWbNN5Sq9rLLPPaTEXXb9suuJIR%2BNuxC0fcqPeAmgixpxv9kCbz%2F4lWYFKF7JYRFSHeOx3F9GkDt3w19ptukSYrkDMgtvkf1nP6RMfc242FwkoBuM0eisBmLQogdpXBar%2BHYn7d1MXNvZuEZb6nvhIj16xb9%2B5S7aPEsg8O4rcOasLLEqlt2U9rX7Az3Zxn%2B0avB%2BSYouq0VIrOOl74ixnmQWUKgelxU2RRcZ8VIlmfSLITgT4a8nWoTbRYT9wHBOIGpiAJGeJeescULA3OevmqU3pqdEUjOupa2CjITx127ZjXya%2BT41OSs2PdPkFpS%2FofWVUK5k%2FOkyAvqy72W%2Frhs5oCJ%2Bqtfh%2FYbfdzUdYSmc23650l0TuDXudODz%2FMQqydrPzGOp8swdlqg%2BcX0CWgHRW4D65xZE%2BDfTY8UlZAxU6ZEOV6aEr2XhL1EKbsL5kNGoBOuUBl84tehuqGLeooT0et8gKDwYgF9oA5KKRJMChWII%2BCEuAFos1Us9KE4DArt8eBboconBzoXuAx%2FqH6p6KTP7b88FdbdbgEVqXERpN4XmzfwjHi9DGQBG6UKTry%2F%2BtQSI7n%2F%2FX9m1Hjuxm38huXFZklyn5AYVp2GeUKXlrkjZewLdkwEdT47wp%2BYgBv6Ee6xVW3mhsqDYNbW%2BwbiqTaSMLcLAHxBANEvkR9%2BhXO29Oz739IR75YV113nTk%2F03m9Hypsszpm7I8jbVjZI4U4iGSIR5NtZFzeh7tyXghvmFX7SQ5faFIV5fTQ3OQyK7r3G49T%2FpHjux638hefyzzpiO7zOkPKEzD5qHM6cssz%2BTMe7SAL0v46Odk5JyeR3vEgH%2BCGr6Bc3pwq4IiOGeh2hDO6I8O32iYkjwNcRSvY032UOG7b1EevLiqvHcyNeff9JWpeVOyxj%2BAtdA4kRrJgjj6ic77uB2pk7EiNWrYHDtJao7qWnMdqTkappCOf9wOEecRxo3tqG8hHYKXFttlar5XYXpU1l1Das4%2FgB0t4Mv6Ovppnvdx%2BzEBvyO8hoQ3%2B6YlJQlNvb%2Fy4ADOQDNvdQZqnX%2B9%2BYiXHTpCLTfZ6Ofa9VOsexe2iyMNuJztiJeYOiI9kUijqeP%2BTL%2BuUj3BtkpvsAf04LIeLjHrTfJ1r16CVe%2Fylv5gj7eTrskXR1%2Fld1Jocp9MuaYvpdAa9smkHZ7%2F9TBNlpIp1%2FR6mCa3kV5lSacmt5GUayrp1GSl1at8fqvJTSDlTT6%2Fpc3y34BkT2HK%2F6WCHv4H%3C%2Fdiagram%3E%3C%2Fmxfile%3E"></iframe>                
+                </div>
+
+
+                <div class="tab-panel" id="dfa-symbols">
+
+                    <p>
+                        The DFA is obtained by removing the epsilon transitions and incorporating
+                        the accepting state into the states reached after reading each valid symbol.
+                        Each valid punctuation symbol therefore leads directly to an accepting DFA
+                        state.
+                        </p>
+                    <iframe loading="lazy" frameborder="0" style="width:100%;height:455px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&nav=1&title=other.drawio&dark=0#R%3Cmxfile%3E%3Cdiagram%20name%3D%22Page-1%22%20id%3D%22_yurgwNn3UwB3d35iXRP%22%3E7V1rb6O4Gv41SLMfWmGbWz427exF2tWuNDpnz5xvNCEJMyTkAJ22%2B%2BuPDYbYBhLMxWkSS6NJMcaAn%2Be94ouBHrdvvyT%2BfvNHvAwiA5rLNwM9GRDanov%2FJwXvRcEM2UXBOgmXRRE4FHwJ%2FwlooUlLX8JlkHIVsziOsnDPFy7i3S5YZFyZnyTxK19tFUf8Xff%2BOqgVfFn4Ub3073CZbYpSzzYP5b8G4XpT3hmY9MzWLyvTgnTjL%2BNXpgh9NtBjEsdZ8de%2F0iD58%2FkbeQloRv4z7se8Ln2XXYhbDOMdLXTnBnT%2B90Iunh%2FOVUUGeuCqpFmAO4w7bc%2B5Ghvcz%2B3XL4Ioql9fHX9%2F%2BnWVOHd3%2B9c4%2BOO%2F6N%2Fx9hu4m82YC%2BDjidp5x8lUB3LVoVx1JFfdkqtuy1V35Kq7ctU9uepyqAI5VIEcqkAOVSCHKpBDFcihCuRQBXKoAjlUgRyqUA5VKIcqlEMVyqEK5VCFLKr2k%2BHm%2F%2FB1rHp8DffBny%2FZuPpTCkFJXStHDqnacrSWY7UcqaX6RI4WUErWoVSfQKk%2BQVLCgqRkBUn1CZLqE1cKHU%2BKsZ4UYz2pHvSk3tKTQt6TQt5jpcF%2B4i7AXrj%2Fzukb7F%2BZzcpr5S%2FHV15S7y2nBOT0t5ygSlFBzvAgKQojKQq7Uj3oSqlRT%2BotPUuSlM2c3Mf7346EMzocOV5dhyNdwpFWb84PeW1oU915uICE5GX%2B4hDMb98eMTEN%2BHNxiP9ggnquhhmKaYgk2GVsvuDnlguapW5WNBMsa9mMQ7u0KI1fkkVwpDGL1sveyyRIEr%2FslgF5ABN3SJxkm3gd7%2Fzo9zje40KAC78FWfZO0zf%2BSxbjok22jehZ%2FAzJ%2B3%2FI9fcm5jIt%2BJoXWJittODpjd6iOHpnj%2F4KknAbZEFSFr6FWdHizIL0uGhwhh2o4vjQHjl4Zw7E1tIsib9XGR6UkynPNfnJOsiO9bzFoP9LEONGE6zjzATruiz8waPh02TUuqoHWbJQrCVwn%2FHZL%2F%2B5RMysw3%2BUOAzYhEO%2FF%2BknFkI%2FCtck%2BbTADZJum%2F8Ikixc%2BNEDPbENl0vSxjwJ0vAf%2BihmrsvDXZa%2FuZ3LXNm3P%2FzoJShzXE5EZC3d%2BzvuaSofJd5ld2lOrwdcAVr7t7ydg%2Bg760JY52VbuEOL5uiZ4p74oYM3BpSOyNFLMH0d6wiYtLW%2FyBvjKjTneSdcEa9WKSaVCH71DAP4YI6oB0CNGiPqAV4H4HDquAroLZ%2FE1zmjfMKB8lkCemHyiZw2%2BcxN9GTyeWfeAwdQA9YifUfkdYiAxq2p%2B6MMYV%2BSMqpJVhn4oyjcpwTH102YBV%2F2fi7Er4m%2F5wmRbvx98NsuJXl9SpF0X3wiWYVvRIrnqzCKHuMoTvKm0WIR2KtVJW3MGeSgGVoekcMOuG2YzyQOpfXr4ZNKWUQbgeV3FIoiKj8IScgoPowZ36snQrCO0IdVr5VP5ILSB%2FrKel3tPhHjoNker5w9UKluWQdtNDfLmUaLCwzpptTRQJ0OL1Klt7pcn6ZW6NBF51Do3chgtSuAA764BzIe2ibdzWvdXbwLBBVNiyRowSmUwRQAXgsFzKEUYG0DkrcN0JaW%2FJ7GwO5pDBhZ3y0fyLgEAmDkp2m44JnBY9bmME%2FmL7eEsyxA5diHRrllULOPWGxBTkt2AAFYS2iiMKr0KjZJIjaE%2BIYqxpQNFf1Qa%2Bi0VhjHp3DqNNJeHwHc4XEDcLDX102Nu1qNozlQq8ZrYCNlapxNCozp07s1zkyWMjllAcpYoIwLmKtao4DeVgPIuHbd7YHt2hxDnG7mQFqLd0zmGMP8fq%2Bu1S%2FZ78e%2F%2FpYovN1zujeO5F2nut%2FjZ2NuTxx8QN6N6Ezgc2SS6t%2BhOjsVudeAC5fxCybT567OxiW5FjbidYky1wJ0Cguu3bdw1foWNbTV%2BRbgIhOGHv8NlYysVfYNFdjNkA%2F0HpDJcwCJAala9wEMzRuCK0sc%2FnSlicO%2BeoNNveikABsn8nIMTXld3k9ibW250RyqzgoIaPfw0%2FpKYENabhzLbU9gui8iLzCbxLI7EN6f8OYV23Z3qG13rsu262D9BGEaMpA6WG8N39SZ%2FJk2%2BWjunTdYV2jyGwZvf9xB1D0st%2FLvxxBNYvGR8GXYOm8sL6w60GMM0Mca10kUwzB7TyZFVDqjaO6mo3nYkAXU0TyRZFcY4yF%2B1JvKtEOkTTuaW4qjeRFtV1keHjbk00Yx7SWRbi6ah%2B4ktt0RMz6ewBHFtt0eatvrvp%2BO5a84locDRvPdYCyvzuDrQX34FygenF2DW6HFn2pY34TBvHk%2FcxzOeAN4IqQf89M7mmbgnmUJ4XrHgdxTmfShQ%2FfgtY3dcyedJn154ToaMHjuusN1zxU%2BtcGZIvuN9MA5%2FIsUB%2Bw1vFGPby99pbAhaTaKAUd13txGyI6mGVrnCGkdKM7OVmvf0dChdQhemX3XIftxwgwYa3cTIbsg3spMvh5xh39nqiN2IUevzuC7bEZZu91G69xIe%2FjyJx0nwnpaAtHcOe9MWFvdggYuO0Jz1Kmw9ZTJbbjcHmymxFCXG%2FBhmXVel9szB7rc7rWtPKhd7uOEGbDS2S243PBMBt%2BD2uCjOYCKfW4RbnUW32NHaGqf22ideWQhVSKoFxHDv4Nt5bB5ZpalTgL7riJ2yuf2pvhQfRE%2B99BVfruluZF91pFpnjPQ5%2Fbq8xC1z33NPveA9Not%2BNxC4lOdwddJNuJzK15vrgZ3D4vfcaWwa5hq0HVOUCu%2B8T4gBHlO%2FMV3ovBMdqXgXlOETuANrGrsQmnAzdpE8R4y3hF07cXj30UUYzPBoj54mRdp1O0ZL%2Bh95pN2xFx%2Fr%2BQFnUA%2FwuBCecg9AfLZZLrd0ZDzYl5g%2FtSK%2BYlbLop3JbdL1s%2F%2BJzPfI8QUfn7KmzLz51v52zB6Ly7Zxrs4LXq1On94fpM%2BvknwuKPd%2BJA%2Fhp8UT2fmwNzRNsi5XUzhaQo47JypzFbnNuYOKc038q6OSi7ZOZtwyRP5m%2Bghm6BgYwqeqguquiXXejUD25th7lDAUp3J6YuPCgKTYpAfMiQmhXk%2FkXKWyOREzlty4kBmrrhAghRRSpNCntTkJKU1OVkSmxSbecnh4QuCVw9P%2FiOcy%2B%2Bfuxm1FyxwLSsUhMFHD3nVnPTlHQ4186N18Xeh8WzGzNm5e3O4cQ5OeffyMuaRCx1Yh6IC86AN7UofVtXRgQFULx5aKnRjeZa5h21B9sw7c43JtIc1ZnVizTyEyLf8sCIdW8iLAq1XkxnlTsHweSkdLYSed0QaCLZhnqvabn1iIND5nYIJAz4d0OeWnGI9fJOvwT6%2F3cPn75llmzUModFZtiPL%2FKtaeLnc9OO2pfLcuzqo%2B66Wb8KsJbH70ppAHpqekgi1JJ5%2FJdUeire3JA4YZHILkniuRZDyreG1JN7OKkjAbBhsoiXx6PxmR5Us6lSy8REmOJc7tKiQRj0iQ2oijLhv43SyqDM4xvnnPfUISHpLos7afMjB0NUesLctiRc4GrorvhTMcXbWAJNOM7w3TWRww54tHECdGPhMjsQFupjlvixosCOiZ9A1xlnua%2FThz8ixBFfJsj2%2Bkd77KHclC9Xl%2FTfWAA2K%2FKLHPA%2F%2FkHZsgDOmvGN1Z0rL4l59xjh3ZQQaVX0o3JkH9lt0f3yxtmeCWNvIUizW1mCxri%2FCfAlijZzWqQyDv5meWpHPKXv9IlbkA2BA4uqq5ymCmSi%2FfTIYgnPeG6XJ9kybRDVXbpgLSrfrK%2BvoddhI5d7EThCn2D1QqX1Zn%2FBsnl1tXLwrxHe9TUDPqG%2FwDmrXtoXap6ntwZlWaO1KCJ2Qw7%2BKF%2B9uMC1Q%2FmtIb1vSdy0iRuJ3y4ckiV8JiJGfpuGCZwePm%2FLdsQBomajMwlRubdUovwx24hZYp9U%2BMGvwirFey4zmelNQbAqaQlNjWZDe%2B7A3rOl8Ca7JZFuxj%2B9GmGKCCNk9%2BYSc2ndYsSnFHknZHQP2azevyyPRG7YL%2BMLJFMwUWe2zbx85gf4RjZDVX%2F%2FUTOPszPpn6KLWoGTxB9E%2FepPJ8TXQVHvcTaqBptzzZnQdY6GajunrMzcMPSqF%2FFw6Zuhed%2BDqNru72p1xDDoxk6l%2BmJKJPv8f%3C%2Fdiagram%3E%3C%2Fmxfile%3E"></iframe>                </div>
+            </div>
         </div>
-      </div>
+
+        <!-- STEP 3: COMBINE THE DFAS (no tabs) -->
+        <h3>Step 3 &mdash; Minimise the DFAs</h3>
+        <div class="dfa-visual-blank" id="combine-dfa">
+            <p>
+                Every DFA above except one is already minimal: Identifier (2 states), Assign (3 states), 
+                Operator (3 states, after merging the shared paths), and every
+                Symbol (2 states each) all came out of subset construction with no equivalent states left to
+                merge. <strong>Number is the one exception</strong> &mdash; its two candidate states after
+                subset construction turn out to be equivalent and collapse into one, the same way Identifier's
+                did. That's the only minimisation actually worked through below.
+            </p>
+        </div>
+
+        <!-- STEP 4: MINIMISE THE DFA (no tabs) -->
+        <h3>Step 4 &mdash; Combine the minDFAs</h3>
+        <div class="dfa-visual-blank" id="minimise-dfa">
+             <p>
+                With every individual DFA now confirmed minimal, combining them is just attaching each one's
+                start state to a single shared <code>S0</code> &mdash; check the token table above and none of
+                the seven categories share a first character, so no branch competes with another for the same
+                transition.
+            </p>
+        </div>
+
+        <!-- STEP 5: READY FOR LEXING -->
+        <h3>Step 5 &mdash; Completed DFA, Ready for Lexing</h3>
+        <p>
+            With every token type minimised and combined into one machine, the lexer has everything it
+            needs: a single automaton that recognises any token in the language, one character at a time.
+        </p>
+        <p>
+            <a class="btn btn-primary" href="#simulate">See this DFA perform lexical analysis on our program &rarr;</a>
+        </p>
+    </section>
 
       <div class="callout callout--info" style="margin-top:1.5rem">
         <p class="callout__label">Key Takeaway from the Trace</p>
         <p>
-            Every step above follows the same two rules: consume characters while a transition exists, 
-            and only accept once none does (longest match); 
-            when a character could complete more than one token type, 
-            whichever pattern is listed first wins (priority). 
-            
-            This trace is the pseudocode. 
-            <stong>
+            Every step above follows the same two rules: consume characters while a transition exists,
+            and only accept once none does (longest match);
+            when a character could complete more than one token type,
+            whichever pattern is listed first wins (priority).
+
+            This trace is itself pseudocode for the scanner:
+            <strong>
                 start at S0, follow a transition if one exists,
                 remember the last accepting state you passed through,
                 emit a token and reset to S0 once none exists.
-            </stong>
+            </strong>
         </p>
       </div>
+    </section>
+
+    <!-- ── CLOSING ───────────────────────────────────────────────── -->
+    <section class="section" id="closing">
+        <h2>Closing</h2>
+        <p>
+            This chapter took one small idea — a regular expression describing a pattern — and carried it all the
+            way to a working scanner: regex to NFA, NFA to DFA, DFA to minimised DFA, and finally every token's
+            minimised DFA combined into one. The trace above showed that combined machine actually reading a
+            fragment of source code, one character at a time, emitting a token every time longest-match and
+            priority say it should.
+        </p>
+        <div class="callout callout--info">
+            <p class="callout__label">Key Connection</p>
+            <p>
+                The token stream produced above is exactly what Chapter 2's parser takes as input.
+                Every token category defined in this chapter becomes a terminal symbol in the grammar used for parsing.
+            </p>
+        </div>
     </section>
 
     <!-- ── EXERCISES ─────────────────────────────────────────────── -->
@@ -279,21 +604,69 @@
             <details class="exercise__hint">
                 <summary>Show answer</summary>
                 <p>
-                    A <strong>synthesised</strong> attribute is computed from the children of a node and returned upward —
-                    the type of an expression is synthesised. An <strong>inherited</strong> attribute is passed downward from a parent to its children
-                    — <code>vtable</code> and <code>ftable</code> are inherited, since every subexpression needs access to the same environment.</p>
+                    Using Thompson's construction: build an NFA for <code>a</code>, one for <code>b</code>, combine
+                    them with a union (<code>a|b</code>), apply the Kleene-star construction to get
+                    <code>(a|b)*</code>, then concatenate an NFA for <code>c</code> onto the end. The result has a
+                    single accepting state, reached only after zero or more <code>a</code>/<code>b</code>
+                    characters followed by exactly one <code>c</code>.
+                </p>
+                <p>
+                    Applying subset construction: the start state's $\epsilon$-closure includes every state
+                    reachable before consuming input. On each <code>a</code> or <code>b</code>, the closure stays
+                    within the "looping" part of the machine — so a single DFA state can represent this entire
+                    loop, since <code>a</code> and <code>b</code> both lead back to the same set of NFA states. On
+                    <code>c</code>, that DFA state transitions to a new, accepting DFA state. Any further
+                    <code>a</code>, <code>b</code>, or <code>c</code> from the accepting state has no valid
+                    continuation of this pattern and goes to a dead state.
+                </p>
             </details>
         </div>
 
         <div class="exercise">
-            <p class="exercise__level"><span class="bloom bloom--analyse">Apply</span> Exercise 1.2</p>
+            <p class="exercise__level"><span class="bloom bloom--analyse">Analyse</span> Exercise 1.2</p>
             <p>
-                A DFA has two states that both transition identically on every input symbol and lead only to rejection. 
-                Explain why these can be merged during minimization, 
+                A DFA has two states that both transition identically on every input symbol and lead only to rejection.
+                Explain why these can be merged during minimisation,
                 and what would go wrong if they were not merged in a large lexer with hundreds of token types.</p>
             <details class="exercise__hint">
                 <summary>Show answer</summary>
-                <p>A <strong>synthesised</strong> attribute is computed from the children of a node and returned upward — the type of an expression is synthesised. An <strong>inherited</strong> attribute is passed downward from a parent to its children — <code>vtable</code> and <code>ftable</code> are inherited, since every subexpression needs access to the same environment.</p>
+                <p>
+                    Two states are equivalent for minimisation if, for every possible remaining input, they either
+                    both lead to acceptance or both never do — from the scanner's point of view, they behave
+                    identically no matter what comes next, so keeping them separate adds no distinguishing power.
+                    Since both states here always lead only to rejection regardless of input, they meet exactly
+                    that condition and can be collapsed into one dead state.
+                </p>
+                <p>
+                    If they were not merged, every additional token type introduces its own redundant dead states
+                    rather than sharing the DFA's existing ones. In a lexer with hundreds of token types, this
+                    multiplies the number of states and the size of the transition table without changing which
+                    strings are recognised — it costs memory and lookup time for no benefit.
+                </p>
+            </details>
+        </div>
+
+        <div class="exercise">
+            <p class="exercise__level"><span class="bloom bloom--create">Create</span> Exercise 1.3</p>
+            <p>
+                Following the same four-step pipeline used above, construct the minimised
+                DFA for the Number token (<code>[0-9][0-9]*</code>) and for the semicolon symbol.
+                Compare their size to the identifier's DFA — why is one so much smaller than the others?
+            </p>
+            <details class="exercise__hint">
+                <summary>Show answer</summary>
+                <p>
+                    Number follows the exact same shape as identifier: one non-accepting
+                    start state, one accepting state reachable by consuming a character from the relevant class,
+                    and a self-loop on that accepting state for every character after the first. Only the
+                    character class changes — digits instead of letters-then-alphanumerics.
+                </p>
+                <p>
+                    The semicolon is the simplest possible case: a single-character token. Its minimised DFA has
+                    exactly two states — a start state and an accepting state reached on <code>;</code>, with no
+                    loop, since nothing can extend a valid semicolon token further. That's why it's smaller
+                    than the others: there's nothing to repeat.
+                </p>
             </details>
         </div>
 
@@ -308,10 +681,10 @@
                 Every terminal symbol in the COS341 Reference Grammar corresponds to a token type defined here.
                 Chapter 1 answered the question <em>"what are the words?"</em>, Chapter 2 answers <em>"what can be built from the words, and is it grammatically valid?"</em>
             </p>
-        </div>
-        <p style="margin-top: 1rem;">
+            <p style="margin-top: 1rem;">
                 <a class="btn btn-primary" href="chapter2.html">Continue to Chapter 2 &rarr;</a>
             </p>
+        </div>
     </section>
 
     </main>

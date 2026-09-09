@@ -1,122 +1,60 @@
-/* Fold into your shared stylesheet. Scoped under .dfa-svg / .dfa-*
-   so it won't collide with the existing tree-line / step-call rules. */
+/* ── TABS: Step 1 / Step 2 of "Creating the DFA" ─────────────────
+   Append to chapter1.css. Reuses existing tokens (--col-accent,
+   --col-border, --font-ui, --radius) so it matches the rest of the
+   site without introducing new colours. ──────────────────────── */
 
-.dfa-diagram {
-  margin-bottom: 1.5rem;
-}
-
-.dfa-svg {
-  width: 100%;
-  height: auto;
-  max-height: 320px;
+.tabs {
+    margin: 1rem 0 2rem;
 }
 
-/* states */
-.dfa-state circle {
-  fill: var(--col-bg, #fff);
-  stroke: var(--col-border, #666);
-  stroke-width: 2;
-}
-.dfa-state .dfa-state-inner {
-  fill: none;
-  stroke-width: 1.5;
-}
-.dfa-state text {
-  font-size: 14px;
-  text-anchor: middle;
-  fill: var(--col-text, #222);
-  font-family: inherit;
+.tab-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    border-bottom: 2px solid var(--col-border);
+    margin-bottom: 1rem;
 }
 
-/* accepting states get a slightly different stroke by default,
-   independent of active/inactive, so they read as "accept" at rest */
-.dfa-state--accept circle:first-of-type {
-  stroke-width: 2;
+.tab-button {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 0.5rem 0.9rem;
+    margin-bottom: -2px; /* sits on top of .tab-buttons' border */
+    color: var(--col-muted);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
 }
 
-/* non-accepting states (S3) rendered dashed to visually flag
-   "you cannot stop here" */
-.dfa-state:not(.dfa-state--accept) circle {
-  stroke-dasharray: 4 3;
+.tab-button:hover {
+    color: var(--col-text);
 }
 
-/* active state highlight — the state currently "lit up" for this step */
-.dfa-state--active circle {
-  stroke: var(--col-accent, #2563eb);
-  stroke-width: 3;
-}
-.dfa-state--active text {
-  fill: var(--col-accent, #2563eb);
-  font-weight: 600;
+.tab-button.active {
+    color: var(--col-accent);
+    border-bottom-color: var(--col-accent);
 }
 
-/* edges */
-.dfa-edge {
-  stroke: var(--col-border, #999);
-  stroke-width: 1.5;
-  fill: none;
-}
-.dfa-arrowhead {
-  fill: var(--col-border, #999);
-}
-.dfa-edge--active {
-  stroke: var(--col-accent, #2563eb);
-  stroke-width: 2.5;
+.tab-panel {
+    display: none;
+    min-height: 220px;           /* reserved space for hand-drawn illustrations */
+    border: 1px dashed var(--col-border);
+    border-radius: var(--radius);
+    padding: 1rem;
 }
 
-.dfa-label {
-  font-size: 11px;
-  fill: var(--col-muted, #777);
-  font-family: monospace;
+.tab-panel.active {
+    display: block;
 }
 
-.pipeline {
-  display: flex;
-  align-items: stretch;
-  flex-wrap: wrap;
-  gap: 0.5rem 0.25rem;
-  margin: 1.5rem 0;
-}
-.pipeline-step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 140px;
-  text-align: center;
-}
-.pipeline-box {
-  border: 2px solid var(--col-border, #666);
-  border-radius: 8px;
-  padding: 0.6rem 0.5rem;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-.pipeline-step--final .pipeline-box {
-  border-style: double;
-  border-width: 4px;
-}
-.pipeline-caption {
-  font-size: 0.72rem;
-  opacity: 0.75;
-  margin: 0.4rem 0 0;
-  line-height: 1.3;
-}
-.pipeline-arrow {
-  align-self: center;
-  font-size: 1.1rem;
-  opacity: 0.6;
-  padding: 0 0.15rem;
-}
-
-/* --- responsive: stack pipeline steps on narrow screens --- */
-@media (max-width: 720px) {
-  .pipeline {
-    flex-direction: column;
-  }
-  .pipeline-arrow {
-    transform: rotate(90deg);
-  }
-  .pipeline-step {
-    width: 100%;
-  }
+/* Step 3 / Step 4: same reserved-space treatment, no tabs needed */
+.dfa-visual-blank {
+    min-height: 260px;
+    border: 1px dashed var(--col-border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin: 1rem 0 2rem;
 }
