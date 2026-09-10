@@ -6,6 +6,7 @@
   <title>Chapter 2 — Syntax Analysis | COS341 Supplement</title>
   <link rel="stylesheet" href="../css/style.css" />
   <link rel="stylesheet" href="../css/chapter2.css" />
+  <link rel="stylesheet" href="../css/chapter1.css" />
 </head>
 <body>
 
@@ -25,6 +26,77 @@
     <p class="breadcrumb">Chapters &rsaquo; Chapter 2 &rsaquo; Syntax Analysis</p>
     <h1 class="article__title">Chapter 2 &mdash; Syntax Analysis</h1>
     <p class="article__subtitle">Building a parser that deterministically knows which rule to apply next.</p>
+
+     <!-- ── EVENT 1: GAIN ATTENTION ──────────────────────────────── -->
+        <div class="callout callout--question">
+            <p class="callout__label">Opening Problem</p>
+            <p>Here's the while-loop body in the <code>gcd</code> function from the <a href="index.html"></a> </p>
+            <pre class="code-block">temp := b ;
+b := a - ( a / b * b ) ;
+a := temp</pre>
+        </div>
+
+        <!-- ── EVENT 2: LEARNING OBJECTIVES ─────────────────────────── -->
+        <section class="section" id="objectives">
+            <h2>Learning Objectives</h2>
+            <p>By the end of this article you should be able to:</p>
+            <ul class="objectives-list">
+                <li><span class="bloom bloom--remember">Remember</span> which productions in the Reference Grammar are ambiguous or left-recursive as written.</li>
+                <li><span class="bloom bloom--understand">Understand</span> why an ambiguous or left-recursive grammar blocks a deterministic top-down parser, and how bottom-up parsing is able to handle a broader class of grammars.</li>
+                <li><span class="bloom bloom--apply">Apply</span> the nullable, FIRST, and FOLLOW sets to parsing algorithms.</li>
+                <li><span class="bloom bloom--analyse">Analyse</span> a constructed LL(1), SLR, or LR table to determine whether a given cell contains a conflict, and trace which grammar property caused it.</li>
+                <li><span class="bloom bloom--evaluate">Evaluate</span> which parsing strategy &mdash; LL(1), SLR, or LR &mdash; is suitable for a given grammar rule, justifying the choice by what each strategy can and cannot handle.</li>
+                <li><span class="bloom bloom--create">Create</span> an LL(1), SLR, or LR parsing table from FIRST/FOLLOW sets or item sets, and use it to trace the parse of a real program fragment.</li>
+            </ul>
+        </section>
+
+        <section class="section" id="core-content">
+            <h2>Core concepts</h2>
+            <p>Two families of parsers build the same kind of tree from opposite directions:</p>
+            <img src="../assests/parsing_methods.png">
+            <ul>
+                <li><strong>Top-down: </strong>starts at the grammar's start symbol and predicts which production to expand next.</li>
+                <li><strong>Bottom-up: </strong>starts at the tokens themselves and repeatedly recognises and collapses ("reduces") pieces matching a production's right-hand side.</li>
+            </ul>
+            <p>
+                These are the methods that will be explored below.
+                All three build the same shape of tree for an unambiguous grammar, 
+                they just get there differently.
+            </p>
+        </section>
+
+        <section class="section" id="recall">
+            <h2>Connecting to What You Already Know</h2>
+            <p>
+                The previous chapter, <a href="chapter1.html">Lexical Analysis</a>, ended with a finished token stream. 
+                That stream is this chapter's input.
+            </p>
+            <p>
+                You should also already be comfortable with <strong>context-free grammars</strong> and <strong>derivations</strong> from your 
+                prerequisite coursework. This chapter turns that into something stricter: not just that a grammar can 
+                generate a given token sequence, but which one, single, unambiguous tree it corresponds to, 
+                and how a parser builds that tree deterministically rather than by guessing.
+            </p>
+        </section>
+
+         <section class="section" id="ambiguity">
+            <h2>Ambiguity</h2>
+            <p>
+                A grammar is ambiguous when some input has more than one valid parse tree —
+                two different, equally legal ways of building the same string from the start
+                symbol. LL(1), SLR, and LR are all built to arrive at exactly one tree per
+                input, not to choose between competing ones.
+            </p>
+            <p>
+                The Reference Grammar avoids this by construction — every alternative in a
+                production like <code>STAT</code> begins with a distinct, unambiguous token,
+                so none of the methods below ever have to resolve a either-or choice.
+                See the <a href="#conflict-check">conflict check</a>
+                under LL(1) below, and the dangling-else example of what a real conflict
+                would actually look like if the grammar weren't written this way.
+            </p>
+
+        </section>
 
     <!-- ── LL(1) PARSING EXAMPLE ────────────────────────────────── -->
     <section class="section" id="ll1-example">
@@ -223,7 +295,7 @@
       </div>
 
       <!-- ── CONFLICT CHECK ──────────────────────────────────────── -->
-      <h3>Step 5 &mdash; LL(1) Conflict Check</h3>
+      <h3 id="conflict-check">Step 5 &mdash; LL(1) Conflict Check</h3>
       <p>A grammar is LL(1) if and only if <strong>no cell contains more than one production</strong>.
          Every cell above has at most one entry &mdash; this grammar subset is LL(1).</p>
 
@@ -238,18 +310,297 @@
       <!-- ── CONFLICT EXAMPLE ────────────────────────────────────── -->
       <h3>What a Conflict Looks Like &mdash; Dangling Else</h3>
       <p>If we allowed both:</p>
-      <pre class="code-block"><code>STAT &rarr; if COND then ALGORITHM
+      <pre class="code-block code-block--pseudo"><code>STAT &rarr; if COND then ALGORITHM
 STAT &rarr; if COND then ALGORITHM else ALGORITHM</code></pre>
       <p>Both have FIRST = {if}. The parse table would have <strong>two productions in the same cell</strong>
          for STAT under token <code>if</code> &mdash; a conflict. The fix is left-factoring:</p>
-      <pre class="code-block"><code>STAT      &rarr; if COND then ALGORITHM ELSE-PART
+      <pre class="code-block code-block--pseudo"><code>STAT      &rarr; if COND then ALGORITHM ELSE-PART
 ELSE-PART &rarr; else ALGORITHM
 ELSE-PART &rarr; &epsilon;</code></pre>
       <p>Now STAT has one production for <code>if</code>. ELSE-PART chooses <code>else ALGORITHM</code>
          (Rule 1) or <code>&epsilon;</code> when the lookahead is in FOLLOW(ELSE-PART) (Rule 2). No conflict.</p>
-
     </section>
 
+    <section class="section" id="slr">
+      <h2>SLR</h2>
+      <p>
+          Building an SLR parser uses the exact same technique as
+          <a href="chapter1.html#construct-dfa">building the lexer's DFA in Chapter 1</a> — small NFAs
+          combined into one, then converted into a deterministic machine via e-closure and subset construction. The only thing
+          that changes is what a "state" represents: instead of a position in a regular expression, a state
+          here is a <strong>set of items</strong> &mdash; a production with a dot marking how far into it the
+          parser has read so far.
+      </p>
+
+      <div class="callout callout--info">
+          <p class="callout__label">Before we start</p>
+          <p>
+              The full grammar has too many productions to usefully show every NFA, every connection, and
+              every state. So we are selecting a subset of the productions in grammar, built specifically 
+              around this fragment from <code>gcd</code>'s while-loop body &mdash; not the whole language,
+               just enough to parse exactly this:
+          </p>
+          <pre class="code-block">temp := b ;
+  b := a - ( a / b * b ) ;
+  a := temp</pre>
+      </div>
+      <h2>Grammar subset</h2>
+      <p>
+        Note: we added an extra production <code>STATLIST' &rarr; STATLIST$</code> to the grammar. 
+        <code>STATLIST'</code> replaces <code>STATLIST</code> as start symbol, and the <code>$</code> 
+        is a new terminal symbol that represents the end of input.
+      </p>
+      <div class="op-table-wrapper" id="slr-tiny-production-key">
+          <table class="op-table">
+              <thead><tr><th>#</th><th>Production</th></tr></thead>
+              <tbody>
+                      <tr><td>0</td><td><code>STATLIST' &rarr; STATLIST$</code></td></tr>
+                      <tr><td>1</td><td><code>STATLIST &rarr; STAT</code></td></tr>
+                      <tr><td>2</td><td><code>STATLIST &rarr; STATLIST ; STAT</code></td></tr>
+                      <tr><td>3</td><td><code>STAT &rarr; _vname := EXPR</code></td></tr>
+                      <tr><td>4</td><td><code>EXPR &rarr; EXPR + TERM</code></td></tr>
+                      <tr><td>5</td><td><code>EXPR &rarr; EXPR - TERM</code></td></tr>
+                      <tr><td>6</td><td><code>EXPR &rarr; TERM</code></td></tr>
+                      <tr><td>7</td><td><code>TERM &rarr; TERM * FACTOR</code></td></tr>
+                      <tr><td>8</td><td><code>TERM &rarr; TERM / FACTOR</code></td></tr>
+                      <tr><td>9</td><td><code>TERM &rarr; FACTOR</code></td></tr>
+                      <tr><td>10</td><td><code>FACTOR &rarr; ( EXPR )</code></td></tr>
+                      <tr><td>11</td><td><code>FACTOR &rarr; _number</code></td></tr>
+                      <tr><td>12</td><td><code>FACTOR &rarr; _vname</code></td></tr>
+              </tbody>
+          </table>
+      </div>
+
+      <!-- STEP 1: NFAs FOR FIVE PRODUCTIONS -->
+      <h3>Step 1 &mdash; Turning a Production into an NFA</h3>
+      <p>
+          Every production, read left to right, is itself a small chain: one state per dot position, one
+          transition per symbol. Five productions from the grammar this section builds, picked to show the
+          range of shapes you'll run into:
+      </p>
+
+      <div class="dfa-visual-blank" id="slr-five-nfas">
+          <iframe Loading="lazy" frameborder="0" style="width:100%;height:625px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&dark=0#R7V1rd5s4Gv41Pjvdc9IDEjd%2FjJO0k922051kO91Pe4iNbabYeDFukvn1K4HwRRI2BksIonyIjRAC672%2F74M0gDeLl4%2BJv5p%2FjidBNADG5GUAbwcAmBYcog%2Fc8kpagGvkLbMknJC2XcND%2BFdAGotum3ASrA86pnEcpeHqsHEcL5fBOD1o85Mkfj7sNo2jw7uu%2FFnANDyM%2FYht%2FSOcpPO81bONXfuvQTibF3c2DXJm4RedScN67k%2Fi570meDeAN0kcp%2Fm3xctNEOHZK%2BYlv%2B5DydntgyXBMuVcED%2F9iecDGJH%2FhIiSdcgvKUbwvi2j8Gf8x%2Ffpt9Xjf6f3m5vo4crcPtn2jvu3IHddp6%2FFBKE%2BiBboYIR%2B4Ao3TuLNUxTcbduf52EaPKz8MT75jPgEtc3TBX4mE33116uccNPwJUCPNpqGUXQTR3GS3QCOx4E9neLx0yT%2BEeydgQ4cwsn2TEEf9Pyj%2FDF%2FBkkavOw9OflhH4N4EaTJK%2Boy3yOeQyj1vCN00VQM4th23kD4GRSM4BM%2Bm22H3pECfSGTWRwS4vApy6ULYMnN0gL92PRwcnlzfziPy3gZUJNOmvwonC3R4RjdMUDtIzydIRKNa3JiEU4m%2BNajJN4sJ5h2t8YxavjRJigY0Ynwk65X%2FvLgJzj%2F22B5GE3jZXq1zrTBNepgequXbJziPPo2w58fipHQpOaD5e216A9r0N%2Bxz6Z%2FTcmErGQGE0Z5HRVV1P2BHMZJOo9n8dKP7natFCF3fT7F8Ypw1J9Bmr4SPe1v0viQ31jao%2BdJXr%2BTEbOD%2F%2BCD93ZxePuyf%2FL2lRwRXe8nsyA9Misun6xJEPlp%2BPNwdng0Ipd%2BjcNlukdnQNPZo%2BR8HW%2BScUAu21fT9Ejw1Ej5T2RGyphm%2B4sq6JGabGXVV%2FgnFHtmD%2B6Xa2TAu6jqoXFxVV%2BTRHZNyc9Y9JTs9F5DDMVoCAtIkutq%2FoEz2HeD%2FaeCogbLHuU8xvDCp5xPD9y16l5BgAw4eRJMrxWeimxy7NHAvj3mF2DzX8kvACV%2BwcPj9eOn%2B4fHPfcgH%2FNM94DLJeSSK%2BM9CmfgARdcnc1IFnU9NUA8na6DMxmoGse42qPkcc6NZI%2BSMTPyPEpPm34%2BTRjdLivKG2qZ5MnkrWSZZOgvTyZNY6CFkksU2zLaEUqzUnD99qTyTrJUMgwgUSoBK5UXCcGGrDj3MAQzz%2FGuz4jBmGxcuzGYSWKB2kGYCbjsoHoUBqwSDZF%2FVTUA217hHF5SJ%2BSqq1c42beL6BXzbWR%2FwRlMc45eMQ4tDXTb1St2U71idVKvHM3udEGxXCCXU1exOKxi6VodFwoMJlwq6wJt72xfsp4sdyjtVirAjUOHf0gOHRhyF8ItIXTgZNlUr9tCCZZbkOkGtvueovWwfun25FgtF2%2FNIctc3ckWiVTw0GBo57RVvwWcnN5FvPzi7n3XFRafJRqXcOXJd0WQ1yGY8XxHf4s17Imj%2F%2B3L9ee7Lnj6F0ghVGQRoP1HOPoovUjLaApXWvIZcJB%2F2siXKPDmRr6iHFpaDuHoV9mFWZbgEuWQg8PTcogHsV3Qmhw6Wg7h6F52KZYluEQ53Md8XzSc4qfJexdOOXweaFw18VQLp0hOt344xUdIqx5OHanHXufXqRpPFaMAagB54VWHEHiN%2BaTUnFB2aRz56%2FXBQNn44ygc%2F8g4eW8Azl2f4hd803A5y2%2F7FCeTILlCzfkVC6QUwmV%2BziBPhAgwmWyvwK3o%2F3szWORnx%2FkM4nPJ7OkXrNEQvQ1cxMGfQ%2FAu75f94Gdi23Bv1zDICJtkXQyRiWA287unS%2FxJuFkTeSoeKk185KOlYUye9skf%2F5hlRMkfb71316m%2FCKPXvB%2BaC3%2BBWYLMyA2yRCG6ITC%2BBM%2F0yfwnbLvgg0W8jNc5c2WPgdjvinDNdTblfpJyCUkVSg9dgxM0zt6evTBp8SyBpKAiQ2MebT2X0JTQ2DScd6pN8%2BAODDxnMAT5Q9Sabi1Sx0Rqr3n3iBDkzwYwMDD7YlvK8QZJYRqF7TXuvn%2F9%2FQST1LXMJ7z4bRsZZei06MVDYUURRzEvHvlEhjWkXHnonXDms6OvQRKi%2BceClDe%2BhOl3ckf8fS8uQEe7kfDBuRhNQW%2FSujbDZEM0IXt%2F1JiVy7Mey77txhuwafkG9qx8Q6k6VaMNkxqgPdgWBKxS1LCtchyPRQO%2BRaUZIexBXNg4zfilZdiWNZTnntRFZqvidYjJHUJBuUN6vQ3bpAS7OmjLOjFSy5AtqKtIZUV2k%2Fbn5Kl3XUVCn%2F%2BUjapgCS5RwXOqSFoO8SBW0SBdCj0thXD0STamgia3RBnkwJcvkgOCquWABHljHp8DmnpjtivJh6qmF4r3vuvnVfivWSufVymr4yqeV1EgkWJx1jG9jGbx3oRmsewzuOYszXJobNrWLKChZrH4Yb%2FqmqUUIXKlsFopRnGoAaStmGb1IQmowSEaHML1IjQ4RMw0a3CIBoccF0EDWV3j8e73z6rCQiSmBKxOr0ct9CULr6W0XFFQ6bTb0zgtVy6cYtJyDLklyiBn8ZiLBM8FJ7UdPIuJbelqdduxrds0tuUnUVWPbUvRSJSFVS28VSFr1mBF6DcBPzKp7FUNnVxPlvvwWkpjE1werYoxwTS5HVqhizPBdl10dL%2FT0jYQY7pp%2BJEDKMGuDT9iRmoZfmRzCiM6vhpw0SjS1LsNtHqHo99ahx%2FJVPB6UZeKeBR5UqiXdEGfX1uGH8mUQVEbqxX6vO%2FemKB1%2BWj4kTAfqqJeaLy3Wkc3VysDCSieSBGIE6iraEStWFOYrJ4rGkfQ%2FiE0GqltRdN0vRq7Z%2BvV%2FF19LSPg3dGKzNKhlCCmXaGTzOZ2qffIpLeBP6qAeND4I40%2FUkVwuosyygXNQNbU%2BHB98%2FhbeR2lZZyRY0rDODid3mdTJs5IWv7NqVTWUsOjKXViGuff%2FtUyzkhi%2Fs0BgsJihyO9PQyLrSGfA5ov2aRUWOw03VbT4adjVQ%2BLS4FMjBFXLTZWIOXmNMARvwUok8M4Xy44X%2FHXk2eNJ0af3yTbeQ7BoTxvuy6iuN8G3DX4pL38Jnhbk36BTfCYsVqGNDl6JZfK2xZdQMnXpVLdfTBPOftFDafvugLwWaLxJnhAmnxXdA9IYaO%2Bu89foqEtd7%2Bqp1BaBfulqacg0NMXX%2BdyOWR%2Fe97ig2xsJGs55HmLrsYol4HlTAEGvaIcAi2HcFS%2Bm4YYOeQQXKIcaoxyWdLcak8ONUoZff5bdpWEJbhEORSFUy50et9DJ0E4ZYdlinZDJ7cpUtlVC6lcWU1U3IBCtehJgTqJKwqaXNipnusWR9BCiQ4TgHlWu7qlKTjZ7Rk4%2BZ3CBVgJaZkOwY8b80D%2FEcdvfS3ESrhIjUa%2BLBq5PLGtpeoiQOWrcOHPiA4Ll%2BhKP2K6rOL9Ict67XRhWY8kWAV%2BeryPn6b%2BeL7IDMaxfnESbklS1geRf8XpoQ6n19nn80TYQ%2FGdaRPQuWkTyTcdWRJfZiHPmKB3pbNzmRzOabx5nRxONffI61DV6jBmAtphUle1q6Pd8M7in%2B4f9O7icl0m7THpV7v4YkimCTec63VcyNwOKXNLrYQGHGkFE68BgEAV8DeoS5oqMAJIJxdNR1L50usQjOAMx6hxQXNUKrSCgAUsC7jy5LPTwAKRkgmpJUflyWWHYAUy5fJaNvCOZgCJUlkXZtBihQ8TX3CFzxOEHqDXnDWHlKhXfkXDAidGavkFDU%2FUfgKeAjVmGRwIxHAgpJa%2FAvSOInIrzF7TDQu8nm1YwMmxqFZolr%2FuldehTaJ1ZrUzKSD1Ujp%2F06lVnVrtvFz1IbWqRja1eVyIDpM4TvftMbKD88%2FxBPtHd%2F8H"></iframe>      
+        </div>
+
+      <!-- STEP 2: CONNECTING -->
+      <h3>Step 2 &mdash; Connecting the NFAs</h3>
+      <p>
+          Wherever a dot sits immediately before a nonterminal, an epsilon transition links into that
+          nonterminal's own production &mdash; the same role epsilon played linking keyword branches together
+          in Chapter 1. Same five productions as Step 1, now linked.
+      </p>
+      <div class="dfa-visual-blank" id="slr-five-connected">
+        <iframe  loading="lazy" frameborder="0" style="width:100%;height:672px;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&nav=1&title=SLR&dark=0#R7V1bd5s6Fv41XnM6a9kLJMTlMXHSns5Jekuv83IWsYlNaxsfTJpkfv0IEDYIYe4CbPWhMUII0L7v%2FQmN4HT9%2FMY1t8tbZ26tRkCaP4%2Fg1QgAWdcR%2FuO3vJAWSVHDloVrz0nboeHO%2Fp8VdSStj%2Fbc2iU6eo6z8uxtsnHmbDbWzEu0ma7rPCW7PTir5F235sJKNdzNzFW69Zs995Zhq46kQ%2Fuflr1YRneWJXJmbUadScNuac6dp1gTvB7Bqes4Xvhr%2FTy1Vv7sRfMSXvc64%2Bz%2BwVxr4zEucO5%2F%2BvMBpJV5j4kSdAgviUb4dfU4vb2bq1fT1f3H91fL98gwx%2FL%2ByfZ3jN%2BC3HXnvUQThPtgWuCDS%2FyCW79x7jzer6zrffvT0vasu605808%2BYT7BbUtv7T%2BTjH%2Bau21IuAf72cKPdvlgr1ZTZ%2BW4wQ3gbGahhwd%2FfM91flmxM1CFBpzvz0T0wc9%2FGT7mb8v1rOfYk5MXe2M5a8tzX3CXZYx4KqHU04HQURMZRFPIccTO0XmTsNliP%2FKBEvgHmcvokNCGTVgmWUCa2mlS4Hf1knPLmvrkNG6cjUXNOWkyV%2FZigw9n%2BI4Wbr%2F0Z9PGknFBTqzt%2Bdy%2F9aXrPG7mPumupGPEMFePVsSH6sp%2F0t3W3CReQf3n0ReHywdn4413gTK4wB1kffscjBOdx78W%2Ft%2FX0Uh4UsPBwvZK5Iflya%2Bh0uSvKJcwLZfWPKW6jgoq7n5HDh3XWzoLZ2Ourg%2BtFB0PfW4cZ0sY6qfleS9ES5uPnpNktzTp8fO4L9%2FJiMHBD%2F9ggqLDq%2Bf4yasXckQ0vekuLO%2FIrGhsqrrWyvTs38nZYdGIXPrBsTfegcyQJrNBSfnOeXRnFrkqrqOpgZS8gcIXTA0UsMz%2BfQookYpMpVRX9jlKPbAFbzc7bLwHqOah0biar0ghVFHsAwbNE5yTVw9GK%2BoByZykuphrQPxp4gCb9xFBpTR3ZLNYihVuQjZNOGrFHQIL227yJD65tv5UBJODLkfo6phL4Fv%2BQi4ByHAJ7j5ffL55e%2Fc55hmEY5b0DJhMQi4ZSxMZaDDBBePSfKRQ11MDOA8PO6skAxXjGE04kyzOmfJ1JlNGhp8zqQu7zyRJSrPzCu8MIZEsibziK5Ep8vOTSFkaCZFk0UQFqBuRlAsF1ecnk9d8ZTJFf44yCdIy2UjwZaSF%2BQSDL7mMY13ca07l4LqNvmQSBVQOv2TA5Ia%2Bx19AydAP4c%2B%2Bhl77K9TkJVWCrapqhZF1a0StyOeR8wUlmKa4WlH1pJ0BerdqBdVVK8og1crRtM4Q9EoDSZyqeiVeDBlo6Ra2F0hoVLoFS3xpR7KaKOvZKr1vgUSm%2FNYOG%2F7DuVJLU1uHpaldVQ7jVYeBlGohB7MN2XStXasFk6TlhhJluYtXa3OH6rheCwadJWpRuUODJh3QuirZJt6oSf8ewPNQFIjNEXWrtvykuyCkizBTZRc%2Fw3AM1sX%2F%2Bu7i9noIPn4DuYOCLAKF6wgv3%2FCuy6Zsic4t5wwGDclq0cKn1XcDFr6gFCIhhfDyT8612DS9OUqhKqSQSRUVaZ1J4YBQS%2B1J4VvO1dc0vTlKIQOm1EwgxYY8nlwg1Q46XtP6FkiRenr1QEpn8kPfA6kjJdiL8Lq%2BRlLRKIAagFtgBcEJGJPCAXeWMaGs0mxl7naJgYLxZyt79ivg5NgAjLveO8%2F%2BTe3NIrztvePOLXeMm8Mr1lgp2JvwnESeCBNgPt9f4bfi%2FyeytQ7PzsIZ9M%2B5i%2Fs%2FfLcM01tCevjXAK%2FCfsELPxHL5vfWJImM8OjuoiECEQxm%2FvB0rjm3H3dEnqKH8lwTO2ie7ZCnvTdnvxYBUcLH28Xu%2BmCu7dVL2A%2FPhbn2WYLMyBQbIhvfEEjvrCf6ZPgK%2By7%2BwdrZOLuQuYLHwOw3JlxzEUy56XpMQlLF0aRjkEPjYJFsw6T1Zwm4ERVTNGbRVtcITQmNZUl91bdpHl2Dka6ODBA%2BRKXpFiJ1TKRizYdH9JX1NLB3EvmBlN7xBkleSpHtla6%2Ff%2FiUwyRVLXOOD79vi%2BpaHfrwsK0FbKAHK9gSPjx2iSTFoBx5qOe48sHRB8u18fz7chQ2Ptved3JH%2F3csKsBHh5H8g7KgTJ3NUjVjAh3SPIZjgokU%2B0cNWbQma6SYt%2BNgA9ZdbgdPbL0dpef6GmrI1ADd4bSgwGmVQe5AGt%2FdVoIRCpwW%2FvuuW5yWIvFzTQROi%2FlNiHaWbdDf1FAAJdaFUVowZ6Cuv6khMFpZdfWUK8dLtSsDWsvXnmr%2FizeOgqY3R%2BWuACGFTKogpSsZFFgm%2FPeGN4qiOwlsa5mbciZ%2BWDt4eVXl5D4V1Ap117kpA13nllW77Xk6pQf5E4UBzmpGsZwHvh5JJbimhGJBlKnpWLFodRWLOkjFkgkKGfdYq0SjqNQA3L6IppxC7k%2FgQQQehOlECDxIO9Ms8CACD3JcBCVsdaXP159ue4oE4ZkPYJRbREYuiMg7ysghhis8OKendkYuWzRbycjR1OYogaithekRI3UdOLcS16Yq1N3GtQjUjGvRia0ap6xr30LbHiTMEGPvEAE4igl4UiOjChq5migrwv7Cy%2BxAtRX7m6I2rc5btL9VsdAnno%2Fms4kPgpRYVwUcpQbqGHCExGL1ogAUfqpdLFbHf993DTjiqdwHvacGR8ARPxkc0KYa7cngh24BRxwlUGUAb5tJb%2FRtqVlLflg7u6XRgKPW3KeCu6WRF6icP1HZya7e50%2BycAE9z5%2B0CA2oqmdAW3qmB%2FuCcNAzqlqCiarjj7rWM3X3BVHBIPVMJv7o3%2F1XMi2sES3ILAPKBPq0i1SSXN8snTwW6TwQRwUwDgJxJBBHfRGc4eKKQkGTsDWVXl9MP7%2FPLp90iyxCgBuuQWXUVUTqbZTGmnBLvanqcPyZTBemdurtY7fIIp6pN8YnTRoJiVX2IoxTC4mRwmaA2l9l6ldIrNcNidmJ2L6HxJnQpZQB71tc3IdsWw3Y8DmAl1KOlwrLq%2F1K4qwxxPb8jPxXzvClNL0Vbo62VhVAfNrWW2tnw6r0znb7Ulr9ne1SQ3UMYtIYRRURw41YuxE1oOCrEokBJG7EzdfOY0MGrR2kI5K5SXdBz4CUMyo7%2Bhr7SwxdOfpFnYTM2tcfdZ2EFn389qtbkXSft6N4xxsMmVIKHB1FAUnOgMdJLVjzglIoIMn4b%2FY2Ga1IIYPeHKVQQJIzMuWwOykUoGT89wvnykia3vykUG8LlqydByxZaweWrKV5otugSa8LTNb7BUwurCQKbizRt7ipB7URnZE0a0a1nAcSWWvpS4ip0EtD3aqWulhkHfRKtdTGIr%2Fqcc21%2FXyMPiC0cW0eOH2A8bl%2F7LAQDFKAj5sFH2dntIVUNYJLHttrc0F0mL3BV5qrVJetEx8yq9dBF2b1cK2tZXrH%2B5ieZ86W68BgHOvnuPaeJFl9MPm3jB794fQqe3fmRD0U38mIYMxlRCRfVnlJfJaFLDFBrzJnp5kETi68vEoCJ%2BUd%2Ff33l09Xf93e2yZ4d%2FHt7u169Y87PhI29c05SgZMQLhL%2FVXs%2FdFt%2Fl7hN2%2FvxH7hfB0m4S%2BJdVxsMSTT5DeU9TkaMrYGBR1IfrBD1tqolbx%2FMb%2F9NMzfN9P%2FLvWfV%2F98%2F7T4MmbgS4eG9QZVCVMAPABSecXmq5ZMuoCT9IlqlzEvM%2BW1HTBBiv56A07wjewt5s7tx7frGwB%2FfflifHn8GjnBZYsJbKHu5OvQ1rPt7SsH%2BPePWPuhauAfREWDrGIDyKs2YAP3O3jUdBHjwH%2F5xYgmahEXrmu%2BxDqQpHpmqQJqlK4H8gTEuSf%2FCj1iygO%2FhU9RNWfNZMgSFYxjDN2TAsbc%2Fp2teOLuydTZ7BzsE4bORgVnhfJPVvbGGi9jXppsRB5XoKzHpG%2Fgq7lWkUiwwFv8aa1%2BW%2F4kxpwwRpUm%2FQgbh1gN5lOEr7u53wU9ptejS5TvQAVT32C1xy%2F2RB9uioo9gEuxp6qPNej9qVt0r6DRjXMln2bGqbZ3dcHXu6LJX8G3qiqRVWEcHaIzwBGHqTw644hcNI7OoL8LLksVF9UhOWcgfkvq2PPXwAbMRxXWifMfaIX9FOozhTK921Nr0CA2LUvsv3yEy3rjWdf%2BJgMjPd43hFCr3ydkE3lA3%2FMRRbHBZO%2F7l43%2Fl6iKiarY4OXqFKpifSiEAU7ZdmJdG4Hu61345vtk%2BwTqYBRLuE8kqIyOJd1zcud%2B3w%2BWa%2BN59uWDytNPdKzvEq6%2Fru4DgwznPziih0xHBOwtbJuICMqm6BEEk2R%2BMWLd7K%2B9QJLEz7gimaJnBLZK8mqlYoS83yqTeoz6sU4xudKKxzbH5LInoY0oGoiiQfMrRJiMrzdokDou%2F4bZoEIF4DxbdLA76qEm%2FCNhZZq3OaCRNWpljY6K0ERKbocAkBQ1Fd0pMX1JjuVREWV5aINRdc9G0Nja3mICZNS0PGwvTlgeYXlO3PJE1qIR0wM6%2BXr0wfQosp4MhpQopqlrgDRJr22AWLFV0UCoG6Okg4maNEpQzQuFpGP988yRlkwAwMqBEKIeo7GiT0GpKvFtiaNiKQySMEhnZpBACYPUVYijw8aCnJyEm5YMfCY63H%2Bno42EWyd2BmnGREvaGSXPzlAKXillZ4IbJq%2BnPxhS1dIonAMfuTZQFwhLIyzNWVoapcHQR%2BnkC06x0AdpydAH1KsDHUwQ0tS4CRr7KaZKRZ8a8Q9qZAvb0vGPASbJ%2FJiiafk5OTCRcy7KC4NS37Oqbp4Ug94nTtL4GqgSgLejYioMlDBQZ2agmsQpoI6BCooUGaQwkDGMKFfXRtyEFCVutLA9PCTwWoiburFPSDUo3AEycsImiHleOXZJXuSk0qYJ6Q2VjBC9%2Fqdtw1QXrSALuIIwTOdpmJrEK0S7qPI1TMXjHwU1U%2FqJUofJME2O4BIZa%2BSrx0yJHb44xkzGRE9wriqpOBo9bgoo3Fr6khyzpEk5tqQqgk6VORulukAGWSAZhFE6S6MUiUgzH2TvJFoqapSCHJycsEoTXamclCN2Tkkg97ACjjKK5UwTf%2BgcHQVpUJtI8Kieh%2F4%2BQXIDV%2FkRFaTY%2BWhuT00aGK3qamiIDS1UpP0%2FGaWeK4LjcLJdoC7oAQjQg7BdPbRd0X2Tkr9PTNcxbfjQdfwpO3THc7m8deY%2By1%2F%2FHw%3D%3D"></iframe>      
+      </div>
+
+    
+      <h3>Step 3 &mdash; Building the Table</h3>
+      <p>
+          From here it's the identical process as
+          <a href="chapter1.html#nfa-to-dfa">Chapter 1's NFA-to-DFA subset construction</a> &mdash;
+          ε-closures computed over item states instead of regex states, collapsing the NFA into a
+          deterministic collection of states. Applied to a grammar built around just this fragment &mdash;
+          sequencing, assignment, and the full <code>+ - * /</code> precedence chain, nothing else &mdash;
+          that collapses to a genuinely small table. Fast-forwarding past the individual states straight to
+          the productions this grammar is built from:
+      </p>
+
+      <div>
+          <h4>Indtroducing Shift and Goto</h4>
+          <p>
+              Every transition out of a state falls into one of two kinds, depending only on what label it's on.
+          </p>
+          <ul>
+            <li>
+              A transition on a <strong>terminal</strong> is a <strong>shift</strong>: consume that token from the
+              input and move to the next state.
+            </li>
+            <li>
+              A transition on a <strong>nonterminal</strong> is a
+              <strong>goto</strong>: used right after a reduction hands back a completed nonterminal, never
+              consumed directly from the input stream.
+            </li>
+          </ul>
+          <p>
+            See the action table below: <code>Shift</code> is marked with <code>s</code> infront of terminal transitions numbers
+            and <code>Goto</code> is marked with <code>g</code> for nonterminal.
+          </p>
+      </div>
+      
+      <div class="op-table-wrapper" id="slr-table">
+        <table class="op-table">
+            <thead>
+              <tr>
+                <th>State</th><th>:=</th><th>;</th><th>+</th><th>-</th><th>*</th><th>/</th><th>(</th><th>)</th><th>_number</th><th>_vname</th><th>$</th>
+                <th>STATLIST</th><th>STAT</th><th>EXPR</th><th>TERM</th><th>FACTOR</th>
+              </tr>
+            </thead>
+            <tbody>
+                    <tr>
+                      <td><strong>I0</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s2</td><td></td>
+                      <td>g3</td><td>g1</td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I1</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I2</strong></td><td>s6</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I3</strong></td><td></td><td>s4</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I4</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s2</td><td></td>
+                      <td></td><td>g5</td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I5</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I6</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s10</td><td></td><td>s9</td><td>s7</td><td></td>
+                      <td></td><td></td><td>g11</td><td>g8</td><td>g12</td>
+                    </tr>
+                    <tr>
+                      <td><strong>I7</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I8</strong></td><td></td><td></td><td></td><td></td><td>s16</td><td>s17</td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I9</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I10</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s10</td><td></td><td>s9</td><td>s7</td><td></td>
+                      <td></td><td></td><td>g21</td><td>g8</td><td>g12</td>
+                    </tr>
+                    <tr>
+                      <td><strong>I11</strong></td><td></td><td></td><td>s14</td><td>s13</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I12</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I13</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s10</td><td></td><td>s9</td><td>s7</td><td></td>
+                      <td></td><td></td><td></td><td>g20</td><td>g12</td>
+                    </tr>
+                    <tr>
+                      <td><strong>I14</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s10</td><td></td><td>s9</td><td>s7</td><td></td>
+                      <td></td><td></td><td></td><td>g15</td><td>g12</td>
+                    </tr>
+                    <tr>
+                      <td><strong>I15</strong></td><td></td><td></td><td></td><td></td><td>s16</td><td>s17</td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I16</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s10</td><td></td><td>s9</td><td>s7</td><td></td>
+                      <td></td><td></td><td></td><td></td><td>g19</td>
+                    </tr>
+                    <tr>
+                      <td><strong>I17</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s10</td><td></td><td>s9</td><td>s7</td><td></td>
+                      <td></td><td></td><td></td><td></td><td>g18</td>
+                    </tr>
+                    <tr>
+                      <td><strong>I18</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I19</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I20</strong></td><td></td><td></td><td></td><td></td><td>s16</td><td>s17</td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I21</strong></td><td></td><td></td><td>s14</td><td>s13</td><td></td><td></td><td></td><td>s22</td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+                    <tr>
+                      <td><strong>I22</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                    </tr>
+            </tbody>
+        </table>
+      </div>
+
+      <h3>Step 4 &mdash; Reduce, Accept, and Error</h3>
+      <p>
+          Any state containing a <em>complete</em> item &mdash; a production with the dot at the very end
+          &mdash; adds a <strong>reduce</strong> action, marked <code>r</code> followed by the production
+          number from the key above, but only for lookahead tokens in <code>FOLLOW</code> of that production's
+          left-hand side. The special case is the augmented start production: once it's complete with
+          lookahead <code>$</code>, that's <strong>accept</strong>, marked <code>acc</code>. Every other cell
+          in the terminal table, left blank, is an <strong>error</strong>: no valid continuation exists from
+          that state on that input &mdash; a blank cell already means exactly that, no explicit marking needed.
+      </p>
+      <p>
+          We will split the action table into two tables for readability purposes. Now, we populate the terminal table with reduces and accept layered in on top of the shifts already
+        there: reduces are marked with <code>r</code>. 
+      </p>
+
+      <h4>Action table (terminals)</h4>
+      <div class="op-table-wrapper" id="slr-tiny-action-table-complete">
+        <table class="op-table">
+            <thead><tr><th>State</th><th>:=</th><th>;</th><th>+</th><th>-</th><th>*</th><th>/</th><th>(</th><th>)</th><th>_number</th><th>_vname</th><th>$</th></tr></thead>
+            <tbody>
+                    <tr><td><strong>I0</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s2</td><td></td></tr>
+                    <tr><td><strong>I1</strong></td><td></td><td>r1</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>r1</td></tr>
+                    <tr><td><strong>I2</strong></td><td>s6</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                    <tr><td><strong>I3</strong></td><td></td><td>s4</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>acc</td></tr>
+                    <tr><td><strong>I4</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s2</td><td></td></tr>
+                    <tr><td><strong>I5</strong></td><td></td><td>r2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>r2</td></tr>
+                    <tr><td><strong>I6</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s10</td><td></td><td>s9</td><td>s7</td><td></td></tr>
+                    <tr><td><strong>I7</strong></td><td></td><td>r12</td><td>r12</td><td>r12</td><td>r12</td><td>r12</td><td></td><td>r12</td><td></td><td></td><td>r12</td></tr>
+                    <tr><td><strong>I8</strong></td><td></td><td>r6</td><td>r6</td><td>r6</td><td>s16</td><td>s17</td><td></td><td>r6</td><td></td><td></td><td>r6</td></tr>
+                    <tr><td><strong>I9</strong></td><td></td><td>r11</td><td>r11</td><td>r11</td><td>r11</td><td>r11</td><td></td><td>r11</td><td></td><td></td><td>r11</td></tr>
+                    <tr><td><strong>I10</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s10</td><td></td><td>s9</td><td>s7</td><td></td></tr>
+                    <tr><td><strong>I11</strong></td><td></td><td>r3</td><td>s14</td><td>s13</td><td></td><td></td><td></td><td></td><td></td><td></td><td>r3</td></tr>
+                    <tr><td><strong>I12</strong></td><td></td><td>r9</td><td>r9</td><td>r9</td><td>r9</td><td>r9</td><td></td><td>r9</td><td></td><td></td><td>r9</td></tr>
+                    <tr><td><strong>I13</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s10</td><td></td><td>s9</td><td>s7</td><td></td></tr>
+                    <tr><td><strong>I14</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s10</td><td></td><td>s9</td><td>s7</td><td></td></tr>
+                    <tr><td><strong>I15</strong></td><td></td><td>r4</td><td>r4</td><td>r4</td><td>s16</td><td>s17</td><td></td><td>r4</td><td></td><td></td><td>r4</td></tr>
+                    <tr><td><strong>I16</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s10</td><td></td><td>s9</td><td>s7</td><td></td></tr>
+                    <tr><td><strong>I17</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td>s10</td><td></td><td>s9</td><td>s7</td><td></td></tr>
+                    <tr><td><strong>I18</strong></td><td></td><td>r8</td><td>r8</td><td>r8</td><td>r8</td><td>r8</td><td></td><td>r8</td><td></td><td></td><td>r8</td></tr>
+                    <tr><td><strong>I19</strong></td><td></td><td>r7</td><td>r7</td><td>r7</td><td>r7</td><td>r7</td><td></td><td>r7</td><td></td><td></td><td>r7</td></tr>
+                    <tr><td><strong>I20</strong></td><td></td><td>r5</td><td>r5</td><td>r5</td><td>s16</td><td>s17</td><td></td><td>r5</td><td></td><td></td><td>r5</td></tr>
+                    <tr><td><strong>I21</strong></td><td></td><td></td><td>s14</td><td>s13</td><td></td><td></td><td></td><td>s22</td><td></td><td></td><td></td></tr>
+                    <tr><td><strong>I22</strong></td><td></td><td>r10</td><td>r10</td><td>r10</td><td>r10</td><td>r10</td><td></td><td>r10</td><td></td><td></td><td>r10</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+      <p>
+          That's a complete, working SLR table &mdash; 23 states, every cell resolved, no conflicts, and it
+          parses the fragment above exactly the way you'd expect.
+      </p>
+      <p>
+          <a class="btn btn-primary" href="#">See the SLR table and how it parses the code snippet &rarr;</a>
+      </p>
+  </section>
+
+     <!-- ── EVENT 9: NEXT ─────────────────────────────────────────── -->
+        <section class="section" id="next">
+            <h2>What Comes Next</h2>
+            <div class="callout callout--next">
+                <a href="chapter3.html">
+                    <p class="callout__label">Chapter 3 &rarr; Scopes and symbol tables</p>
+                </a>
+                <p>
+                    The type information gathered by <code>CheckExp</code> does not disappear after this phase. 
+                </p>
+            </div>
+        </section>
   </main>
 
   <footer class="site-footer">
