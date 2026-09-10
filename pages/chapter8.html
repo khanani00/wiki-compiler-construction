@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapter 8 — Register Allocation | COS341 Supplement</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/chapter8.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <span class="site-header__course">COS341 Supplementary Material</span>
+      <nav class="site-header__nav">
+        <a href="index.html">Home</a>
+        <a href="#">Chapters</a>
+        <a href="grammar.html">Grammar</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="article">
+
+    <p class="breadcrumb">Chapters &rsaquo; Chapter 8 &rsaquo; Register Allocation</p>
+    <h1 class="article__title">Chapter 8 &mdash; Register Allocation</h1>
+    <p class="article__subtitle">Mapping many variables into a small number of registers — and handling the overflow.</p>
+
+    <!-- ── EVENT 1: GAIN ATTENTION ──────────────────────────────── -->
+    <div class="callout callout--question">
+      <p class="callout__label">Opening Problem</p>
+      <p>In <a href="chapter6.html">Chapter 6</a>, generating intermediate code for the GCD
+         function produced 11 distinct variables: <code>v0</code>, <code>v1</code>,
+         <code>v2</code>, <code>t1</code> through <code>t8</code>. A real processor might
+         have only 3 or 4 registers. You cannot put 11 variables in 4 registers simultaneously
+         — but you do not need to. Most variables are only needed for a short stretch of the
+         program. The question is: at any given point, which variables actually need to
+         be in a register at the same time?</p>
+      <p>That question is answered by <strong>liveness analysis</strong>. Once you know which
+         variables are live simultaneously, you can decide which ones can share a register —
+         and which ones must be spilled to memory.</p>
+    </div>
+
+    <!-- ── EVENT 2: LEARNING OBJECTIVES ─────────────────────────── -->
+    <section class="section" id="objectives">
+      <h2>Learning Objectives</h2>
+      <ul class="objectives-list">
+        <li><span class="bloom bloom--remember">Remember</span> the definition of liveness and the four rules that govern it.</li>
+        <li><span class="bloom bloom--understand">Understand</span> how gen, kill, in, and out sets are derived from the intermediate code.</li>
+        <li><span class="bloom bloom--apply">Apply</span> fixed-point iteration to compute in/out sets for the GCD function.</li>
+        <li><span class="bloom bloom--apply">Apply</span> the interference definition to build an interference graph from the liveness results.</li>
+        <li><span class="bloom bloom--understand">Understand</span> how graph colouring maps interference nodes to registers, and what spilling means when colouring fails.</li>
+      </ul>
+    </section>
+
+    <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
+    <section class="section" id="recall">
+      <h2>Connecting to What You Already Know</h2>
+      <p>In <a href="chapter6.html">Chapter 6</a> we translated the GCD source program into
+         flat intermediate code. That translation used <code>newvar()</code> freely —
+         every temporary result got its own variable. The intermediate code for the GCD
+         function uses 11 variables. This chapter determines how many registers are actually
+         needed to run that code.</p>
+      <div class="callout callout--info">
+        <p class="callout__label">The intermediate code we are analysing</p>
+        <pre class="code-block" style="font-size:0.8rem"><code><span class="il-num"> 1:</span>  v2 := 0
+<span class="il-num"> 2:</span>  LABEL L1
+<span class="il-num"> 3:</span>  IF v1 &gt; 0 THEN L2 ELSE L3
+<span class="il-num"> 4:</span>  LABEL L2
+<span class="il-num"> 5:</span>  t1 := v1
+<span class="il-num"> 6:</span>  v2 := t1
+<span class="il-num"> 7:</span>  t2 := v0
+<span class="il-num"> 8:</span>  t3 := v0
+<span class="il-num"> 9:</span>  t4 := v1
+<span class="il-num">10:</span>  t5 := t3 / t4
+<span class="il-num">11:</span>  t6 := t5 * v1
+<span class="il-num">12:</span>  t7 := t2 - t6
+<span class="il-num">13:</span>  v1 := t7
+<span class="il-num">14:</span>  t8 := v2
+<span class="il-num">15:</span>  v0 := t8
+<span class="il-num">16:</span>  GOTO L1
+<span class="il-num">17:</span>  LABEL L3
+<span class="il-num">18:</span>  RETURN v0</code></pre>
+        <p style="font-size:0.85rem;margin-top:0.5rem">Parameters <code>v0</code> (= a) and <code>v1</code> (= b) enter the function already live. <code>v2</code> (= temp) is declared inside the body.</p>
+      </div>
+    </section>
+
+    <!-- ── SECTION 1: LIVENESS ───────────────────────────────────── -->
+    <section class="section" id="liveness">
+      <h2>8.1 — Liveness</h2>
+
+      <div class="callout callout--info">
+        <p class="callout__label">Definition 8.1 (Mogensen)</p>
+        <p>A variable is <strong>live</strong> at some point in the program if the value it
+           contains at that point might conceivably be used in future computations.
+           Conversely, it is <strong>dead</strong> if there is no way its value can be used
+           in the future.</p>
+      </div>
+
+      <p>Four rules determine liveness. The first two define where liveness is generated
+         and killed; the last two define how it propagates:</p>
+
+      <div class="rules-grid">
+        <div class="rule-card rule-card--gen">
+          <p class="rule-card__num">Rule 1</p>
+          <p class="rule-card__title">Generate</p>
+          <p>If an instruction <em>uses</em> a variable, that variable is live at the
+             <strong>start</strong> of that instruction.</p>
+          <p class="rule-card__example">At instruction 9 (<code>t4 := v1</code>), <code>v1</code>
+             is used — so <code>v1</code> is live in at instruction 9.</p>
+        </div>
+        <div class="rule-card rule-card--kill">
+          <p class="rule-card__num">Rule 2</p>
+          <p class="rule-card__title">Kill</p>
+          <p>If a variable is <em>assigned</em> by an instruction (and not also used as an
+             operand), it is dead at the <strong>start</strong> of that instruction — the
+             old value is about to be overwritten.</p>
+          <p class="rule-card__example">At instruction 13 (<code>v1 := t7</code>), <code>v1</code>
+             is killed — its previous value is irrelevant.</p>
+        </div>
+        <div class="rule-card rule-card--prop">
+          <p class="rule-card__num">Rule 3</p>
+          <p class="rule-card__title">Propagate backward</p>
+          <p>If a variable is live at the <em>end</em> of an instruction and that instruction
+             does not assign to it, the variable is also live at the <strong>start</strong>.</p>
+        </div>
+        <div class="rule-card rule-card--prop">
+          <p class="rule-card__num">Rule 4</p>
+          <p class="rule-card__title">Propagate across successors</p>
+          <p>A variable is live at the <em>end</em> of instruction i if it is live at the
+             <strong>start</strong> of any immediately succeeding instruction.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SECTION 2: LIVENESS ANALYSIS ─────────────────────────── -->
+    <section class="section" id="analysis">
+      <h2>8.2 — Liveness Analysis</h2>
+      <p>Liveness analysis formalises the four rules as equations over sets of variables.
+         For each instruction i, we define:</p>
+
+      <div class="two-col-recap" style="margin:1rem 0">
+        <div class="recap-card">
+          <p class="recap-card__label">gen[i]</p>
+          <p>Variables that instruction i <strong>reads</strong> — liveness is generated here.</p>
+        </div>
+        <div class="recap-card">
+          <p class="recap-card__label">kill[i]</p>
+          <p>Variables that instruction i <strong>writes</strong> — liveness is killed here.</p>
+        </div>
+      </div>
+
+      <div class="two-col-recap" style="margin:1rem 0">
+        <div class="recap-card">
+          <p class="recap-card__label">in[i]</p>
+          <p>Variables live at the <strong>start</strong> of instruction i.</p>
+          <pre class="code-block" style="font-size:0.78rem;margin:0.4rem 0"><code>in[i] = gen[i] ∪ (out[i] \ kill[i])</code></pre>
+        </div>
+        <div class="recap-card">
+          <p class="recap-card__label">out[i]</p>
+          <p>Variables live at the <strong>end</strong> of instruction i.</p>
+          <pre class="code-block" style="font-size:0.78rem;margin:0.4rem 0"><code>out[i] = ∪ in[j]  for j ∈ succ[i]</code></pre>
+        </div>
+      </div>
+
+      <p>These equations are recursive. We solve them by <strong>fixed-point
+         iteration</strong>: initialise all in[i] and out[i] to ∅, then repeatedly
+         evaluate the equations in reverse instruction order (backwards, because liveness
+         flows backwards — a use of a variable propagates its liveness toward earlier
+         instructions) until no set changes. The result is guaranteed to be reached because
+         sets only grow and are bounded by the finite set of all variables.</p>
+
+      <h3>Step 1 — succ, gen, kill for each instruction</h3>
+      <p>The successor sets are determined by control flow. For GOTO and IF instructions,
+         successors are found by looking up the target labels:</p>
+
+      <div class="op-table-wrapper">
+        <table class="op-table">
+          <thead>
+            <tr><th>i</th><th>Instruction</th><th>succ[i]</th><th>gen[i]</th><th>kill[i]</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td><code>v2 := 0</code></td><td>{2}</td><td>∅</td><td>{v2}</td></tr>
+            <tr><td>2</td><td><code>LABEL L1</code></td><td>{3}</td><td>∅</td><td>∅</td></tr>
+            <tr class="tr-highlight"><td>3</td><td><code>IF v1 &gt; 0 THEN L2 ELSE L3</code></td><td>{4, 17}</td><td>{v1}</td><td>∅</td></tr>
+            <tr><td>4</td><td><code>LABEL L2</code></td><td>{5}</td><td>∅</td><td>∅</td></tr>
+            <tr><td>5</td><td><code>t1 := v1</code></td><td>{6}</td><td>{v1}</td><td>{t1}</td></tr>
+            <tr><td>6</td><td><code>v2 := t1</code></td><td>{7}</td><td>{t1}</td><td>{v2}</td></tr>
+            <tr><td>7</td><td><code>t2 := v0</code></td><td>{8}</td><td>{v0}</td><td>{t2}</td></tr>
+            <tr><td>8</td><td><code>t3 := v0</code></td><td>{9}</td><td>{v0}</td><td>{t3}</td></tr>
+            <tr><td>9</td><td><code>t4 := v1</code></td><td>{10}</td><td>{v1}</td><td>{t4}</td></tr>
+            <tr><td>10</td><td><code>t5 := t3 / t4</code></td><td>{11}</td><td>{t3, t4}</td><td>{t5}</td></tr>
+            <tr><td>11</td><td><code>t6 := t5 * v1</code></td><td>{12}</td><td>{t5, v1}</td><td>{t6}</td></tr>
+            <tr><td>12</td><td><code>t7 := t2 - t6</code></td><td>{13}</td><td>{t2, t6}</td><td>{t7}</td></tr>
+            <tr><td>13</td><td><code>v1 := t7</code></td><td>{14}</td><td>{t7}</td><td>{v1}</td></tr>
+            <tr><td>14</td><td><code>t8 := v2</code></td><td>{15}</td><td>{v2}</td><td>{t8}</td></tr>
+            <tr><td>15</td><td><code>v0 := t8</code></td><td>{16}</td><td>{t8}</td><td>{v0}</td></tr>
+            <tr class="tr-highlight"><td>16</td><td><code>GOTO L1</code></td><td>{2}</td><td>∅</td><td>∅</td></tr>
+            <tr><td>17</td><td><code>LABEL L3</code></td><td>{18}</td><td>∅</td><td>∅</td></tr>
+            <tr class="tr-highlight"><td>18</td><td><code>RETURN v0</code></td><td>∅</td><td>{v0}</td><td>∅</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:0.85rem;color:var(--col-muted)">Highlighted rows: instruction 3 branches to both labels (succ = {4, 17}). Instruction 16 jumps back to instruction 2. Instruction 18 has an empty successor set — RETURN ends the function.</p>
+
+      <h3>Step 2 — Fixed-point iteration</h3>
+      <p>We evaluate the equations in reverse order (18 down to 1) in each iteration,
+         using the most recently computed values on the right-hand sides. We initialise
+         all sets to ∅ and stop when no set changes between iterations.</p>
+
+      <!-- Stepper for fixed-point iterations -->
+      <div class="stepper" id="stepper">
+        <div class="stepper-controls">
+          <button class="btn" id="prevStep" disabled>&larr; Previous</button>
+          <span class="stepper-counter" id="stepCounter">Iteration 1 of 3</span>
+          <button class="btn" id="nextStep">Next &rarr;</button>
+        </div>
+        <div style="background:#2a3550;padding:0.4rem 1rem;font-family:var(--font-ui);font-size:0.75rem;color:#8fa8c8;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;">
+          <span id="stepPhase">Iteration 1 — first pass</span>
+        </div>
+        <div class="stepper-body">
+          <div class="stepper-tree" id="stepTree"></div>
+          <div class="stepper-detail" id="stepDetail"></div>
+        </div>
+      </div>
+
+      <h3>Final in/out sets (fixed point)</h3>
+      <p>After 3 iterations the sets stop changing — fixed point reached.</p>
+
+      <div class="op-table-wrapper">
+        <table class="op-table">
+          <thead>
+            <tr><th>i</th><th>Instruction</th><th>in[i]</th><th>out[i]</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td><code>v2 := 0</code></td><td>{v0, v1}</td><td>{v0, v1}</td></tr>
+            <tr><td>2</td><td><code>LABEL L1</code></td><td>{v0, v1}</td><td>{v0, v1}</td></tr>
+            <tr><td>3</td><td><code>IF v1 &gt; 0 THEN L2 ELSE L3</code></td><td>{v0, v1}</td><td>{v0, v1}</td></tr>
+            <tr><td>4</td><td><code>LABEL L2</code></td><td>{v0, v1}</td><td>{v0, v1}</td></tr>
+            <tr><td>5</td><td><code>t1 := v1</code></td><td>{v0, v1}</td><td>{t1, v0, v1}</td></tr>
+            <tr><td>6</td><td><code>v2 := t1</code></td><td>{t1, v0, v1}</td><td>{v0, v1, v2}</td></tr>
+            <tr><td>7</td><td><code>t2 := v0</code></td><td>{v0, v1, v2}</td><td>{t2, v0, v1, v2}</td></tr>
+            <tr><td>8</td><td><code>t3 := v0</code></td><td>{t2, v0, v1, v2}</td><td>{t2, t3, v1, v2}</td></tr>
+            <tr><td>9</td><td><code>t4 := v1</code></td><td>{t2, t3, v1, v2}</td><td>{t2, t3, t4, v1, v2}</td></tr>
+            <tr><td>10</td><td><code>t5 := t3 / t4</code></td><td>{t2, t3, t4, v1, v2}</td><td>{t2, t5, v1, v2}</td></tr>
+            <tr><td>11</td><td><code>t6 := t5 * v1</code></td><td>{t2, t5, v1, v2}</td><td>{t2, t6, v2}</td></tr>
+            <tr><td>12</td><td><code>t7 := t2 - t6</code></td><td>{t2, t6, v2}</td><td>{t7, v2}</td></tr>
+            <tr><td>13</td><td><code>v1 := t7</code></td><td>{t7, v2}</td><td>{v1, v2}</td></tr>
+            <tr><td>14</td><td><code>t8 := v2</code></td><td>{v1, v2}</td><td>{t8, v1}</td></tr>
+            <tr><td>15</td><td><code>v0 := t8</code></td><td>{t8, v1}</td><td>{v0, v1}</td></tr>
+            <tr><td>16</td><td><code>GOTO L1</code></td><td>{v0, v1}</td><td>{v0, v1}</td></tr>
+            <tr><td>17</td><td><code>LABEL L3</code></td><td>{v0}</td><td>{v0}</td></tr>
+            <tr><td>18</td><td><code>RETURN v0</code></td><td>{v0}</td><td>∅</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--info">
+        <p class="callout__label">Key observations</p>
+        <ul style="font-size:0.9rem;line-height:1.8;padding-left:1.2rem">
+          <li><strong>v0 and v1 are live at instruction 1</strong> — these are the input parameters.
+              This is expected: parameters must be live from the start of the function.</li>
+          <li><strong>v2 is not live at instruction 1</strong> — it is declared and initialised
+              at instruction 1, so its old value is irrelevant before that point.</li>
+          <li><strong>All temporaries (t1–t8) have short live ranges.</strong> t1 is only live
+              between instructions 5 and 6. t3 and t4 die at instruction 10. This is the key
+              insight — temporaries can share registers with each other and with v0/v1/v2 as
+              long as their live ranges do not overlap at the same point.</li>
+          <li><strong>The back-edge from GOTO L1 (16 → 2)</strong> is why v0 and v1 stay live
+              throughout instructions 1–4. The liveness of v0 and v1 at the start of instruction
+              3 propagates back through instruction 2 and then back-edge to instruction 16,
+              which in turn makes them live out of instruction 15, and so on.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── SECTION 3: INTERFERENCE ───────────────────────────────── -->
+    <section class="section" id="interference">
+      <h2>8.3 — Interference</h2>
+
+      <div class="callout callout--info">
+        <p class="callout__label">Definition 8.2 (Mogensen)</p>
+        <p>A variable <strong>x interferes with y</strong> if x ≠ y and there is an
+           instruction i such that x ∈ kill[i], y ∈ out[i], and instruction i is
+           <em>not</em> of the form x := y.</p>
+        <p>Two variables can share a register precisely if <strong>neither interferes
+           with the other</strong>.</p>
+      </div>
+
+      <p>Note two subtleties from the definition:</p>
+      <ul style="font-size:0.9rem;line-height:1.8;padding-left:1.2rem">
+        <li>After a copy instruction <code>x := y</code>, x and y contain the same value,
+            so they <em>can</em> share a register even if both are live — hence the exclusion
+            of copy instructions from the interference rule.</li>
+        <li>x may interfere with y even if x is not in out[i] (x is assigned a dead value).
+            The assignment still occupies a register at that point and must not overwrite y.</li>
+      </ul>
+
+      <h3>Interference from each assignment in _gcd</h3>
+      <p>For each instruction that writes a variable (has a non-empty kill set), we
+         check which variables are live in out[i]:</p>
+
+      <div class="op-table-wrapper">
+        <table class="op-table">
+          <thead>
+            <tr><th>i</th><th>Instruction</th><th>kill[i]</th><th>out[i]</th><th>New interference edges</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td><code>v2 := 0</code></td><td>{v2}</td><td>{v0,v1}</td><td>v2 — v0, v2 — v1</td></tr>
+            <tr><td>5</td><td><code>t1 := v1</code></td><td>{t1}</td><td>{v0,v1}</td><td>t1 — v0 &nbsp;<span style="color:var(--col-muted);font-size:0.8rem">(t1—v1 excluded: copy instr? No — t1:=v1 is a copy, so t1—v1 excluded)</span></td></tr>
+            <tr><td>6</td><td><code>v2 := t1</code></td><td>{v2}</td><td>{v0,v1,v2}</td><td>v2 — v0, v2 — v1 &nbsp;<span style="color:var(--col-muted);font-size:0.8rem">(v2—v2 not applicable; copy exclusion for v2:=t1 means v2—t1 excluded)</span></td></tr>
+            <tr><td>7</td><td><code>t2 := v0</code></td><td>{t2}</td><td>{v0,v1,v2}</td><td>t2 — v1, t2 — v2 &nbsp;<span style="color:var(--col-muted);font-size:0.8rem">(t2—v0 excluded: copy)</span></td></tr>
+            <tr><td>8</td><td><code>t3 := v0</code></td><td>{t3}</td><td>{t2,v1,v2}</td><td>t3 — t2, t3 — v1, t3 — v2 &nbsp;<span style="color:var(--col-muted);font-size:0.8rem">(t3—v0 excluded: copy)</span></td></tr>
+            <tr><td>9</td><td><code>t4 := v1</code></td><td>{t4}</td><td>{t2,t3,v2}</td><td>t4 — t2, t4 — t3, t4 — v2 &nbsp;<span style="color:var(--col-muted);font-size:0.8rem">(t4—v1 excluded: copy)</span></td></tr>
+            <tr><td>10</td><td><code>t5 := t3/t4</code></td><td>{t5}</td><td>{t2,v1,v2}</td><td>t5 — t2, t5 — v1, t5 — v2</td></tr>
+            <tr><td>11</td><td><code>t6 := t5*v1</code></td><td>{t6}</td><td>{t2,v2}</td><td>t6 — t2, t6 — v2</td></tr>
+            <tr><td>12</td><td><code>t7 := t2-t6</code></td><td>{t7}</td><td>{v2}</td><td>t7 — v2</td></tr>
+            <tr><td>13</td><td><code>v1 := t7</code></td><td>{v1}</td><td>{v2}</td><td>v1 — v2 &nbsp;<span style="color:var(--col-muted);font-size:0.8rem">(v1—t7 excluded: copy)</span></td></tr>
+            <tr><td>14</td><td><code>t8 := v2</code></td><td>{t8}</td><td>{v1}</td><td>t8 — v1 &nbsp;<span style="color:var(--col-muted);font-size:0.8rem">(t8—v2 excluded: copy)</span></td></tr>
+            <tr><td>15</td><td><code>v0 := t8</code></td><td>{v0}</td><td>{v1}</td><td>v0 — v1 &nbsp;<span style="color:var(--col-muted);font-size:0.8rem">(v0—t8 excluded: copy)</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Complete interference graph — _gcd</h3>
+      <p>Collecting all unique edges (interference is symmetric):</p>
+
+      <div class="interference-layout interference-layout--3col">
+        <div class="interference-edges">
+          <p class="demo-label">All interference edges</p>
+          <div class="edge-list">
+            <div class="edge-group">
+              <p class="edge-group-label">v0, v1, v2 (parameters + temp)</p>
+              <div class="edge-item">v0 — v1</div>
+              <div class="edge-item">v0 — v2</div>
+              <div class="edge-item">v1 — v2</div>
+            </div>
+            <div class="edge-group">
+              <p class="edge-group-label">t1</p>
+              <div class="edge-item">t1 — v0</div>
+            </div>
+            <div class="edge-group">
+              <p class="edge-group-label">t2</p>
+              <div class="edge-item">t2 — t3</div>
+              <div class="edge-item">t2 — t4</div>
+              <div class="edge-item">t2 — t5</div>
+              <div class="edge-item">t2 — t6</div>
+              <div class="edge-item">t2 — v1</div>
+              <div class="edge-item">t2 — v2</div>
+            </div>
+            <div class="edge-group">
+              <p class="edge-group-label">t3, t4</p>
+              <div class="edge-item">t3 — t4</div>
+              <div class="edge-item">t3 — v1</div>
+              <div class="edge-item">t3 — v2</div>
+              <div class="edge-item">t4 — v2</div>
+            </div>
+            <div class="edge-group">
+              <p class="edge-group-label">t5, t6, t7, t8</p>
+              <div class="edge-item">t5 — v1</div>
+              <div class="edge-item">t5 — v2</div>
+              <div class="edge-item">t6 — v2</div>
+              <div class="edge-item">t7 — v2</div>
+              <div class="edge-item">t8 — v1</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="interference-graph-panel">
+          <p class="demo-label">Interference graph (colour = register)</p>
+<div class="graph-placeholder">
+          <p class="graph-placeholder__label">Interference Graph</p>
+          <p class="graph-placeholder__sub">Place holder</p>
+        </div>
+        </div>
+
+        <div class="interference-insight">
+          <p class="demo-label">What the interference graph tells us</p>
+          <div class="callout callout--info" style="margin:0">
+            <p class="callout__label">Register sharing opportunities</p>
+            <ul style="font-size:0.85rem;line-height:1.8;padding-left:1.2rem">
+              <li><strong>t1 only interferes with v0.</strong> It can share a register with v1, v2, or any t other than through v0's neighbours.</li>
+              <li><strong>t7 only interferes with v2.</strong> Short live range — assigned at 12, used at 13, dead after.</li>
+              <li><strong>t8 only interferes with v1.</strong> Similarly short — assigned at 14, used at 15.</li>
+              <li><strong>v0, v1, v2 all interfere with each other</strong> — they must each have a distinct register.</li>
+              <li><strong>t2 is heavily connected</strong> (6 edges) — it is live across the entire computation of <code>a/b*b</code> and cannot share with t3, t4, t5, t6, v1, or v2.</li>
+            </ul>
+          </div>
+          <div class="callout callout--info" style="margin-top:0.8rem">
+            <p class="callout__label">Minimum registers needed</p>
+            <p>The maximum clique in this interference graph (a set of mutually interfering
+               variables) has size 5: {t2, t3, t4, v1, v2} all interfere with each other at
+               instruction 9. This means we need <strong>at least 5 registers</strong> to
+               hold all variables of _gcd without spilling.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SECTION 4: GRAPH COLOURING ────────────────────────────── -->
+    <section class="section" id="colouring">
+      <h2>8.4 — Register Allocation by Graph Colouring</h2>
+      <p>Each node in the interference graph is a variable. Each colour is a register number.
+         Two nodes connected by an edge must receive different colours (they cannot share a
+         register). The goal is to colour every node using at most N colours, where N is the
+         number of available registers.</p>
+
+      <p>This is the <strong>graph colouring problem</strong>, which is NP-hard in general.
+         In practice, the following heuristic algorithm (Algorithm 8.3, Mogensen) is used:</p>
+
+      <div class="algo-box">
+        <p class="algo-box__title">Algorithm 8.3 — Colouring Heuristic</p>
+        <div class="algo-phase">
+          <p class="algo-phase__label">Simplify</p>
+          <p>While nodes remain: if any node has strictly fewer than N edges, push it onto a
+             stack (recording its neighbours) and remove it from the graph. If no such node
+             exists, pick any node and do the same. Repeat until the graph is empty.</p>
+        </div>
+        <div class="algo-phase">
+          <p class="algo-phase__label">Select</p>
+          <p>Pop nodes from the stack one at a time. Assign the node any colour not used by
+             its recorded neighbours (which are all already coloured at this point). If no
+             colour is available: mark the node for <strong>spilling</strong>.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--info">
+        <p class="callout__label">Why this works even when a node has ≥ N neighbours</p>
+        <p>A node with N or more edges is not necessarily uncolourable. Some of its neighbours
+           may receive the same colour, leaving a colour available for this node. The "optimistic"
+           approach is to push such nodes anyway and only declare spill failure in the select
+           phase when we actually run out of colours.</p>
+      </div>
+
+      <h3>Applying Algorithm 8.3 to _gcd with N = 5 colours</h3>
+      <p>With 5 available registers, every node has fewer than 5 neighbours at some point
+         during simplify, so no forced spill is needed:</p>
+
+      <div class="op-table-wrapper">
+        <table class="op-table">
+          <thead><tr><th>Step</th><th>Node pushed</th><th>Remaining neighbours at push time</th><th>Colour assigned (select)</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>t1</td><td>v0</td><td>2 (v0 gets 1)</td></tr>
+            <tr><td>2</td><td>t7</td><td>v2</td><td>1 (v2 gets 3)</td></tr>
+            <tr><td>3</td><td>t8</td><td>v1</td><td>1 (v1 gets 2)</td></tr>
+            <tr><td>4</td><td>t6</td><td>t2, v2</td><td>1</td></tr>
+            <tr><td>5</td><td>t5</td><td>t2, v1, v2</td><td>1</td></tr>
+            <tr><td>6</td><td>t4</td><td>t2, t3, v2</td><td>1</td></tr>
+            <tr><td>7</td><td>t3</td><td>t2, v1, v2</td><td>1</td></tr>
+            <tr><td>8</td><td>v2</td><td>v0, v1</td><td>3</td></tr>
+            <tr><td>9</td><td>v1</td><td>v0</td><td>2</td></tr>
+            <tr><td>10</td><td>v0</td><td>∅</td><td>1</td></tr>
+            <tr><td>11</td><td>t2</td><td>v1, v2</td><td>4 (must avoid 2,3)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><strong>Final register assignment:</strong></p>
+      <div class="op-table-wrapper">
+        <table class="op-table">
+          <thead><tr><th>Variable</th><th>Register</th><th>Source variable</th></tr></thead>
+          <tbody>
+            <tr><td>v0</td><td>R1</td><td>parameter a</td></tr>
+            <tr><td>v1</td><td>R2</td><td>parameter b</td></tr>
+            <tr><td>v2</td><td>R3</td><td>local temp</td></tr>
+            <tr><td>t2</td><td>R4</td><td>copy of a — live across full modulo computation</td></tr>
+            <tr><td>t1, t3, t4, t5, t6, t7, t8</td><td>R1 or R2</td><td>all short-lived, can share R1 or R2 with neighbours coloured differently</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--info">
+        <p class="callout__label">Why only 4 registers are actually needed</p>
+        <p>Despite the maximum clique of size 5, the coloring above assigns at most 4 distinct
+           colours. This is because the 5 mutually interfering variables {t2, t3, t4, v1, v2}
+           are not all live simultaneously with every other variable — the colouring algorithm
+           exploits the global structure of the graph, not just local cliques. The GCD function
+           can be register-allocated with 4 registers with no spilling.</p>
+      </div>
+    </section>
+
+    <!-- ── EVENT 9: NEXT ─────────────────────────────────────────── -->
+    <section class="section" id="next">
+      <h2>What Comes Next</h2>
+      <div class="callout callout--next">
+        <p class="callout__label">Chapter 9 &rarr; Function Calls and the Call Stack</p>
+        <p>Register allocation in this chapter treats one function body in isolation. Chapter 9
+           expands to programs with multiple functions calling each other. Function calls
+           introduce new constraints: arguments and return values must be in specific registers,
+           and a called function may overwrite registers that the caller is still using. Handling
+           this requires <strong>calling conventions</strong> — agreements about which registers
+           a function may destroy and which it must preserve.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>COS341 Supplementary Material &mdash; University of Pretoria &mdash; Based on Mogensen,
+       <em>Introduction to Compiler Design</em>, 2nd ed.</p>
+  </footer>
+
+  <script src="../js/chapter8.js"></script>
+</body>
+</html>

@@ -522,38 +522,294 @@
             </div>
         </div>
 
-        <!-- STEP 3: COMBINE THE DFAS (no tabs) -->
+                <!-- ── STEP 3: MINIMISE ──────────────────────────────────────────
+            Drop-in replacement for the existing step 3/4/5 section.
+            Terminology aligned with Mogensen Algorithm 1.4.
+        ──────────────────────────────────────────────────────────────── -->
+
         <h3>Step 3 &mdash; Minimise the DFAs</h3>
-        <div class="dfa-visual-blank" id="combine-dfa">
-            <p>
-                Every DFA above except one is already minimal: Identifier (2 states), Assign (3 states), 
-                Operator (3 states, after merging the shared paths), and every
-                Symbol (2 states each) all came out of subset construction with no equivalent states left to
-                merge. <strong>Number is the one exception</strong> &mdash; its two candidate states after
-                subset construction turn out to be equivalent and collapse into one, the same way Identifier's
-                did. That's the only minimisation actually worked through below.
-            </p>
+
+        <div class="callout callout--info">
+        <p class="callout__label">Why minimise?</p>
+        <p>DFAs constructed from regular expressions through NFAs are often non-minimal,
+            though rarely very far from it. Any regular language has a <strong>unique
+            equivalent minimal DFA</strong> — so minimising is well-defined and the
+            result is the smallest possible machine for that language. Fewer states means
+            faster scanning and less memory.</p>
         </div>
 
-        <!-- STEP 4: MINIMISE THE DFA (no tabs) -->
-        <h3>Step 4 &mdash; Combine the minDFAs</h3>
-        <div class="dfa-visual-blank" id="minimise-dfa">
-             <p>
-                With every individual DFA now confirmed minimal, combining them is just attaching each one's
-                start state to a single shared <code>S0</code> &mdash; check the token table above and none of
-                the seven categories share a first character, so no branch competes with another for the same
-                transition.
-            </p>
+        <h4>Algorithm 1.4 — DFA Minimisation (Mogensen)</h4>
+        <p>Two states are <strong>equivalent</strong> if they cannot be distinguished by
+        any sequence of input symbols. We identify equivalent states using two rules:</p>
+        <ul style="font-size:0.9rem;line-height:1.9;padding-left:1.3rem">
+        <li>An <strong>accepting</strong> state is never equivalent to a
+            <strong>non-accepting</strong> state.</li>
+        <li>If states s<sub>1</sub> and s<sub>2</sub> transition on the same symbol
+            <em>c</em> to states t<sub>1</sub> and t<sub>2</sub> that are already proven
+            different — or if only one of s<sub>1</sub>, s<sub>2</sub> has a defined
+            transition on <em>c</em> — then s<sub>1</sub> and s<sub>2</sub> are
+            different.</li>
+        </ul>
+        <p>Rather than testing all pairs directly, the algorithm works by
+        <strong>grouping</strong> states and splitting groups when inconsistency is
+        found:</p>
+        <ol style="font-size:0.9rem;line-height:1.9;padding-left:1.3rem">
+        <li>Start with two <em>unmarked</em> groups: the accepting states F and the
+            non-accepting states S&thinsp;\&thinsp;F.</li>
+        <li>Pick any unmarked group G and check if it is <strong>consistent</strong>:
+            for every pair of states s<sub>1</sub>, s<sub>2</sub> in G and every symbol
+            c, move(s<sub>1</sub>, c) and move(s<sub>2</sub>, c) must both land in the
+            same group, or both be undefined. If G is consistent, <em>mark</em> it. If
+            not, split G into maximal consistent subgroups, replace G with those
+            subgroups, and <em>erase all marks</em> (including any previously marked
+            groups).</li>
+        <li>If no unmarked groups remain, stop — the current groups are the states of
+            the minimal DFA. Otherwise return to step 2.</li>
+        </ol>
+        <div class="callout callout--info">
+        <p class="callout__label">Useful shortcut</p>
+        <p>A group of exactly one state is trivially consistent and never needs to be
+            split. Such singleton groups can be skipped in step 2, and the algorithm can
+            stop as soon as all unmarked groups are singletons.</p>
         </div>
 
-        <!-- STEP 5: READY FOR LEXING -->
-        <h3>Step 5 &mdash; Completed DFA, Ready for Lexing</h3>
+        <p>For the token types in this chapter:</p>
+
+        <div class="op-table-wrapper">
+        <table class="op-table">
+            <thead>
+            <tr>
+                <th>Token type</th>
+                <th>States after subset construction</th>
+                <th>States after minimisation</th>
+                <th>Reduction</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>Keyword</td>
+                <td>one state per character per keyword</td>
+                <td>same — each path is unique, no consistent groups to merge</td>
+                <td>none</td>
+            </tr>
+            <tr>
+                <td>Identifier</td>
+                <td>2 states</td>
+                <td>2 states</td>
+                <td>none</td>
+            </tr>
+            <tr>
+                <td><strong>Number</strong></td>
+                <td>7 states (A–G)</td>
+                <td><strong>4 states — worked below</strong></td>
+                <td>3 states</td>
+            </tr>
+            <tr>
+                <td>Assign (<code>:=</code>)</td>
+                <td>3 states</td>
+                <td>3 states</td>
+                <td>none</td>
+            </tr>
+            <tr>
+                <td>Relational operator</td>
+                <td>3 states</td>
+                <td>3 states</td>
+                <td>none</td>
+            </tr>
+            <tr>
+                <td>Operator</td>
+                <td>2 states</td>
+                <td>2 states</td>
+                <td>none</td>
+            </tr>
+            <tr>
+                <td>Symbols (<code>( ) { } ; ,</code>)</td>
+                <td>2 states each</td>
+                <td>2 states each</td>
+                <td>none</td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+
+        <h4>Worked Example — Minimising the Number DFA</h4>
+        <p>Recall the Number DFA transition table from subset construction:</p>
+
+        <div class="op-table-wrapper">
+        <table class="op-table">
+            <thead>
+            <tr><th>State</th><th>NFA states</th><th>On 0</th><th>On [1-9]</th><th>On .</th><th>Accepting?</th></tr>
+            </thead>
+            <tbody>
+            <tr><td>A</td><td>{0}</td><td>B</td><td>C</td><td>–</td><td>No</td></tr>
+            <tr><td>B</td><td>{1}</td><td>–</td><td>–</td><td>D</td><td><strong>Yes</strong></td></tr>
+            <tr><td>C</td><td>{2}</td><td>E</td><td>E</td><td>D</td><td><strong>Yes</strong></td></tr>
+            <tr><td>D</td><td>{4}</td><td>F</td><td>G</td><td>–</td><td>No</td></tr>
+            <tr><td>E</td><td>{2,3,7}</td><td>E</td><td>E</td><td>D</td><td><strong>Yes</strong></td></tr>
+            <tr><td>F</td><td>{4,5}</td><td>F</td><td>G</td><td>–</td><td>No</td></tr>
+            <tr><td>G</td><td>{6,7,4}</td><td>F</td><td>G</td><td>–</td><td>No</td></tr>
+            </tbody>
+        </table>
+        </div>
+
+        <p><strong>Step 1 — Initial partition (both groups unmarked):</strong></p>
+        <ul style="font-size:0.9rem;line-height:1.8;font-family:var(--font-mono)">
+        <li>G<sub>1</sub> = {B, C, E} &nbsp;— accepting states</li>
+        <li>G<sub>2</sub> = {A, D, F, G} &nbsp;— non-accepting states</li>
+        </ul>
+
+        <p><strong>Step 2 — Check G<sub>1</sub> = {B, C, E} for consistency:</strong></p>
+        <div class="op-table-wrapper">
+        <table class="op-table">
+            <thead><tr><th>State</th><th>On 0 &rarr; group</th><th>On [1-9] &rarr; group</th><th>On . &rarr; group</th></tr></thead>
+            <tbody>
+            <tr><td>B</td><td>– (undefined)</td><td>– (undefined)</td><td>G<sub>2</sub></td></tr>
+            <tr><td>C</td><td>G<sub>1</sub></td><td>G<sub>1</sub></td><td>G<sub>2</sub></td></tr>
+            <tr><td>E</td><td>G<sub>1</sub></td><td>G<sub>1</sub></td><td>G<sub>2</sub></td></tr>
+            </tbody>
+        </table>
+        </div>
+        <p>G<sub>1</sub> is <strong>not consistent</strong>: B has undefined transitions on
+        0 and [1-9] while C and E have defined transitions to G<sub>1</sub>. By the
+        second rule, B is distinguishable from C and E. Split, erase all marks:</p>
+        <ul style="font-size:0.9rem;line-height:1.8;font-family:var(--font-mono)">
+        <li>G<sub>1</sub> = {B} &nbsp;— singleton, skip in future</li>
+        <li>G<sub>3</sub> = {C, E} &nbsp;— C and E have identical transitions in this table</li>
+        <li>G<sub>2</sub> = {A, D, F, G} &nbsp;— unchanged, mark erased</li>
+        </ul>
+
+        <p><strong>Step 3 — Check G<sub>2</sub> = {A, D, F, G} for consistency:</strong></p>
+        <div class="op-table-wrapper">
+        <table class="op-table">
+            <thead><tr><th>State</th><th>On 0 &rarr; group</th><th>On [1-9] &rarr; group</th><th>On . &rarr; group</th></tr></thead>
+            <tbody>
+            <tr><td>A</td><td>G<sub>1</sub> {B}</td><td>G<sub>3</sub> {C,E}</td><td>– (undefined)</td></tr>
+            <tr><td>D</td><td>G<sub>2</sub></td><td>G<sub>2</sub></td><td>– (undefined)</td></tr>
+            <tr><td>F</td><td>G<sub>2</sub></td><td>G<sub>2</sub></td><td>– (undefined)</td></tr>
+            <tr><td>G</td><td>G<sub>2</sub></td><td>G<sub>2</sub></td><td>– (undefined)</td></tr>
+            </tbody>
+        </table>
+        </div>
+        <p>G<sub>2</sub> is <strong>not consistent</strong>: A transitions to G<sub>1</sub>
+        and G<sub>3</sub> on 0 and [1-9], while D, F, G all transition within G<sub>2</sub>
+        itself. A is distinguishable. Split, erase all marks:</p>
+        <ul style="font-size:0.9rem;line-height:1.8;font-family:var(--font-mono)">
+        <li>G<sub>1</sub> = {B} &nbsp;— singleton</li>
+        <li>G<sub>2</sub> = {A} &nbsp;— singleton</li>
+        <li>G<sub>3</sub> = {C, E}</li>
+        <li>G<sub>4</sub> = {D, F, G}</li>
+        </ul>
+
+        <p><strong>Step 4 — Check G<sub>3</sub> = {C, E} for consistency:</strong></p>
+        <div class="op-table-wrapper">
+        <table class="op-table">
+            <thead><tr><th>State</th><th>On 0 &rarr; group</th><th>On [1-9] &rarr; group</th><th>On . &rarr; group</th></tr></thead>
+            <tbody>
+            <tr><td>C</td><td>G<sub>3</sub> {C,E}</td><td>G<sub>3</sub> {C,E}</td><td>G<sub>4</sub> {D,F,G}</td></tr>
+            <tr><td>E</td><td>G<sub>3</sub> {C,E}</td><td>G<sub>3</sub> {C,E}</td><td>G<sub>4</sub> {D,F,G}</td></tr>
+            </tbody>
+        </table>
+        </div>
+        <p>G<sub>3</sub> is <strong>consistent</strong> — C and E land in the same group
+        on every symbol. Mark G<sub>3</sub>.</p>
+
+        <p><strong>Step 5 — Check G<sub>4</sub> = {D, F, G} for consistency:</strong></p>
+        <div class="op-table-wrapper">
+        <table class="op-table">
+            <thead><tr><th>State</th><th>On 0 &rarr; group</th><th>On [1-9] &rarr; group</th><th>On . &rarr; group</th></tr></thead>
+            <tbody>
+            <tr><td>D</td><td>G<sub>4</sub> {D,F,G}</td><td>G<sub>4</sub> {D,F,G}</td><td>– (undefined)</td></tr>
+            <tr><td>F</td><td>G<sub>4</sub> {D,F,G}</td><td>G<sub>4</sub> {D,F,G}</td><td>– (undefined)</td></tr>
+            <tr><td>G</td><td>G<sub>4</sub> {D,F,G}</td><td>G<sub>4</sub> {D,F,G}</td><td>– (undefined)</td></tr>
+            </tbody>
+        </table>
+        </div>
+        <p>G<sub>4</sub> is <strong>consistent</strong>. Mark G<sub>4</sub>. All remaining
+        unmarked groups (G<sub>1</sub> = {B} and G<sub>2</sub> = {A}) are singletons —
+        stop.</p>
+
+        <p><strong>Final groups → states of the minimal DFA:</strong></p>
+        <div class="op-table-wrapper">
+        <table class="op-table">
+            <thead>
+            <tr><th>Group</th><th>Original states</th><th>On 0</th><th>On [1-9]</th><th>On .</th><th>Accepting?</th></tr>
+            </thead>
+            <tbody>
+            <tr><td>G<sub>2</sub> (start)</td><td>{A}</td><td>G<sub>1</sub></td><td>G<sub>3</sub></td><td>–</td><td>No</td></tr>
+            <tr><td>G<sub>1</sub></td><td>{B}</td><td>–</td><td>–</td><td>G<sub>4</sub></td><td><strong>Yes</strong></td></tr>
+            <tr><td>G<sub>3</sub></td><td>{C, E}</td><td>G<sub>3</sub></td><td>G<sub>3</sub></td><td>G<sub>4</sub></td><td><strong>Yes</strong></td></tr>
+            <tr><td>G<sub>4</sub></td><td>{D, F, G}</td><td>G<sub>4</sub></td><td>G<sub>4</sub></td><td>–</td><td>No</td></tr>
+            </tbody>
+        </table>
+        </div>
+        <p>The Number DFA is reduced from 7 states to <strong>4 states</strong>. C and E
+        were equivalent because both are accepting states that self-loop on digits and
+        transition to the decimal part on <code>.</code> — the compiler cannot tell them
+        apart by any input sequence. D, F, and G were equivalent because all three are
+        non-accepting states that self-loop on digits and have no decimal transition.</p>
+
+        <!-- ── STEP 4: COMBINE ───────────────────────────────────────────── -->
+        <h3>Step 4 &mdash; Combine the Minimised DFAs</h3>
+
+        <!-- <div class="callout callout--warn" style="border-left-color:var(--bloom-evaluate);background:#fff5f5">
+        <p class="callout__label">Why the ε-transition trick is wrong here</p>
+        <p>A common approach is to add a new shared start state S0 with ε-transitions to
+            each individual DFA's start state. The problem — as discussed in lectures — is
+            that ε-transitions are an <strong>NFA construct</strong>. Adding them means
+            you no longer have a DFA. You now have a new NFA and must run subset
+            construction all over again from scratch, potentially producing a larger
+            machine and undoing the minimisation work just completed.</p>
+        </div> -->
+
+        <div class="callout callout--info">
+        <p class="callout__label">The correct approach: merge start states directly</p>
+        <p>This works — without creating any ε-transitions — when <strong>no two token
+            types share a possible first character</strong>. In that case, each individual
+            DFA's start-state transitions are completely disjoint from every other. A
+            single combined start state S0 can own all of those transitions simultaneously.
+            For any given first character there is exactly one valid transition, so S0 is
+            unambiguous and the combined machine is still a proper DFA.</p>
+        <p>Check the token table: every category starts on a distinct character class.
+            Keywords and identifiers both start with <code>[a-zA-Z_]</code>, but keywords
+            are resolved by the <strong>priority rule</strong> — they are matched first —
+            so no DFA conflict arises at the automaton level.</p>
+        </div>
+
+        <p>The combined start state S0 owns every first-character transition from every
+        individual minimised DFA:</p>
+
+        <div class="op-table-wrapper">
+        <table class="op-table">
+            <thead>
+            <tr><th>First character</th><th>Token category</th><th>S0 transition</th></tr>
+            </thead>
+            <tbody>
+            <tr><td><code>0</code></td><td>Number</td><td>S0 → Number G<sub>1</sub></td></tr>
+            <tr><td><code>[1-9]</code></td><td>Number</td><td>S0 → Number G<sub>3</sub></td></tr>
+            <tr><td><code>[a-zA-Z_]</code></td><td>Keyword / Identifier (priority: keyword first)</td><td>S0 → Keyword/Identifier start</td></tr>
+            <tr><td><code>:</code></td><td>Assign</td><td>S0 → Assign q<sub>1</sub></td></tr>
+            <tr><td><code>&lt; &gt; =</code></td><td>Relational operator</td><td>S0 → Relop start</td></tr>
+            <tr><td><code>+ - * /</code></td><td>Operator</td><td>S0 → Operator accept</td></tr>
+            <tr><td><code>( ) { } ; ,</code></td><td>Symbol (one per character)</td><td>S0 → respective accept state</td></tr>
+            <tr><td>whitespace / newline</td><td>(discard)</td><td>S0 → S0 (no token emitted)</td></tr>
+            </tbody>
+        </table>
+        </div>
+
+        <!-- ── STEP 5: READY ─────────────────────────────────────────────── -->
+        <h3>Step 5 &mdash; Completed Combined DFA, Ready for Lexing</h3>
+        <p>With every token type minimised and merged into one machine at S0, the lexer
+        is complete: a single deterministic automaton that recognises any token in the
+        language, one character at a time, with no backtracking.</p>
+        <p>The <code>scan()</code> algorithm drives it: start at S0, follow transitions
+        character by character, remember the last accepting state reached, and when no
+        further transition exists, emit the token corresponding to that accepting state
+        — then reset to S0 for the next token. This is exactly the longest-match rule
+        in action.</p>
         <p>
-            With every token type minimised and combined into one machine, the lexer has everything it
-            needs: a single automaton that recognises any token in the language, one character at a time.
-        </p>
-        <p>
-            <a class="btn btn-primary" href="#simulate">See this DFA perform lexical analysis on our program &rarr;</a>
+        <a class="btn btn-primary" href="#simulate">
+            See this DFA perform lexical analysis on our program &rarr;
+        </a>
         </p>
     </section>
 

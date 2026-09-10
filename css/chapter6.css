@@ -241,7 +241,7 @@
 .tr--done .tr-result { color: #ffd06a; }
 
 /* ── STATE: pending ── visibly dimmed */
-.tr--pending { opacity: 0.25; }
+.tr--pending { opacity: 0.4; } /* <-- Bumped up from 0.25 */
 .tr--pending .tr-text  { color: #e8edf5; }
 .tr--pending.tr--result .tr-text { color: #a8e6a8; }
 
