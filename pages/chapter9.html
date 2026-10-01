@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapter 9 — Function Calls and the Call Stack | COS341 Supplement</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/chapter9.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <span class="site-header__course">COS341 Supplementary Material</span>
+      <nav class="site-header__nav">
+        <a href="index.html">Home</a>
+        <a href="#">Chapters</a>
+        <a href="grammar.html">Grammar</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="article">
+
+    <p class="breadcrumb">Chapters &rsaquo; Chapter 9 &rsaquo; Function Calls and the Call Stack</p>
+    <h1 class="article__title">Chapter 9 &mdash; Function Calls and the Call Stack</h1>
+    <p class="article__subtitle">Crossing the boundary between two functions — passing arguments, returning values, and protecting registers across a call.</p>
+
+    <!-- ── EVENT 1: GAIN ATTENTION ──────────────────────────────── -->
+    <div class="callout callout--question">
+      <p class="callout__label">Opening Problem</p>
+      <p>In <a href="chapter6.html">Chapter 6</a> we translated the body of <code>gcd</code> into flat
+         intermediate code, and in <a href="chapter8.html">Chapter 8</a> we fitted its variables into
+         four registers. But both chapters treated a single function body <em>in isolation</em>. The GCD
+         program is not one function — it is <code>main</code> calling <code>gcd</code>:</p>
+      <pre class="code-block"><code>main(number a, number b) {
+  number result := 0;
+  result := <span class="code-hl">gcd(a, b)</span>;   <span class="code-comment">/* one line — but a whole protocol */</span>
+  return result
+}</code></pre>
+      <p>That single line hides four questions the code generator must answer. How does <code>main</code>
+         hand <code>a</code> and <code>b</code> to <code>gcd</code>? Where does <code>gcd</code> find them?
+         How does <code>gcd</code>'s answer get back into <code>result</code>? And since both functions want
+         to use the same handful of registers, <strong>who makes sure <code>main</code>'s values survive while
+         <code>gcd</code> runs?</strong></p>
+      <p>The answer is a fixed <strong>call sequence</strong> and a region of memory called the
+         <strong>call stack</strong>. This chapter builds that protocol for the GCD program.</p>
+    </div>
+
+    <!-- ── EVENT 2: LEARNING OBJECTIVES ─────────────────────────── -->
+    <section class="section" id="objectives">
+      <h2>Learning Objectives</h2>
+      <ul class="objectives-list">
+        <li><span class="bloom bloom--remember">Remember</span> what the stack pointer (<code>SP</code>) is and how a stack frame is laid out for a call.</li>
+        <li><span class="bloom bloom--understand">Understand</span> the division of labour between the <strong>caller</strong> and the <strong>callee</strong> across a function call.</li>
+        <li><span class="bloom bloom--understand">Understand</span> the difference between the <strong>caller-saves</strong> and <strong>callee-saves</strong> register strategies.</li>
+        <li><span class="bloom bloom--apply">Apply</span> the call sequence to translate <code>result := gcd(a, b)</code> into intermediate code.</li>
+        <li><span class="bloom bloom--apply">Apply</span> the prologue/epilogue pattern to give <code>gcd</code> an entry and exit that cooperate with its caller.</li>
+        <li><span class="bloom bloom--analyse">Analyse</span> how the stack changes, slot by slot, as the call to <code>gcd</code> is made and returns.</li>
+      </ul>
+    </section>
+
+    <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
+    <section class="section" id="recall">
+      <h2>Connecting to What You Already Know</h2>
+      <p>From <a href="chapter6.html">Chapter 6</a> we have the intermediate code for <code>gcd</code>, using
+         <code>v0</code>&nbsp;=&nbsp;<code>a</code>, <code>v1</code>&nbsp;=&nbsp;<code>b</code>,
+         <code>v2</code>&nbsp;=&nbsp;<code>temp</code>, and temporaries <code>t1</code>–<code>t8</code>.
+         From <a href="chapter8.html">Chapter 8</a> we know that body fits in four registers. What is still
+         missing is the <em>glue</em>: the code that lets <code>main</code> invoke <code>gcd</code> and recover
+         its result. That glue is what Mogensen calls the call sequence and the function's prologue and
+         epilogue.</p>
+
+      <div class="callout callout--info">
+        <p class="callout__label">Notation used throughout this chapter</p>
+        <div class="notation-grid">
+          <div><code>SP</code><span>the stack pointer — the memory address of the current frame's top slot</span></div>
+          <div><code>SOI</code><span>size of an integer, in bytes — the stride between adjacent stack slots</span></div>
+          <div><code>M[addr]</code><span>the memory cell at <code>addr</code></span></div>
+          <div><code>n</code><span>number of parameters the called function takes (for <code>gcd</code>, <code>n = 2</code>)</span></div>
+          <div><code>k</code><span>number of registers in use that must be preserved</span></div>
+          <div><code>framesize</code><span>bytes a function reserves for its return address and local variables</span></div>
+        </div>
+        <p style="margin-top:0.6rem;font-size:0.85rem">The stack grows <strong>downward</strong>: making room means
+           <em>subtracting</em> from <code>SP</code> (<code>SP := SP - …</code>); releasing room adds back.</p>
+      </div>
+    </section>
+
+    <!-- ── SECTION 1: STACK & CONVENTION ─────────────────────────── -->
+    <section class="section" id="stack">
+      <h2>9.1 — The Call Stack</h2>
+      <p>When <code>main</code> calls <code>gcd</code>, it cannot simply jump — it must first build a small
+         record on the stack so that <code>gcd</code> knows where its arguments are and where to return to.
+         That record is a <strong>stack frame</strong>. For a call with <code>n</code> parameters, the frame
+         holds <code>n + 1</code> slots: one per argument, plus one for the return address.</p>
+
+      <div class="frame-layout">
+        <p class="demo-label">Frame for the call <code>gcd(a, b)</code> &nbsp;(n = 2 &rarr; 3 slots)</p>
+        <div class="frame-slot frame-slot--ret">
+          <span class="frame-slot__addr">M[SP]</span>
+          <span class="frame-slot__what">return address</span>
+          <span class="frame-slot__note">where <code>gcd</code> jumps back to when it finishes</span>
+        </div>
+        <div class="frame-slot frame-slot--arg">
+          <span class="frame-slot__addr">M[SP + SOI]</span>
+          <span class="frame-slot__what">argument 1 &rarr; a</span>
+          <span class="frame-slot__note">also where the return value comes back</span>
+        </div>
+        <div class="frame-slot frame-slot--arg">
+          <span class="frame-slot__addr">M[SP + SOI&nbsp;*&nbsp;2]</span>
+          <span class="frame-slot__what">argument 2 &rarr; b</span>
+          <span class="frame-slot__note">last argument slot</span>
+        </div>
+      </div>
+      <p>Notice the second line: the <strong>return value is delivered in the same slot that held the first
+         argument</strong> (<code>M[SP + SOI]</code>). That reuse is deliberate — it means the caller always
+         knows exactly where to look for the answer, regardless of how many arguments were passed.</p>
+    </section>
+
+    <!-- ── SECTION 2: CALL SEQUENCE ──────────────────────────────── -->
+    <section class="section" id="callseq">
+      <h2>9.2 — The Call Sequence</h2>
+      <p>The call sequence is the code the <strong>caller</strong> emits around the jump into the callee.
+         There are two conventions for protecting registers, and they differ only in <em>who</em> saves them:</p>
+      <ul>
+        <li><strong>Caller-saves:</strong> the calling function stores its own live registers before the call
+            and restores them afterwards. The callee is free to clobber anything.</li>
+        <li><strong>Callee-saves:</strong> the called function promises to leave the registers as it found
+            them, saving and restoring them itself. The caller does nothing special.</li>
+      </ul>
+      <p>Pick a strategy below, then <strong>click any line</strong> in the generated sequence to see what it does.
+         This is the translation of <code>result := gcd(a, b)</code> from <code>main</code>.</p>
+
+      <div class="save-toggle" data-group="callseq">
+        <button class="save-toggle__btn is-active" data-mode="caller">Caller-saves</button>
+        <button class="save-toggle__btn" data-mode="callee">Callee-saves</button>
+      </div>
+
+      <div class="xlat">
+        <div class="xlat__src">
+          <p class="demo-label">Source (inside main)</p>
+          <pre class="code-block"><code><span class="code-hl">result := gcd(a, b)</span></code></pre>
+          <p class="xlat__note">With <code>result = v2</code>, <code>a = v0</code>, <code>b = v1</code>,
+             <code>n = 2</code>, and <code>L0</code> the label to resume at after the call returns.</p>
+        </div>
+        <div class="xlat__out">
+          <p class="demo-label">Generated call sequence</p>
+          <pre class="code-block code-block--interactive"><code id="callseqLines"></code></pre>
+        </div>
+      </div>
+      <div class="xlat__explain" id="callseqExplain">
+        <p class="explain-placeholder">Click a line above to see what it does.</p>
+      </div>
+    </section>
+
+    <!-- ── SECTION 3: PROLOGUE / EPILOGUE ────────────────────────── -->
+    <section class="section" id="prologue">
+      <h2>9.3 — Prologue and Epilogue</h2>
+      <p>The call sequence is only one half of the handshake. The <strong>callee</strong> — here <code>gcd</code> —
+         needs a matching <strong>prologue</strong> (code at entry that unpacks the arguments and reserves space
+         for locals) and an <strong>epilogue</strong> (code at exit that stores the return value and jumps back).
+         The prologue and epilogue must agree with whichever save strategy the caller used.</p>
+
+      <div class="save-toggle" data-group="prologue">
+        <button class="save-toggle__btn is-active" data-mode="caller">Caller-saves</button>
+        <button class="save-toggle__btn" data-mode="callee">Callee-saves</button>
+      </div>
+
+      <div class="mode-block" data-group="prologue" data-mode="caller">
+        <div class="xlat">
+          <div class="xlat__src">
+            <p class="demo-label">Source: gcd header &amp; return</p>
+            <pre class="code-block"><code>gcd(number a, number b) {
+  number temp := 0;
+  <span class="code-comment">... body ...</span>
+  return a
+}</code></pre>
+          </div>
+          <div class="xlat__out">
+            <p class="demo-label">Prologue + epilogue (caller-saves)</p>
+<pre class="code-block"><code>LABEL gcd
+<span class="code-comment">; -- prologue --</span>
+v0 := M[SP + SOI]        <span class="code-comment">; unpack arg a</span>
+v1 := M[SP + SOI * 2]    <span class="code-comment">; unpack arg b</span>
+SP := SP - framesize     <span class="code-comment">; room for locals (temp = v2)</span>
+
+<span class="code-comment">; ... translated body from Chapter 6 ...</span>
+
+<span class="code-comment">; -- epilogue --</span>
+SP := SP + framesize     <span class="code-comment">; release locals</span>
+M[SP + SOI] := v0        <span class="code-comment">; return value (gcd returns a = v0)</span>
+returnaddress := M[SP]   <span class="code-comment">; fetch saved return address</span>
+GOTO returnaddress       <span class="code-comment">; jump back into main</span></code></pre>
+          </div>
+        </div>
+        <p class="xlat__note">Because the caller already saved the registers, <code>gcd</code>'s prologue is short:
+           it only unpacks parameters and makes room for <code>temp</code>. It never touches <code>R0…Rk</code>.</p>
+      </div>
+
+      <div class="mode-block" data-group="prologue" data-mode="callee" hidden>
+        <div class="xlat">
+          <div class="xlat__src">
+            <p class="demo-label">Source: gcd header &amp; return</p>
+            <pre class="code-block"><code>gcd(number a, number b) {
+  number temp := 0;
+  <span class="code-comment">... body ...</span>
+  return a
+}</code></pre>
+          </div>
+          <div class="xlat__out">
+            <p class="demo-label">Prologue + epilogue (callee-saves)</p>
+<pre class="code-block"><code>LABEL gcd
+<span class="code-comment">; -- prologue --</span>
+SP := SP - SOI * (k + 1) <span class="code-comment">; room to save registers</span>
+M[SP] := R0              <span class="code-comment">; save the registers gcd will use</span>
+<span class="code-comment">...</span>
+M[SP + SOI * k] := Rk
+v0 := M[SP + SOI*k + SOI]     <span class="code-comment">; arg a (now above saved regs)</span>
+v1 := M[SP + SOI*k + SOI*2]   <span class="code-comment">; arg b</span>
+SP := SP - framesize          <span class="code-comment">; room for locals</span>
+
+<span class="code-comment">; ... translated body from Chapter 6 ...</span>
+
+<span class="code-comment">; -- epilogue --</span>
+SP := SP + framesize
+M[SP + SOI*k + SOI] := v0     <span class="code-comment">; return value where arg a was</span>
+R0 := M[SP]                   <span class="code-comment">; restore the registers</span>
+<span class="code-comment">...</span>
+Rk := M[SP + SOI * k]
+SP := SP + SOI * (k + 1)      <span class="code-comment">; release the register-save area</span>
+returnaddress := M[SP]
+GOTO returnaddress</code></pre>
+          </div>
+        </div>
+        <p class="xlat__note">Here <code>gcd</code> carries the burden: it saves the registers first (so it can use
+           them immediately), which pushes the argument slots up by <code>SOI * k</code> — notice every parameter
+           and return-value offset shifts accordingly.</p>
+      </div>
+    </section>
+
+    <!-- ── SECTION 4: FULL EXAMPLE ───────────────────────────────── -->
+    <section class="section" id="full">
+      <h2>9.4 — The Whole GCD Program, Linked Together</h2>
+      <p>Putting the call sequence and the prologue/epilogue together with the Chapter 6 body gives the complete,
+         callable intermediate code for the GCD program (caller-saves strategy). <strong>Hover over any line</strong>
+         in either panel to highlight the source statement and the instructions it produced.</p>
+
+      <div class="annotated" id="fullXlat">
+        <div class="annotated__src">
+          <p class="demo-label">Source</p>
+<pre class="code-block"><code><span class="src-line" data-group="m-head">main(number a, number b) {</span>
+<span class="src-line" data-group="m-init">  number result := 0;</span>
+<span class="src-line" data-group="m-call">  result := gcd(a, b);</span>
+<span class="src-line" data-group="m-ret">  return result</span>
+<span class="src-line" data-group="m-head">}</span>
+<span class="src-line" data-group="g-head">gcd(number a, number b) {</span>
+<span class="src-line" data-group="g-body">  number temp := 0;</span>
+<span class="src-line" data-group="g-body">  while (b &gt; 0) do { ... };</span>
+<span class="src-line" data-group="g-ret">  return a</span>
+<span class="src-line" data-group="g-head">}</span></code></pre>
+        </div>
+        <div class="annotated__out">
+          <p class="demo-label">Intermediate code (caller-saves)</p>
+<pre class="code-block"><code><span class="ir-line" data-group="m-head">LABEL main</span>
+<span class="ir-line" data-group="m-head">  v0 := M[SP + SOI]</span>
+<span class="ir-line" data-group="m-head">  v1 := M[SP + SOI * 2]</span>
+<span class="ir-line" data-group="m-head">  SP := SP - framesize</span>
+<span class="ir-line" data-group="m-init">  v2 := 0</span>
+<span class="ir-line" data-group="m-call">  M[SP] := R0</span>
+<span class="ir-line" data-group="m-call">  ...</span>
+<span class="ir-line" data-group="m-call">  M[SP + SOI * k] := Rk</span>
+<span class="ir-line" data-group="m-call">  SP := SP - SOI * 3</span>
+<span class="ir-line" data-group="m-call">  M[SP + SOI] := v0</span>
+<span class="ir-line" data-group="m-call">  M[SP + SOI * 2] := v1</span>
+<span class="ir-line" data-group="m-call">  M[SP] := L0</span>
+<span class="ir-line" data-group="m-call">  GOTO gcd</span>
+<span class="ir-line" data-group="m-call">  LABEL L0</span>
+<span class="ir-line" data-group="m-call">  t0 := M[SP + SOI]</span>
+<span class="ir-line" data-group="m-call">  SP := SP + SOI * 3</span>
+<span class="ir-line" data-group="m-call">  R0 := M[SP]</span>
+<span class="ir-line" data-group="m-call">  ...</span>
+<span class="ir-line" data-group="m-call">  Rk := M[SP + SOI * k]</span>
+<span class="ir-line" data-group="m-call">  v2 := t0</span>
+<span class="ir-line" data-group="m-ret">  SP := SP + framesize</span>
+<span class="ir-line" data-group="m-ret">  M[SP + SOI] := v2</span>
+<span class="ir-line" data-group="m-ret">  returnaddress := M[SP]</span>
+<span class="ir-line" data-group="m-ret">  GOTO returnaddress</span>
+<span class="ir-line" data-group="g-head">LABEL gcd</span>
+<span class="ir-line" data-group="g-head">  v0 := M[SP + SOI]</span>
+<span class="ir-line" data-group="g-head">  v1 := M[SP + SOI * 2]</span>
+<span class="ir-line" data-group="g-head">  SP := SP - framesize</span>
+<span class="ir-line" data-group="g-body">  v2 := 0</span>
+<span class="ir-line" data-group="g-body">  LABEL L1</span>
+<span class="ir-line" data-group="g-body">  IF v1 &gt; 0 THEN L2 ELSE L3</span>
+<span class="ir-line" data-group="g-body">  ...  (Chapter 6 body)</span>
+<span class="ir-line" data-group="g-body">  LABEL L3</span>
+<span class="ir-line" data-group="g-ret">  SP := SP + framesize</span>
+<span class="ir-line" data-group="g-ret">  M[SP + SOI] := v0</span>
+<span class="ir-line" data-group="g-ret">  returnaddress := M[SP]</span>
+<span class="ir-line" data-group="g-ret">  GOTO returnaddress</span></code></pre>
+        </div>
+      </div>
+      <p class="demo-hint" id="fullHint">Hover over any line in either panel to highlight the corresponding lines.</p>
+
+      <h3>Watch the Stack During the Call</h3>
+      <p>The clearest way to understand the protocol is to watch memory change. Step through the call to
+         <code>gcd</code> and see how <code>SP</code> moves and what each slot holds.</p>
+
+      <div class="stepper" id="stackStepper">
+        <div class="stepper-controls">
+          <button class="btn" id="stackPrev" disabled>&larr; Previous</button>
+          <span class="stepper-counter" id="stackCounter">Step 1 of 6</span>
+          <button class="btn" id="stackNext">Next &rarr;</button>
+        </div>
+        <div class="stack-phase" id="stackPhase">Before the call</div>
+        <div class="stepper-body stepper-body--stack">
+          <div class="stack-view" id="stackView"></div>
+          <div class="stepper-detail" id="stackDetail"></div>
+        </div>
+      </div>
+
+      <div class="callout callout--info" style="margin-top:1.5rem">
+        <p class="callout__label">The symmetry that makes it work</p>
+        <p>Every <code>SP := SP - x</code> in the call sequence is undone by a matching <code>SP := SP + x</code>;
+           every value pushed is later read back from the same offset. The caller and callee never see each
+           other's code — they only agree on the <em>layout</em> of the frame. That contract is what lets
+           <code>gcd</code> be called from <code>main</code>, from itself recursively, or from anywhere else,
+           without either side knowing the other's internals.</p>
+      </div>
+    </section>
+
+    <!-- ── SYMBOL TABLE ──────────────────────────────────────────── -->
+    <section class="section" id="symbols">
+      <h2>Symbol Table (per scope)</h2>
+      <p>Each function names its own <code>v</code>-variables starting from <code>v0</code>; the scope column
+         keeps them apart.</p>
+      <div class="op-table-wrapper">
+        <table class="sym-table">
+          <thead><tr><th>Internal name</th><th>Source name</th><th>Function scope</th></tr></thead>
+          <tbody>
+            <tr><td><code>v0</code></td><td><code>a</code></td><td>main</td></tr>
+            <tr><td><code>v1</code></td><td><code>b</code></td><td>main</td></tr>
+            <tr><td><code>v2</code></td><td><code>result</code></td><td>main</td></tr>
+            <tr><td><code>v0</code></td><td><code>a</code></td><td>gcd</td></tr>
+            <tr><td><code>v1</code></td><td><code>b</code></td><td>gcd</td></tr>
+            <tr><td><code>v2</code></td><td><code>temp</code></td><td>gcd</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── EXERCISES ─────────────────────────────────────────────── -->
+    <section class="section" id="exercises">
+      <h2>Exercises</h2>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--remember">Remember</span> Exercise 9.1</p>
+        <p>For the call <code>gcd(a, b)</code>, how many stack slots does the frame need, and what does each one
+           hold? Give the offset of each slot relative to <code>SP</code>.</p>
+        <details class="exercise__hint">
+          <summary>Show answer</summary>
+          <p>Three slots (<code>n + 1 = 3</code>): <code>M[SP]</code> = return address, <code>M[SP + SOI]</code> =
+             argument <code>a</code> (and later the return value), <code>M[SP + SOI * 2]</code> = argument
+             <code>b</code>.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--understand">Understand</span> Exercise 9.2</p>
+        <p>Under the caller-saves strategy, which function emits the <code>M[SP] := R0 … M[SP + SOI*k] := Rk</code>
+           instructions, and when are the matching restores run? Under callee-saves, where do those same
+           instructions move to?</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>Caller-saves: <code>main</code> saves before <code>GOTO gcd</code> and restores at <code>LABEL L0</code>.
+             Callee-saves: the saves/restores move inside <code>gcd</code>'s prologue/epilogue — and the argument
+             offsets shift up by <code>SOI * k</code> as a result.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--apply">Apply</span> Exercise 9.3</p>
+        <p>The return value of <code>gcd</code> is read in <code>main</code> with <code>t0 := M[SP + SOI]</code>.
+           Explain why it is read from the <em>first argument's</em> slot rather than from a dedicated
+           return-value slot.</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p><code>gcd</code>'s epilogue writes the result with <code>M[SP + SOI] := v0</code> — the first argument
+             slot. Reusing that slot means the caller needs no extra space and always knows the fixed offset of
+             the answer, independent of <code>n</code>.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--analyse">Analyse</span> Exercise 9.4</p>
+        <p>Suppose <code>gcd</code> were made <strong>recursive</strong> (calling itself on smaller arguments).
+           With the caller-saves strategy, what must be true of the registers and the stack for each nested call
+           to return to the correct place? Which slot keeps the calls from colliding?</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>Each call subtracts <code>SOI * 3</code> from <code>SP</code> first, so every activation gets its own
+             fresh three-slot frame lower in memory — including its own return-address slot (<code>M[SP]</code>).
+             Because the caller saves its own registers before each call, the live values of the outer activation
+             are preserved on the stack while the inner one runs.</p>
+        </details>
+      </div>
+
+      <div class="exercise">
+        <p class="exercise__level"><span class="bloom bloom--evaluate">Evaluate</span> Exercise 9.5</p>
+        <p>The GCD program makes exactly one call (<code>main</code>&nbsp;&rarr;&nbsp;<code>gcd</code>), and
+           <code>gcd</code> itself calls nothing. For this specific program, which register strategy produces
+           fewer instructions — caller-saves or callee-saves? Would your answer change if <code>gcd</code> were
+           called from many different places?</p>
+        <details class="exercise__hint">
+          <summary>Show hint</summary>
+          <p>With one call site, caller-saves emits the save/restore once around that site; callee-saves emits it
+             once inside <code>gcd</code> — roughly even here. Callee-saves wins when a function is called from
+             many sites (the save code lives in one place); caller-saves wins when the caller has few live
+             registers to protect at the moment of the call.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ── EVENT 9: NEXT ─────────────────────────────────────────── -->
+    <section class="section" id="next">
+      <h2>What Comes Next</h2>
+      <div class="callout callout--next">
+        <p class="callout__label">From intermediate code to a real machine</p>
+        <p>With functions now callable, the GCD program is a complete, self-contained unit of intermediate code:
+           lexed, parsed, type-checked, translated, register-allocated, and linked across calls. The remaining
+           step is turning this abstract intermediate code — with its unbounded temporaries and symbolic
+           <code>M[SP + …]</code> addresses — into the concrete instruction set of a target processor. The call
+           stack convention built here maps directly onto the hardware stack pointer and the machine's
+           call/return instructions.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>COS341 Supplementary Material &mdash; University of Pretoria &mdash; Based on Mogensen,
+       <em>Introduction to Compiler Design</em>, 2nd ed.</p>
+  </footer>
+
+  <script src="../js/chapter9.js"></script>
+</body>
+</html>
