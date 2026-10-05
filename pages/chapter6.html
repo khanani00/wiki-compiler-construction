@@ -91,7 +91,7 @@ temp &rarr; v2</code></pre>
       </div>
 
       <div class="callout callout--info">
-        <p class="callout__label">Gruner's key point from lectures</p>
+        <p class="callout__label">Key point</p>
         <p>The syntax tree has no meaning by itself — "guided by &ne; determined by". The compiler
            engineer creates meaning by designing the appropriate attributions. Each grammar rule
            gets a <code>trans()</code> function. Every tree node corresponds to a recursive
@@ -196,7 +196,7 @@ TransStat(while Cond do Stat1, vtable, ftable):
       ++ [GOTO L1, LABEL L3]</code></pre>
 
       <div class="callout callout--info">
-        <p class="callout__label">The while loop flowchart (from Gruner's lecture)</p>
+        <p class="callout__label">The while loop flowchart </p>
         <div class="flowchart">
           <div class="fc-node fc-label">LABEL entry</div>
           <div class="fc-arrow">&darr;</div>
@@ -222,7 +222,7 @@ TransStat(while Cond do Stat1, vtable, ftable):
     <!-- ── EVENT 5: WORKED EXAMPLE — GCD ────────────────────────── -->
     <section class="section" id="example">
       <h2>Worked Example — Translating the GCD Program</h2>
-
+      <p> Click the "Next" button to see the step-by-step translation of the GCD program.</p>
       <div class="callout callout--info">
         <p class="callout__label">Assumed environments (from scope analysis in Chapter 3)</p>
         <div class="two-col-recap" style="margin-top:0.5rem">
@@ -252,6 +252,7 @@ isZero &rarr; _isZero</code></pre>
           <span id="stepPhase">Statement: temp := b</span>
         </div>
         <div class="stepper-body">
+          
           <div class="stepper-tree" id="stepTree"></div>
           <div class="stepper-detail" id="stepDetail"></div>
         </div>

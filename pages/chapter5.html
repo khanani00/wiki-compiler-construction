@@ -85,31 +85,18 @@ gcd(number a, number b) {
       <h2>Synthesised and Inherited Attributes</h2>
       <p>Before looking at <code>CheckExp</code>, you need to understand how information flows through the AST during type checking. There are two directions:</p>
 
-      <div class="attr-diagram" id="attrDiagram">
-        <div class="attr-tree">
-          <div class="attr-node attr-node--root">
-            <span class="node-label">a - (a / b * b) &nbsp;&nbsp;<span style="font-size:0.75rem;color:#888">(from gcd body)</span></span>
-          </div>
-          <div class="attr-children">
-            <div class="attr-branch">
-              <div class="attr-arrow attr-arrow--down">vtable, ftable &darr;</div>
-              <div class="attr-node attr-node--cond">a <span class="attr-badge attr-badge--synth">number &uarr;</span></div>
-            </div>
-            <div class="attr-branch">
-              <div class="attr-arrow attr-arrow--down">vtable, ftable &darr;</div>
-              <div class="attr-node attr-node--then">(a / b * b) <span class="attr-badge attr-badge--synth">number &uarr;</span></div>
-            </div>
-          </div>
-          <div class="attr-node attr-node--result">
-            Result type: <strong>number</strong> &uarr; (synthesised — subtraction of two numbers)
-          </div>
-        </div>
-        <div class="attr-legend">
-          <span class="attr-badge attr-badge--synth">type &uarr;</span> Synthesised — returned upward
-          &nbsp;&nbsp;
-          <span class="attr-arrow attr-arrow--down" style="display:inline">&darr;</span> Inherited — passed downward
-        </div>
-      </div>
+      <figure class="diagram-embed">
+        <iframe
+          title="Synthesised and inherited attributes flowing through the AST"
+          src="https://viewer.diagrams.net/?tags=%7B%7D&lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&dark=auto#R%3Cmxfile%3E%3Cdiagram%20name%3D%22Attribute%20Flow%22%20id%3D%22attr-flow%22%3E5Vprb6M4FP01SM1KrcAOj3xsM%2BnMSJ1t1c5oZj8acACVQBacptlfv9fBvEkmIUAaTaoEc40v5Zxzrx9YwtPF%2B%2BeILN1voU19Ccn2u4Q%2FSQjpmga%2F3LBJDKqCE4MTeXZiknPDi%2FcfTYxKal15No2FLTGxMPSZtywbrTAIqMVKNhJF4bp82Tz07ZJhSRxaM7xYxK9bf3o2cxOrocq5%2FQv1HFfcWU8rTGK9OlG4CsTtfH7NtU2i1ysJ4fvtR0LTrDxKmi1IegvhJ3aJHa4LJjyT8DQKQ5aUFu9T6nPEy2je76jNHieiATukAfMYQFFrJPzEbJMCxeg71N25bOGDQYHiPAyYIFRR03PRgNcTwCSAsgVeaQSGxOcb8VfCp4Q0nzuNlyQo3U37d8UBuLNCP4SWt1BZADhyzCt5C66cHkbJsV6jKqPR9tapSyg5%2FPiyCZhLYy%2BmNpdSwH%2B%2FBi6NPLa13DIWeeaKgTgBwhmSDFmajPml8L2G7xUvcGBBDPD9ix9H6ROBPXmo5GbiyWkEKBYAFpR8puGCsmgDl7gFrWEhkXWuSzWVTerFEOebclQRERVO5jmXABSECpoV8fz4%2BP0QQUArCFI4uVu7gNnLkli8Zg1poqITz%2FenCZHQDtuEGnOLs86i8JUWajTLoOa8oizUoKyakGa%2Fnp45JVueDGmCRq0QV%2BuIK0oZcVxBXOsA8YeGqO0Qb5Ua9rgJbwOZGPJ3He8avqQrOPX9%2Bu1EwA%2Fo0uT7ffb8rShfvTf5qlovgJOLRRzd94b1GJexxp3kCmR%2B9GRh9pQsdLkPPHG%2F2v3AyRerZTzVTnIB%2FmP1mQ3OusSTCuyoXZvH1PENV5FFq6O4IuqBfcvnTHAWhAEtI11DNPlkNen0SLlRM1QZiRzKiqOYOogR9Qnz3sr%2F%2FUmQoIuBBA0FCW4HSTpUGg4QMhQi40tBxBwKEbUtImRgSPBgItEuBpKhVOIFbk89juWTOPas3wBj6xMTxnnNwNgkdqmdjgygny80nBCNbBsW%2Bv8JnNJ3j%2F2CsnyDxdk%2FwgE8TLRJqvT0lNfJe7q30kDijRGTL57xdaa5KCdLRZo0wUcQJgYQ8o2CZbU0hrjGk92cCu9PoQe05E0qKgjn8xgeoqqB7H86VBY99bpnl4W%2BWxb4AFmg3mVxLd8gWdfKulAO10XXQuhlrHF2GZyYHbJZWp%2FpQVa1igzw%2BDwyiDdBy24izaOnyCCb6zXJoML8mOgEyNnDvFZgXi4zj4rMK43M5%2FmtQH2wWpg0KtA91NwIeGmZp7sIz255Ge%2FmxTgHL4V0rKhGJQ7x2eKwdTreO4YdjvCD%2BtSOiFP01JYRt2eNpmfiWs9QzT%2BFuBMzYdsJL%2F7AkVEfZnQVGppczmlIPVtktJ2W4w8cGb0RhwyjMmc8F3M%2BdXbzlFOy3TWTDdSPW%2F%2BfG%2FyviTdr%2B2la7xeG45b7J%2FXlfowr7%2FcqOwG6WO4HCNkhGO7YjVN45Vl8DVLcjePTOWtC6YE6lG%2BCaYEVangXKlfejagVrPZI9AisvBOwEtjIdWx2zR1rmBX3CxW3CC0h0WyNnx5%2F%2Fg2Hq%2FpUsN1b5wakq2%2BhJhVVjrtRpUeOyMmDzPAb4%2FyEgUUlM%2B4Q7tgoe0j6H9EoR7Tmx%2FiNn6SzqPlpl4XjIcIi6%2FxqRJS31jUGxo8nHhZwFe8nN8vhwkEzdivgiHCIBwqHvaOR80RAuhJ5agRU%2FbSOADjN98sml%2BdblfHsfw%3D%3D%3C%2Fdiagram%3E%3C%2Fmxfile%3E"
+          loading="lazy"
+          allowfullscreen></iframe>
+        <figcaption class="diagram-embed__caption">
+          Information flow for <code>a - (a / b * b)</code>: <code>vtable</code> and
+          <code>ftable</code> are <strong>inherited</strong> downward into every call;
+          each subexpression's type is <strong>synthesised</strong> back upward.
+        </figcaption>
+      </figure>
 
       <p><strong>Inherited attributes</strong> (<code>vtable</code>, <code>ftable</code>) are passed <em>down</em> into each recursive call — every subexpression needs to know the current environment.</p>
       <p><strong>Synthesised attributes</strong> (the type of each subexpression) are returned <em>up</em> — each call tells its caller what type it computed.</p>
@@ -222,10 +209,12 @@ gcd(number a, number b) {
     <!-- ── EVENT 5: WORKED TRACE — GCD ──────────────────────────── -->
     <section class="section" id="trace">
       <h2>Worked Example — Type-Checking the GCD Body</h2>
-      <p>We walk through the full type-checking process for the GCD program — from
-         <code>CheckProgram</code> building the function table, through <code>CheckFun(main)</code>,
-         to <code>CheckFun(gcd)</code> and its body expressions. Use the stepper to follow each
-         decision the type checker makes. The environments are shown to the right.</p>
+      <p>The hardest expression in the GCD body is <code>a - (a / b * b)</code> — the modulo
+         computation. Type-checking it is a <strong>bottom-up</strong> process: the leaf lookups
+         resolve first, then each synthesised <code>number</code> type bubbles up to its parent
+         until the whole expression is typed. Step through the animation below to watch the types
+         flow from the leaves to the root. The program and its environments are shown first for
+         reference.</p>
 
       <div class="trace-setup">
         <div class="trace-program">
@@ -274,20 +263,100 @@ isZero(number x) {
         </div>
       </div>
 
-      <!-- Interactive stepper -->
-      <div class="stepper" id="stepper">
-        <div class="stepper-controls">
-          <button class="btn" id="prevStep" disabled>&larr; Previous</button>
-          <span class="stepper-counter" id="stepCounter">Step 1 of 8</span>
-          <button class="btn" id="nextStep">Next &rarr;</button>
+      <!-- Animated bottom-up type-checking trace -->
+      <style>
+        .tc-anim{--tc-blue-fill:#dae8fc;--tc-blue-stroke:#6c8ebf;--tc-green-fill:#d5e8d4;--tc-green-stroke:#82b366;--tc-muted:#8a94a6;margin:1.2rem 0;}
+        .tc-anim__head{display:flex;align-items:center;justify-content:center;gap:0.8rem;margin:0 0 0.6rem;}
+        .tc-anim__btn{font-family:var(--font-ui);font-size:0.85rem;font-weight:600;padding:0.4rem 0.9rem;border:1px solid var(--tc-blue-stroke);background:#fff;color:#1a2a3a;border-radius:6px;cursor:pointer;}
+        .tc-anim__btn:disabled{opacity:0.4;cursor:default;}
+        .tc-anim__btn--primary{background:var(--tc-blue-stroke);color:#fff;}
+        .tc-anim__counter{font-size:0.8rem;color:var(--tc-muted);min-width:90px;text-align:center;}
+        .tc-anim__phase{background:#2a3550;color:#8fa8c8;font-size:0.72rem;letter-spacing:0.06em;text-transform:uppercase;font-weight:700;padding:0.4rem 1rem;border-radius:6px 6px 0 0;text-align:center;}
+        .tc-anim svg{width:100%;height:auto;display:block;background:#fff;border:1px solid #e2e8f0;border-radius:0 0 6px 6px;}
+        .tc-anim .node rect{transition:fill .4s,stroke .4s,opacity .4s;}
+        .tc-anim .node text{transition:opacity .4s,fill .4s;}
+        .tc-anim .node.dim{opacity:0.3;}
+        .tc-anim .node.active .box{stroke-width:3;}
+        .tc-anim .result{opacity:0;font-family:var(--font-mono);font-size:11px;font-weight:700;}
+        .tc-anim .result.show{opacity:1;}
+        .tc-anim .edge{stroke:#bbb;stroke-width:1.4;fill:none;transition:stroke .4s,stroke-width .4s,opacity .4s;}
+        .tc-anim .edge.up{stroke:var(--tc-green-stroke);stroke-width:2.6;}
+        .tc-anim .edge.dim{opacity:0.25;}
+        .tc-anim .flow{opacity:0;font-family:var(--font-mono);font-size:10px;fill:var(--tc-green-stroke);font-weight:700;transition:opacity .4s;}
+        .tc-anim .flow.show{opacity:1;}
+        .tc-anim__explain{margin-top:0.8rem;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:0.8rem 1rem;font-size:0.9rem;line-height:1.5;min-height:60px;}
+        .tc-anim__explain code{font-family:var(--font-mono);background:#eef2f8;padding:0.05em 0.35em;border-radius:3px;font-size:0.85em;}
+        .tc-anim__explain .tag{display:inline-block;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;padding:0.1em 0.5em;border-radius:3px;margin-right:0.4rem;background:var(--tc-green-fill);color:#2a6a2a;}
+        .tc-anim__legend{display:flex;gap:1.2rem;justify-content:center;margin-top:0.7rem;font-size:0.78rem;color:var(--tc-muted);flex-wrap:wrap;}
+        .tc-anim__legend span{display:inline-flex;align-items:center;gap:0.35rem;}
+        .tc-anim__sw{width:14px;height:14px;border-radius:3px;display:inline-block;}
+      </style>
+      <div class="tc-anim" id="tcAnim">
+        <div class="tc-anim__head">
+          <button class="tc-anim__btn" id="tcPrev" disabled>&larr; Previous</button>
+          <span class="tc-anim__counter" id="tcCounter">Step 1 of 6</span>
+          <button class="tc-anim__btn tc-anim__btn--primary" id="tcNext">Next &rarr;</button>
         </div>
-        <div style="background:#2a3550;padding:0.4rem 1rem;font-family:var(--font-ui);font-size:0.75rem;color:#8fa8c8;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;">
-          <span id="stepPhase">Phase 1 &mdash; CheckProgram</span>
+        <div class="tc-anim__phase" id="tcPhase">Start</div>
+        <svg id="tcSvg" viewBox="0 0 760 470" xmlns="http://www.w3.org/2000/svg">
+          <path class="edge" id="e-N0-N1" d="M 300,95 L 205,175"/>
+          <path class="edge" id="e-N0-N2" d="M 460,95 L 560,175"/>
+          <path class="edge" id="e-N2-N3" d="M 600,225 L 520,300"/>
+          <path class="edge" id="e-N2-N4" d="M 660,225 L 700,300"/>
+          <path class="edge" id="e-N3-N5" d="M 460,350 L 410,415"/>
+          <path class="edge" id="e-N3-N6" d="M 500,350 L 560,415"/>
+
+          <text class="flow" id="f-N1" x="235" y="150">number &#8593;</text>
+          <text class="flow" id="f-N2" x="515" y="150">number &#8593;</text>
+          <text class="flow" id="f-N3" x="480" y="285">number &#8593;</text>
+          <text class="flow" id="f-N4" x="690" y="285">number &#8593;</text>
+          <text class="flow" id="f-N5" x="360" y="400">number &#8593;</text>
+          <text class="flow" id="f-N6" x="560" y="400">number &#8593;</text>
+
+          <g class="node" id="N0" data-fill="blue">
+            <rect class="box" x="300" y="45" width="200" height="50" rx="8" fill="var(--tc-blue-fill)" stroke="var(--tc-blue-stroke)" stroke-width="1.5"/>
+            <text x="400" y="66" text-anchor="middle" font-size="12" font-weight="700" font-family="var(--font-mono)">CheckExp(a - (a/b*b))</text>
+            <text class="result" x="400" y="83" text-anchor="middle" fill="#2a6a2a">&#8658; number &#10003;</text>
+          </g>
+          <g class="node" id="N1" data-fill="green">
+            <rect class="box" x="110" y="175" width="150" height="48" rx="8" fill="var(--tc-green-fill)" stroke="var(--tc-green-stroke)" stroke-width="1.5"/>
+            <text x="185" y="196" text-anchor="middle" font-size="11" font-weight="700" font-family="var(--font-mono)">CheckExp(a)</text>
+            <text class="result" x="185" y="212" text-anchor="middle" fill="#2a6a2a">lookup &#8658; number</text>
+          </g>
+          <g class="node" id="N2" data-fill="blue">
+            <rect class="box" x="540" y="175" width="170" height="48" rx="8" fill="var(--tc-blue-fill)" stroke="var(--tc-blue-stroke)" stroke-width="1.5"/>
+            <text x="625" y="196" text-anchor="middle" font-size="11" font-weight="700" font-family="var(--font-mono)">CheckExp(a/b*b)</text>
+            <text class="result" x="625" y="212" text-anchor="middle" fill="#2a6a2a">&#8658; number &#10003;</text>
+          </g>
+          <g class="node" id="N3" data-fill="blue">
+            <rect class="box" x="405" y="300" width="150" height="48" rx="8" fill="var(--tc-blue-fill)" stroke="var(--tc-blue-stroke)" stroke-width="1.5"/>
+            <text x="480" y="321" text-anchor="middle" font-size="11" font-weight="700" font-family="var(--font-mono)">CheckExp(a/b)</text>
+            <text class="result" x="480" y="337" text-anchor="middle" fill="#2a6a2a">&#8658; number &#10003;</text>
+          </g>
+          <g class="node" id="N4" data-fill="green">
+            <rect class="box" x="635" y="300" width="120" height="48" rx="8" fill="var(--tc-green-fill)" stroke="var(--tc-green-stroke)" stroke-width="1.5"/>
+            <text x="695" y="321" text-anchor="middle" font-size="11" font-weight="700" font-family="var(--font-mono)">CheckExp(b)</text>
+            <text class="result" x="695" y="337" text-anchor="middle" fill="#2a6a2a">&#8658; number</text>
+          </g>
+          <g class="node" id="N5" data-fill="green">
+            <rect class="box" x="300" y="415" width="120" height="48" rx="8" fill="var(--tc-green-fill)" stroke="var(--tc-green-stroke)" stroke-width="1.5"/>
+            <text x="360" y="436" text-anchor="middle" font-size="11" font-weight="700" font-family="var(--font-mono)">CheckExp(a)</text>
+            <text class="result" x="360" y="452" text-anchor="middle" fill="#2a6a2a">&#8658; number</text>
+          </g>
+          <g class="node" id="N6" data-fill="green">
+            <rect class="box" x="490" y="415" width="120" height="48" rx="8" fill="var(--tc-green-fill)" stroke="var(--tc-green-stroke)" stroke-width="1.5"/>
+            <text x="550" y="436" text-anchor="middle" font-size="11" font-weight="700" font-family="var(--font-mono)">CheckExp(b)</text>
+            <text class="result" x="550" y="452" text-anchor="middle" fill="#2a6a2a">&#8658; number</text>
+          </g>
+        </svg>
+
+        <div class="tc-anim__legend">
+          <span><i class="tc-anim__sw" style="background:var(--tc-blue-fill);border:1px solid var(--tc-blue-stroke)"></i>BINOP node</span>
+          <span><i class="tc-anim__sw" style="background:var(--tc-green-fill);border:1px solid var(--tc-green-stroke)"></i>leaf (lookup / literal)</span>
+          <span><i class="tc-anim__sw" style="background:var(--tc-green-stroke)"></i>synthesised type flowing up</span>
         </div>
-        <div class="stepper-body">
-          <div class="stepper-tree" id="stepTree"></div>
-          <div class="stepper-detail" id="stepDetail"></div>
-        </div>
+
+        <div class="tc-anim__explain" id="tcExplain"></div>
       </div>
 
       <div class="callout callout--info" style="margin-top:1.5rem">
@@ -306,58 +375,8 @@ isZero(number x) {
         <li>Declared return type (<code>number</code>) matches body type (<code>number</code>) &rarr; <strong>no error</strong>.</li>
       </ol>
 
-      <!-- Textbook bug -->
-      <div class="callout callout--warn" style="margin-top:1.2rem">
-        <p class="callout__label">Known Error in Mogensen (2nd ed.) — Fig. 5.3 and Fig. 5.4</p>
-        <p>The textbook contains two logically inverted conditions.</p>
-        <table class="op-table" style="margin-top:0.8rem">
-          <thead><tr><th>Location</th><th>As printed (incorrect)</th><th>Should be</th></tr></thead>
-          <tbody>
-            <tr>
-              <td>Fig. 5.3 — <code>CheckFun</code></td>
-              <td><code>if t0 = t1 then error()</code></td>
-              <td><code>if t0 &ne; t1 then error()</code></td>
-            </tr>
-            <tr>
-              <td>Fig. 5.4 — <code>CheckProgram</code></td>
-              <td><code>if lookup(ftable, main) = (int)&rarr;int then error()</code></td>
-              <td><code>if lookup(ftable, main) &ne; (int)&rarr;int then error()</code></td>
-            </tr>
-          </tbody>
-        </table>
-        <p style="margin-top:0.7rem">As printed, <code>CheckFun</code> fires an error when the declared return type <em>matches</em> the body — the exact case where no error should occur. Implement the corrected versions above.</p>
-      </div>
+      
     </section>
-
-      <!-- Textbook bug -->
-      <div class="callout callout--warn" style="margin-top:1.2rem">
-        <p class="callout__label">Known Errors in Mogensen (2nd ed.) &mdash; Fig. 5.3 and Fig. 5.4</p>
-        <p>The textbook contains two logically inverted conditions that were lost in typesetting.
-           Implementing the code as printed will produce a type checker that rejects correct programs
-           and silently accepts incorrect ones.</p>
-        <table class="op-table" style="margin-top:0.8rem">
-          <thead>
-            <tr><th>Figure</th><th>Function</th><th>As printed (wrong)</th><th>Correct version</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Fig. 5.3</td>
-              <td><code>CheckFun</code></td>
-              <td><code>if t0 = t1 then error()</code></td>
-              <td><code>if t0 &ne; t1 then error()</code></td>
-            </tr>
-            <tr>
-              <td>Fig. 5.4</td>
-              <td><code>CheckProgram</code></td>
-              <td><code>if lookup(ftable, main) = (int)&rarr;int then error()</code></td>
-              <td><code>if lookup(ftable, main) &ne; (int)&rarr;int then error()</code></td>
-            </tr>
-          </tbody>
-        </table>
-        <p style="margin-top:0.7rem">In both cases the error should fire when the types <strong>do not match</strong>
-           (&ne;), not when they do. The condition was almost certainly inverted during typesetting
-           — the = sign should be &ne;.</p>
-      </div>
 
     <!-- ── EXERCISES ─────────────────────────────────────────────── -->
     <section class="section" id="exercises">

@@ -96,8 +96,114 @@
   margin: 0 !important;
 }
 
+/* ── SIDE-BY-SIDE SECTION ─────────────────────────────────────── */
+.side-by-side-section {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1.2rem;
+  align-items: flex-start;
+  margin: 1.2rem 0;
+}
+
+.side-by-side-item {
+  flex: 0 1 48%;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.side-by-side-item h3,
+.side-by-side-item h4 {
+  margin-top: 0;
+}
+
+.visualisation-placeholder {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 220px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--col-muted);
+  text-align: center;
+  padding: 0;
+}
+
+.visualisation-placeholder__label {
+  display: inline-block;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--col-accent);
+  margin-bottom: 0.5rem;
+}
+
+.visualisation-placeholder p {
+  margin: 0;
+  max-width: 20rem;
+  line-height: 1.5;
+}
+
 /* ── GRAMMAR SUBSET TABLE ─────────────────────────────────────── */
-.grammar-subset { overflow-x: auto; margin: 0.8rem 0 1.4rem; }
+.grammar-subset {
+  overflow-x: auto;
+  margin: 0.8rem 0 1.4rem;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.grammar-subset--large {
+  width: 100%;
+}
+
+.grammar-subset .op-table {
+  width: auto;
+  max-width: 100%;
+  background: #f2f2f2;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-size: 0.78rem;
+  table-layout: auto;
+}
+
+.grammar-subset .op-table th,
+.grammar-subset .op-table td {
+  border: none;
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+  background: transparent;
+}
+
+.grammar-subset .op-table td code {
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+
+.grammar-subset .op-table thead th {
+  background: #e6e6e6;
+  color: var(--col-accent);
+  font-weight: 700;
+  border-bottom: 0;
+}
+
+.grammar-subset .op-table tbody tr {
+  border-bottom: none;
+}
+
+.grammar-subset .op-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.grammar-subset .op-table code {
+  background: rgba(255, 255, 255, 0.5);
+}
 
 /* ── NULLABLE / YES / NO BADGES ──────────────────────────────── */
 .badge {
@@ -224,3 +330,215 @@
 
 /* keep pt-why hidden — no longer used but kept for safety */
 .pt-why { display: none; }
+
+/* ── SLR TABLE ────────────────────────────────────────────────────
+   Append to chapter2.css. Reuses --col-accent, --col-border,
+   --col-surface, --col-muted, --font-ui, --radius, --bloom-apply
+   already defined in style.css. ─────────────────────────────────── */
+
+.slr-table-plain td,
+.slr-table-plain th {
+    text-align: center;
+}
+
+/* the final, clickable table */
+.slr-table th.slr-table__group {
+    background: var(--col-accent);
+    color: #fff;
+    text-align: center;
+}
+
+.slr-table td,
+.slr-table th {
+    text-align: center;
+}
+
+.slr-table tbody tr {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.slr-table tbody tr:hover {
+    background: #f0f4f8;
+}
+
+.slr-table tbody tr.is-selected {
+  background: #d9ecff;
+}
+
+.slr-cell--reduce {
+    background: #fff8f0;
+    color: var(--bloom-apply);
+    font-weight: 600;
+}
+
+.slr-cell--accept {
+    background: #eafaf0;
+    color: var(--bloom-understand);
+    font-weight: 700;
+}
+
+/* ── DIAGRAM PLACEHOLDERS (matches Chapter 1's .dfa-visual-blank) ── */
+.slr-diagram-blank {
+    min-height: 260px;
+    border: 1px dashed var(--col-border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin: 1rem 0 2rem;
+}
+
+.slr-state-diagram {
+    min-height: 200px;
+    margin: 1rem 0;
+}
+
+.slr-state-panel__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.slr-state-panel__body .slr-state-diagram {
+  min-width: 0;
+  margin: 0;
+}
+
+.slr-state-panel__explanation {
+  min-width: 0;
+}
+
+.slr-state-panel__explanation > :first-child {
+  margin-top: 0;
+}
+
+#slr > iframe {
+  display: block;
+  height: 640px !important;
+}
+
+#slr-dfa-productions iframe {
+  display: block;
+  height: 520px !important;
+}
+
+.slr-dfa-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 470px;
+}
+
+.slr-dfa-edge {
+  stroke: #64748b;
+  stroke-width: 2;
+}
+
+.slr-dfa-edge-label {
+  fill: #344454;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.slr-dfa-state circle {
+  fill: #cce5ff;
+  stroke: #36393d;
+  stroke-width: 2.5;
+}
+
+.slr-dfa-state text {
+  fill: #243447;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.slr-dfa-state.is-highlighted circle {
+  fill: #ffdf9e;
+  stroke: #c77716;
+  stroke-width: 4;
+}
+
+.slr-dfa-state.is-highlighted text {
+  fill: #5c3a0d;
+}
+
+.slr-table tbody tr:focus-visible {
+  outline: 2px solid var(--col-accent);
+  outline-offset: -2px;
+}
+
+/* ── PER-STATE PANEL ──────────────────────────────────────────────
+   One <div class="slr-state-panel"> per state, all hidden by default;
+   JS toggles [hidden] and adds .is-open to the one being shown. ─── */
+.slr-state-panel {
+    border: 1px solid var(--col-border);
+    border-radius: var(--radius);
+    background: var(--col-surface);
+    padding: 1rem 1.25rem;
+    margin-top: 1.5rem;
+}
+
+.slr-state-panel__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--col-border);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.slr-state-panel__head h4 {
+    margin: 0;
+    color: var(--col-accent);
+}
+
+.slr-state-panel__close {
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    background: none;
+    border: 1px solid var(--col-border);
+    border-radius: var(--radius);
+    padding: 0.25rem 0.7rem;
+    cursor: pointer;
+    color: var(--col-muted);
+}
+
+.slr-state-panel__close:hover {
+    color: var(--col-text);
+    border-color: var(--col-muted);
+}
+
+.slr-state-panel__meta {
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    color: var(--col-muted);
+    margin-bottom: 0.75rem;
+}
+
+.slr-state-panel ul {
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    background: var(--col-code-bg);
+    border-radius: var(--radius);
+    padding: 0.75rem 1.25rem;
+    list-style: none;
+}
+
+.slr-state-panel li {
+    margin-bottom: 0.3rem;
+}
+
+@media (max-width: 760px) {
+  .slr-state-panel__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #slr > iframe {
+    height: 560px !important;
+  }
+
+  #slr-dfa-productions iframe {
+    height: 440px !important;
+  }
+}
