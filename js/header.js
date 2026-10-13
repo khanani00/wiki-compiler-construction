@@ -1,7 +1,10 @@
 (() => {
-  console.log("header.js loaded");
+  // Project root = one level above the js/ folder that holds this script
+  const ROOT = new URL("../", document.currentScript.src).href;
+  const url = path => new URL(path, ROOT).href;
 
-  const cssUrl = new URL("../css/header.css", document.currentScript.src).href;
+  // Load header.css
+  const cssUrl = url("css/header.css");
   if (!document.querySelector(`link[href="${cssUrl}"]`)) {
     const link = document.createElement("link");
     link.rel = "stylesheet";
@@ -10,20 +13,20 @@
   }
 
   const CHAPTERS = [
-    { title: "Chapter 1", href: "../pages/chapter1.html" },
-    { title: "Chapter 2", href: "../pages/chapter2.html" },
-    { title: "Chapter 3", href: "../pages/chapter3.html" },
-    { title: "Chapter 5", href: "../pages/chapter5.html" },
-    { title: "Chapter 6", href: "../pages/chapter6.html" },
-    { title: "Chapter 8", href: "../pages/chapter8.html" },
-    { title: "Chapter 9", href: "../pages/chapter9.html" },
+    { title: "Chapter 1", path: "pages/chapter1.html" },
+    { title: "Chapter 2", path: "pages/chapter2.html" },
+    { title: "Chapter 3", path: "pages/chapter3.html" },
+    { title: "Chapter 5", path: "pages/chapter5.html" },
+    { title: "Chapter 6", path: "pages/chapter6.html" },
+    { title: "Chapter 8", path: "pages/chapter8.html" },
+    { title: "Chapter 9", path: "pages/chapter9.html" },
   ];
 
   class SiteHeader extends HTMLElement {
     connectedCallback() {
       const here = location.pathname.split("/").pop() || "index.html";
       const items = CHAPTERS.map(c =>
-        `<li><a href="${c.href}"${c.href.endsWith("/" + here) ? ' aria-current="page"' : ""}>${c.title}</a></li>`
+        `<li><a href="${url(c.path)}"${c.path.endsWith("/" + here) ? ' aria-current="page"' : ""}>${c.title}</a></li>`
       ).join("");
 
       this.innerHTML = `
@@ -31,14 +34,14 @@
           <div class="site-header__inner">
             <span class="site-header__course">COS341 Supplementary Material</span>
             <nav class="site-header__nav">
-              <a href="../pages/index.html">Home</a>
+              <a href="${url("index.html")}">Home</a>
               <div class="dropdown">
-                <a class="dropdown__toggle" aria-expanded="false" aria-haspopup="true">
+                <button class="dropdown__toggle" aria-expanded="false" aria-haspopup="true">
                   Chapters <span aria-hidden="true">▾</span>
-                </a>
+                </button>
                 <ul class="dropdown__menu" hidden>${items}</ul>
               </div>
-              <a href="../pages/grammar.html">Grammar</a>
+              <a href="${url("pages/grammar.html")}">Grammar</a>
             </nav>
           </div>
         </header>`;
