@@ -1,31 +1,5 @@
 /* ── CHAPTER 6 SPECIFIC STYLES ────────────────────────────────── */
 
-/* Two-col recap cards */
-.two-col-recap {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin: 0.8rem 0;
-}
-@media (max-width: 560px) { .two-col-recap { grid-template-columns: 1fr; } }
-
-.recap-card {
-  border: 1px solid var(--col-border);
-  border-radius: var(--radius);
-  padding: 0.8rem 1rem;
-  background: var(--col-surface);
-}
-
-.recap-card__label {
-  font-family: var(--font-ui);
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--col-muted);
-  margin-bottom: 0.3rem !important;
-}
-
 /* ── IL INSTRUCTION GRID ──────────────────────────────────────── */
 .il-instruction-grid {
   display: grid;
@@ -89,63 +63,8 @@
 }
 
 /* ── FLOWCHART ────────────────────────────────────────────────── */
-.flowchart {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 1rem;
-  font-family: var(--font-ui);
-  font-size: 0.82rem;
-}
-
-.fc-node {
-  padding: 0.35rem 1rem;
-  border-radius: var(--radius);
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-align: center;
-  min-width: 140px;
-}
-
-.fc-label  { background: #e8f4fd; border: 2px solid #3b89c8; color: #1a3a5c; }
-.fc-diamond{ background: #fff8f0; border: 2px solid var(--bloom-apply); color: #5a3000;
-             border-radius: 6px; padding: 0.35rem 0.8rem; }
-.fc-rect   { background: #f0f9f0; border: 2px solid var(--bloom-understand); color: #1a4a1a; }
-.fc-goto   { background: #f9f0ff; border: 2px dashed #9b59b6; color: #4a1a6a;
-             font-style: italic; }
-
-.fc-arrow { color: var(--col-muted); font-size: 1.1rem; line-height: 1; }
-
-.fc-branches {
-  display: flex;
-  gap: 3rem;
-}
-
-.fc-branch {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.fc-branch-label {
-  font-family: var(--font-ui);
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--col-muted);
-}
 
 /* ── ANNOTATED CODE PANEL ─────────────────────────────────────── */
-.annotated-code {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.2rem;
-  margin: 1rem 0;
-}
-@media (max-width: 640px) { .annotated-code { grid-template-columns: 1fr; } }
-
 /* hover highlight */
 .src-line, .il-line {
   display: block;

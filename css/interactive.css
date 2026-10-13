@@ -1,0 +1,172 @@
+/* ── SHARED INTERACTIVE CONTROLS ────────────────────────────────── */
+
+.btn {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid #adbbd4;
+  border-radius: 3px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.btn:hover:not(:disabled) { background: rgba(255,255,255,0.15); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.stepper,
+.stepper--stack {
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--col-surface);
+  margin: 1rem 0;
+}
+
+.stepper-controls {
+  background: var(--col-accent);
+  padding: 0.7rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.stepper-counter {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: #cdd9e5;
+}
+
+.stepper-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 260px;
+}
+
+.stepper-detail {
+  padding: 1.2rem;
+  font-family: var(--font-ui);
+  font-size: 0.88rem;
+}
+
+.stepper-detail h4 {
+  color: var(--col-accent);
+  margin-bottom: 0.5rem;
+  font-size: 0.92rem;
+}
+
+.stepper-detail p { margin-bottom: 0.5rem; }
+
+.step-call,
+.step-result,
+.step-error,
+.stack-detail-call {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+}
+
+.step-call,
+.stack-detail-call {
+  background: var(--col-code-bg);
+}
+
+.step-result {
+  font-weight: 700;
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.step-error {
+  font-weight: 700;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Shared interactive highlighting */
+.code-block--interactive .var-ref {
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+
+.code-block--interactive .var-ref:hover {
+  background: rgba(255, 243, 176, 0.3);
+  outline: 1px solid rgba(255, 243, 176, 0.6);
+}
+
+.code-block--interactive .var-ref.active {
+  background: rgba(255, 243, 176, 0.35);
+}
+
+.src-line,
+.il-line,
+.seq-line,
+.annotated .src-line,
+.annotated .ir-line,
+.stepper-tree .tr {
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.src-line,
+.il-line,
+.seq-line,
+.src-line.active,
+.il-line.active,
+.seq-line.active {
+  display: block;
+  border-radius: 2px;
+}
+
+.src-line,
+.il-line,
+.seq-line {
+  cursor: pointer;
+  padding: 0 0.4rem;
+  border-left: 3px solid transparent;
+  border-radius: 0 3px 3px 0;
+}
+
+.src-line:hover,
+.il-line:hover,
+.seq-line:hover,
+.src-line.active,
+.il-line.active,
+.seq-line.active {
+  background: rgba(91,141,238,0.18);
+  border-left-color: #5b8dee;
+}
+
+.save-toggle {
+  display: inline-flex;
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 0.4rem 0 1rem;
+}
+
+.save-toggle__btn {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.4rem 1rem;
+  border: 0;
+  background: var(--col-surface);
+  color: var(--col-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.save-toggle__btn + .save-toggle__btn { border-left: 1px solid var(--col-border); }
+.save-toggle__btn:hover { background: #eef2f8; }
+.save-toggle__btn.is-active { background: var(--col-accent); color: #fff; }
+
+/* Shared focus and selected-state presentation */
+:focus-visible {
+  outline: 2px solid var(--col-accent);
+  outline-offset: 2px;
+}

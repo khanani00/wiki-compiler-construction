@@ -8,6 +8,7 @@
   --col-text:      #1a1a1a;
   --col-muted:     #57606a;
   --col-link:      #0550ae;
+  --col-navy-hover: #2E5A88;
   --col-code-bg:   #f0f0f0;
   --col-accent:    #1a3a5c;   /* UP dark navy */
   --col-highlight: #fff3b0;   /* soft amber — hover highlight */
@@ -43,20 +44,29 @@ body {
   padding: 0.6rem 1.5rem;
   font-family: var(--font-ui);
   font-size: 0.85rem;
+  position: relative;        
+  height: 64px;              
+  z-index: 1000;
+  overflow: visible;
 }
 
 .site-header__inner {
   max-width: var(--max-width);
   margin: 0 auto;
+  gap: 1rem;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
 }
 
 .site-header__course { font-weight: 600; }
 
-.site-header__nav { display: flex; gap: 1.2rem; }
+.site-header__nav { 
+  display: flex; 
+  gap: 1.2rem; 
+  align-items: center;
+}
 .site-header__nav a {
   color: #cdd9e5;
   text-decoration: none;
@@ -214,82 +224,7 @@ code {
 .bloom--evaluate  { background: var(--bloom-evaluate); }
 .bloom--create    { background: var(--bloom-create); }
 
-/* ── OPERATIONS TABLE ─────────────────────────────────────────── */
-.op-table-wrapper { overflow-x: auto; margin: 1rem 0; }
-
-.op-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: var(--font-ui);
-  font-size: 0.9rem;
-}
-
-.op-table th {
-  background: var(--col-accent);
-  color: #fff;
-  text-align: left;
-  padding: 0.5rem 0.8rem;
-}
-
-.op-table td {
-  padding: 0.45rem 0.8rem;
-  border-bottom: 1px solid var(--col-border);
-  vertical-align: top;
-}
-
-.op-table tbody tr:hover { background: #f0f4f8; }
-
-/* ── IMPLEMENTATION CARDS ─────────────────────────────────────── */
-.impl-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin: 1rem 0;
-}
-
-@media (max-width: 600px) { .impl-grid { grid-template-columns: 1fr; } }
-
-.impl-card {
-  border: 1px solid var(--col-border);
-  border-radius: var(--radius);
-  padding: 1rem;
-  background: var(--col-surface);
-}
-
-.impl-card h4 { color: var(--col-accent); }
-
-.impl-card p { font-size: 0.92rem; margin-bottom: 0.6rem; }
-
-.impl-card__use {
-  color: var(--col-muted);
-  font-style: italic;
-}
-
-.impl-card__structure {
-  margin-top: 0.8rem;
-  padding-top: 0.6rem;
-  border-top: 1px solid var(--col-border);
-  font-family: var(--font-ui);
-  font-size: 0.82rem;
-  color: var(--col-muted);
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.impl-card__structure strong { color: var(--col-text); }
-
 /* ── INTERACTIVE DEMO ─────────────────────────────────────────── */
-.interactive-demo {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.2rem;
-  margin: 1.2rem 0;
-  align-items: start;
-}
-
-@media (max-width: 660px) { .interactive-demo { grid-template-columns: 1fr; } }
-
 .demo-label {
   font-family: var(--font-ui);
   font-size: 0.78rem;
@@ -298,49 +233,6 @@ code {
   letter-spacing: 0.06em;
   color: var(--col-muted);
   margin-bottom: 0.4rem !important;
-}
-
-.code-block--interactive .var-ref {
-  cursor: pointer;
-  border-radius: 2px;
-  transition: background 0.15s;
-}
-
-.code-block--interactive .var-ref:hover {
-  background: rgba(255, 243, 176, 0.3);
-  outline: 1px solid rgba(255, 243, 176, 0.6);
-}
-
-.code-block--interactive .var-ref.active {
-  background: rgba(255, 243, 176, 0.35);
-}
-
-/* symbol table */
-.sym-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: var(--font-ui);
-  font-size: 0.85rem;
-}
-
-.sym-table th {
-  background: var(--col-accent);
-  color: #fff;
-  text-align: left;
-  padding: 0.4rem 0.6rem;
-}
-
-.sym-table td {
-  padding: 0.4rem 0.6rem;
-  border-bottom: 1px solid var(--col-border);
-}
-
-.sym-row--inner td:first-child { color: var(--col-muted); }
-
-.sym-row { transition: background 0.15s; }
-
-.sym-row.highlighted {
-  background: var(--col-highlight);
 }
 
 .scope-badge {

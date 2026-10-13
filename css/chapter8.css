@@ -10,14 +10,6 @@
 }
 
 /* ── LIVENESS RULES GRID ──────────────────────────────────────── */
-.rules-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.8rem;
-  margin: 1rem 0 1.4rem;
-}
-@media (max-width: 620px) { .rules-grid { grid-template-columns: 1fr; } }
-
 .rule-card {
   border-radius: var(--radius);
   padding: 0.9rem 1rem;
@@ -57,32 +49,6 @@
 .tr-highlight {
   background: #f0f4ff;
   font-weight: 600;
-}
-
-/* ── TWO COL RECAP (reuse from ch6) ──────────────────────────── */
-.two-col-recap {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin: 0.8rem 0;
-}
-@media (max-width: 560px) { .two-col-recap { grid-template-columns: 1fr; } }
-
-.recap-card {
-  border: 1px solid var(--col-border);
-  border-radius: var(--radius);
-  padding: 0.8rem 1rem;
-  background: var(--col-surface);
-}
-
-.recap-card__label {
-  font-family: var(--font-ui);
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--col-muted);
-  margin-bottom: 0.3rem !important;
 }
 
 /* ── STEPPER TREE ─────────────────────────────────────────────── */

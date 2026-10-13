@@ -8,34 +8,6 @@
   padding: 0 0.15em;
 }
 
-/* ── NOTATION GRID ────────────────────────────────────────────── */
-.notation-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem 1.2rem;
-  margin-top: 0.4rem;
-}
-@media (max-width: 600px) { .notation-grid { grid-template-columns: 1fr; } }
-
-.notation-grid > div {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  font-size: 0.86rem;
-}
-
-.notation-grid > div > code {
-  flex-shrink: 0;
-  min-width: 78px;
-  color: var(--col-accent);
-  font-weight: 700;
-}
-
-.notation-grid span {
-  color: var(--col-muted);
-  line-height: 1.4;
-}
-
 /* ── FRAME LAYOUT ─────────────────────────────────────────────── */
 .frame-layout {
   border: 1px solid var(--col-border);

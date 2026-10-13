@@ -1,0 +1,241 @@
+/* ── SHARED TABLES ───────────────────────────────────────────────── */
+
+.grammar-subset {
+  overflow-x: auto;
+  margin: 0.8rem 0 1.4rem;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.grammar-subset--large { width: 100%; }
+
+.grammar-subset .op-table {
+  width: auto;
+  max-width: 100%;
+  background: #f2f2f2;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-size: 0.78rem;
+  table-layout: auto;
+}
+
+.grammar-subset .op-table th,
+.grammar-subset .op-table td {
+  border: none;
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+  background: transparent;
+}
+
+.grammar-subset .op-table td code {
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+
+.grammar-subset .op-table thead th {
+  background: #e6e6e6;
+  color: var(--col-accent);
+  font-weight: 700;
+  border-bottom: 0;
+}
+
+.grammar-subset .op-table tbody tr { border-bottom: none; }
+
+.grammar-subset .op-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.grammar-subset .op-table code {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.op-table-wrapper,
+.parse-table-wrapper {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.op-table,
+.sym-table,
+.parse-table,
+.grammar-subset .op-table {
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+}
+
+.op-table {
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+.op-table th,
+.sym-table th {
+  background: var(--col-accent);
+  color: #fff;
+  text-align: left;
+}
+
+.op-table th,
+.op-table td,
+.sym-table th,
+.sym-table td {
+  padding: 0.45rem 0.8rem;
+  border-bottom: 1px solid var(--col-border);
+}
+
+.op-table tbody tr:hover,
+.sym-table tbody tr:hover {
+  background: #f0f4f8;
+}
+
+.sym-table {
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+.sym-row--inner td:first-child { color: var(--col-muted); }
+
+.sym-row.highlighted {
+  background: var(--col-highlight);
+}
+
+.parse-table {
+  font-size: 0.78rem;
+  min-width: 100%;
+}
+
+.parse-table th {
+  background: var(--col-accent);
+  color: #fff;
+  padding: 0.45rem 0.5rem;
+  text-align: center;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid #2a4a70;
+}
+
+.pt-corner {
+  text-align: left !important;
+  min-width: 90px;
+}
+
+.pt-nt {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--col-accent);
+  background: #eef2f8;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--col-border);
+  white-space: nowrap;
+}
+
+.pt-empty {
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  padding: 0.4rem 0.5rem;
+}
+
+.pt-cell {
+  background: var(--col-surface);
+  border: 1px solid var(--col-border);
+  padding: 0.4rem 0.5rem;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--col-accent);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.pt-cell:hover { background: #e8f0fe; }
+
+.pt-cell.active {
+  background: #fff3b0;
+  outline: 2px solid #e6ac00;
+}
+
+.parse-table--static .pt-cell {
+  cursor: default;
+  vertical-align: middle;
+  min-width: 80px;
+  padding: 0.4rem 0.5rem;
+  text-align: center;
+}
+
+.parse-table--static .pt-cell:hover { background: inherit; }
+
+.pt-cell--r1 { border-left: 3px solid var(--bloom-apply); background: #f6f9ff; }
+.pt-cell--r2 { border-left: 3px solid var(--bloom-understand); background: #f0f9f0; }
+
+.pt-set {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1a3a5c;
+  line-height: 1.3;
+  margin-bottom: 0.2rem;
+}
+
+.pt-set--follow {
+  color: #1a5c2a;
+  font-style: italic;
+}
+
+.pt-num {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: var(--col-accent);
+  color: #fff;
+  padding: 0.05em 0.4em;
+  border-radius: 2px;
+}
+
+.pt-why { display: none; }
+
+.slr-table-plain td,
+.slr-table-plain th {
+  text-align: center;
+}
+
+.slr-table th.slr-table__group {
+  background: var(--col-accent);
+  color: #fff;
+  text-align: center;
+}
+
+.slr-table td,
+.slr-table th {
+  text-align: center;
+}
+
+.slr-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.slr-table tbody tr:hover { background: #f0f4f8; }
+
+.slr-table tbody tr.is-selected { background: #d9ecff; }
+
+.slr-cell--reduce {
+  background: #fff8f0;
+  color: var(--bloom-apply);
+  font-weight: 600;
+}
+
+.slr-cell--accept {
+  background: #eafaf0;
+  color: var(--bloom-understand);
+  font-weight: 700;
+}
+
+.slr-table tbody tr:focus-visible {
+  outline: 2px solid var(--col-accent);
+  outline-offset: -2px;
+}
