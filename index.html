@@ -30,11 +30,8 @@
                     and compiler implementation through worked examples,
                     visual explanations and interactive demonstrations.
                 </p>
-                <div class="hero__buttons">
-                    <a class="btn btn-primary" href="#overview"> Get started </a>
-                </div>
             </div>
-            </section>
+        </section>
 
             <section class="section" id="overview">
                 <h2>Overview</h2>
@@ -81,55 +78,49 @@ isZero(number x) {
                     This is the only program we are working with throughout.
                     Every compiler phase studies this same program from a
                     different perspective.
-                    Follow the <a href="grammar.html">Reference Grammar</a> for the full language definition.
+                    Follow the <a href="pages/grammar.html">Reference Grammar</a> for the full language definition.
                 </p>
-                <div class="hero__buttons">
-                    <a class="btn btn-primary" href="chapter1.html"> Start Learning </a>
-                    <a class="btn btn-primary" href="#chapters"> Learning Pathway</a>
-                    <a class="btn btn-secondary" href="#manual"> Website manual</a>
-                </div>
             </section>
 
             <section class="section" id="manual">
-                <section id="code-blocks">
+                <section class="section">
                     <h2>Manual: how to read this site</h2>
                     <h3>Code blocks: program vs. pseudocode</h3>
                     <p>
                         Two kinds of code appear throughout the site, styled
                         differently so you can always tell which is which instantly.
                     </p>
-                    <div class="section">
-                        <p class="demo-label">Program (example code)</p>
-                        
-                        <pre class="code-block"><code>main() {
-        number x := 5;
-        text   y := "hello";
-        number z := x + y;   <span class="code-comment">/* adding a number to text — should this work? */</span>
-        }</code></pre>
-                        <p>
-                            This dark block always refers to the one running program that every
-                            chapter studies from a different angle.
-                        </p>
-
-        
-                        <p class="demo-label">Pseudocode (example code)</p>
-                        
-                        <pre class="code-block code-block--pseudo"><code>function TYPECHECK(expr):
-        if expr is BINOP(op, left, right):
-            t1 := TYPECHECK(left)
-            t2 := TYPECHECK(right)
-            if t1 != t2:
-                report type error
-            return t1
-        return TYPE_OF(expr)</code></pre>
-                        <p>
+                    <section class="two-col" id="code-blocks">
+                        <section class="section">
+                            <h4 ">Program (example code)</h4>
+                            <p>
+                                This dark block always refers to the one running program that every
+                                chapter studies from a different angle.
+                            </p>
+                            <pre class="code-block"><code>main() {
+    number x := 5;
+    text   y := "hello";
+    number z := x + x;
+}</code></pre>       
+                    </section>
+                    <section class="section">
+                        <h4>Pseudocode (example code)</h4>
+                         <p>
                             This lighter block means pseudocode, which an algorithm that acts <em>on</em> the program (like a
                             type-checking routine), rather than being the program itself.
                         </p>
+                        <pre class="code-block code-block--pseudo"><code>function TYPECHECK(expr):
+    if expr is BINOP(op, left, right):
+        t1 := TYPECHECK(left)
+        t2 := TYPECHECK(right)
+        if t1 != t2:
+            report type error
+        return t1
+    return TYPE_OF(expr)</code></pre>
+                       
                     </div>
+                    </section>    
                 </section>
-
-                <section>
                     <h3>Callout boxes</h3>
                     <p>
                         You'll also see coloured callout boxes throughout the
@@ -139,29 +130,30 @@ isZero(number x) {
                     <div class="callout callout--question">
                         <p class="callout__label">Question</p>
                         <p>What happens when you add a number to a text value?</p>
+                        <p>
+                            Poses a question — usually at the
+                            start of a topic, to give you something to think about
+                            before the explanation.
+                        </p>
                     </div>
-                    <p>
-                        Poses a question — usually at the
-                        start of a topic, to give you something to think about
-                        before the explanation.
-                    </p>
-        
+                    
                     <div class="callout callout--info">
                         <p class="callout__label">Info</p>
                         <p>Scope determines which declarations are visible at a given point in the program.</p>
+                        <p>
+                            Adds a clarifying note or reminder
+                            alongside the main explanation.
+                        </p>
                     </div>
-                    <p>
-                        Adds a clarifying note or reminder
-                        alongside the main explanation.
-                    </p>
         
                     <div class="callout callout--next">
                         <p class="callout__label">Up next</p>
                         <p>We'll trace this expression through the symbol table in Chapter 3.</p>
+                        <p>
+                            Previews what the next section or chapter covers.
+                        </p>
                     </div>
-                    <p>
-                        Previews what the next section or chapter covers.
-                    </p>
+
                 </section>
             </section>
             

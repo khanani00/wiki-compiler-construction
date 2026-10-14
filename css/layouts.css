@@ -23,7 +23,7 @@
   grid-template-columns: 1fr 1fr;
 }
 
-.two-col,
+/* .two-col, */
 .two-col-recap,
 .interference-layout {
   margin: 1rem 0;

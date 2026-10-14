@@ -25,14 +25,15 @@
   --font-mono:  'Courier New', Courier, monospace;
   --font-ui:    system-ui, -apple-system, sans-serif;
 
-  --max-width: 860px;
+  --max-width: 1500px;
+  --text-width: 75ch;
   --radius: 4px;
 }
 
 body {
   background: var(--col-bg);
   color: var(--col-text);
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   font-size: 1rem;
   line-height: 1.7;
 }
@@ -103,13 +104,23 @@ body {
   font-size: 0.95rem;
 }
 
+.article > p,
+.article > ul,
+.article > ol {
+  max-width: var(--text-width);
+}
+
 /* ── SECTIONS ─────────────────────────────────────────────────── */
 .section {
-  margin-top: 2.4rem;
+  /* margin-top: 0.5rem; */
+  max-width:var(--max-width);
+  /* margin:1rem auto; */
+  padding:1rem 1.5rem;
 }
 
 .section h2 {
-  font-size: 1.3rem;
+  /* color:var(--col-accent); */
+  font-size: 1.8rem;
   font-weight: 700;
   border-bottom: 1px solid var(--col-border);
   padding-bottom: 0.3rem;
@@ -117,19 +128,23 @@ body {
 }
 
 .section h3 {
-  font-size: 1.05rem;
+  /* color:var(--col-accent); */
+  font-size: 1.2rem;
   font-weight: 700;
+  border-bottom: 0.5px solid var(--col-border);
   margin-top: 1.6rem;
   margin-bottom: 0.5rem;
+
 }
 
 .section h4 {
+  /* color:var(--col-accent); */
   font-size: 0.95rem;
   font-weight: 700;
   margin-bottom: 0.4rem;
 }
 
-.section p { margin-bottom: 0.8rem; }
+.section p { margin-bottom: 0.2rem; }
 
 .section ul, .section ol {
   padding-left: 1.5rem;
@@ -147,13 +162,13 @@ body {
   border-radius: 0 var(--radius) var(--radius) 0;
 }
 
-.callout--question { border-left-color: var(--col-accent); }
-.callout--info     { border-left-color: #5ba85b; }
+.callout--question { border-left-color: var(--col-accent); background: #f0f4f9; }
+.callout--info     { border-left-color: #5ba85b;           background: #f2f9f2; }
 .callout--next     { border-left-color: var(--bloom-apply); background: #fff8f0; }
 
 .callout__label {
   font-family: var(--font-ui);
-  font-size: 0.72rem;
+  font-size: 1rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -173,12 +188,15 @@ code {
 .code-block {
   background: #1e2127;
   color: #abb2bf;
-  padding: 1rem 1.2rem;
+  padding: 0.3rem 1.2rem;
   border-radius: var(--radius);
   overflow-x: auto;
   margin: 0.8rem 0;
   font-size: 0.88rem;
   line-height: 1.6;
+  width: fit-content; 
+  max-width: 100%; 
+  min-width: min(28rem, 100%);
 }
 
 .code-block code {
@@ -186,6 +204,18 @@ code {
   padding: 0;
   color: inherit;
   font-size: inherit;
+}
+
+.code-block--pseudo {
+  background: var(--col-code-bg);
+  color: var(--col-text);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.code-block-pseudo code {
+  font-family: inherit;    
 }
 
 .code-comment { color: #7f848e; font-style: italic; }
