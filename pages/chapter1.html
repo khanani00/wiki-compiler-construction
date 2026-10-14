@@ -52,9 +52,8 @@
     <!-- ── EVENT 2: LEARNING OBJECTIVES ─────────────────────────── -->
     <section class="section" id="objectives">
       <h2>Learning Objectives</h2>
-      <p>By the end of this article you should be able to:</p>
       <ul class="objectives-list">
-        <li><span class="bloom bloom--remember">Remember</span> the token types used in the <a href="grammar.html">Reference Grammar</a></li>
+        <li><span class="bloom bloom--remember">Remember</span> the token types used in the <a class="hyperlink" href="grammar.html">Reference Grammar</a></li>
         <li><span class="bloom bloom--understand">Understand</span> why regular expressions alone are not directly executable, and why NFAs and DFAs exist as a construction path between a regex and a working program.</li>
         <li><span class="bloom bloom--understand">Understand</span> the difference between an NFA and a DFA, and why lexers are built on DFAs specifically.</li>
         <li><span class="bloom bloom--apply">Apply</span> subset construction to convert a small NFA into a DFA.</li>
@@ -801,11 +800,6 @@
         further transition exists, emit the token corresponding to that accepting state
         — then reset to S0 for the next token. This is exactly the longest-match rule
         in action.</p>
-        <p>
-        <a class="btn btn-primary" href="#simulate">
-            See this DFA perform lexical analysis on our program &rarr;
-        </a>
-        </p>
     </section>
 
       <div class="callout callout--info" style="margin-top:1.5rem">
@@ -932,9 +926,9 @@
                 Every terminal symbol in the COS341 Reference Grammar corresponds to a token type defined here.
                 Chapter 1 answered the question <em>"what are the words?"</em>, Chapter 2 answers <em>"what can be built from the words, and is it grammatically valid?"</em>
             </p>
-            <p style="margin-top: 1rem;">
-                <a class="btn btn-primary" href="chapter2.html">Continue to Chapter 2 &rarr;</a>
-            </p>
+            <button class="btn-next" >
+               <a href="chapter2.html">Continue to Chapter 2 &rarr;</a> 
+            </button>
         </div>
     </section>
 

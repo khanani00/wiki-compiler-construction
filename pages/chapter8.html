@@ -26,7 +26,7 @@
     <!-- ── EVENT 1: GAIN ATTENTION ──────────────────────────────── -->
     <div class="callout callout--question">
       <p class="callout__label">Opening Problem</p>
-      <p>In <a href="chapter6.html">Chapter 6</a>, generating intermediate code for the GCD
+      <p>In <a class="hyperlink" href="chapter6.html">Chapter 6</a>, generating intermediate code for the GCD
          function produced 11 distinct variables: <code>v0</code>, <code>v1</code>,
          <code>v2</code>, <code>t1</code> through <code>t8</code>. A real processor might
          have only 3 or 4 registers. You cannot put 11 variables in 4 registers simultaneously
@@ -53,7 +53,7 @@
     <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
     <section class="section" id="recall">
       <h2>Connecting to What You Already Know</h2>
-      <p>In <a href="chapter6.html">Chapter 6</a> we translated the GCD source program into
+      <p>In <a class="hyperlink" href="chapter6.html">Chapter 6</a> we translated the GCD source program into
          flat intermediate code. That translation used <code>newvar()</code> freely —
          every temporary result got its own variable. The intermediate code for the GCD
          function uses 11 variables. This chapter determines how many registers are actually
@@ -494,6 +494,9 @@
            and a called function may overwrite registers that the caller is still using. Handling
            this requires <strong>calling conventions</strong> — agreements about which registers
            a function may destroy and which it must preserve.</p>
+        <button class="btn-next" >
+              <a href="chapter9.html">Continue to Chapter 9 &rarr;</a> 
+        </button>
       </div>
     </section>
 

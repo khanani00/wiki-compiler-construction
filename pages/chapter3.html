@@ -50,26 +50,25 @@ gcd(number a, number b) {         <span class="code-comment">/* different a, b �
     <!-- ── EVENT 2: LEARNING OBJECTIVES ─────────────────────────── -->
     <section class="section" id="objectives">
       <h2>Learning Objectives</h2>
-      <p>By the end of this article you should be able to:</p>
       <ul class="objectives-list">
         <li><span class="bloom bloom--remember">Remember</span> what a symbol table is and what operations it supports.</li>
         <li><span class="bloom bloom--understand">Understand</span> how lexical (static) scoping works and how scope is represented in a syntax tree.</li>
         <li><span class="bloom bloom--understand">Understand</span> the difference between persistent and imperative symbol table implementations.</li>
         <li><span class="bloom bloom--apply">Apply</span> tree-crawling to populate a symbol table from a given program.</li>
         <li><span class="bloom bloom--analyse">Analyse</span> a code block, identify scopes, and construct the corresponding symbol table by hand.</li>
-        <li><span class="bloom bloom--create">Create</span> a symbol table for a program written in the <a href="grammar.html">referenced grammar</a>.</li>
+        <li><span class="bloom bloom--create">Create</span> a symbol table for a program written in the <a class="hyperlink" href="grammar.html">referenced grammar</a>.</li>
       </ul>
     </section>
 
     <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
     <section class="section" id="recall">
       <h2>Connecting to What You Already Know</h2>
-      <p>In Chapter 2 you built a <strong><a href="chapter2.html">parser</a></strong> that takes a stream of tokens and produces an <strong>abstract syntax tree (AST)</strong>. The AST captures the grammatical structure of the program — which expressions nest inside which statements, how conditions relate to branches, and so on.</p>
+      <p>In Chapter 2 you built a <strong><a class="hyperlink" "chapter2.html">parser</a></strong> that takes a stream of tokens and produces an <strong>abstract syntax tree (AST)</strong>. The AST captures the grammatical structure of the program — which expressions nest inside which statements, how conditions relate to branches, and so on.</p>
       <p>But the AST is <em>context-free</em>. It was built using a context-free grammar, which means it carries no information about what names <em>mean</em>. The <code>a</code> in <code>main</code> and the <code>a</code> in <code>gcd</code> look identical in the tree even though they are completely separate variables.</p>
       <p>Chapter 3 is where <strong>semantic analysis</strong> begins. The compiler now needs to understand context — specifically, which declaration each use of a name refers to. This is called <strong>binding</strong>, and the data structure that records it is the <strong>symbol table</strong>.</p>
       <div class="callout callout--info">
         <p class="callout__label">Key Connection</p>
-        <p>You will use the symbol table you build here again in <a href="chapter5.html">Chapter 5 (Type Checking)</a>, where it becomes the <em>environment</em> passed to the type checker. Every <code>vtable</code> and <code>ftable</code> you see in Chapter 5 is an instance of what is described in this chapter.</p>
+        <p>You will use the symbol table you build here again in <a class="hyperlink" href="chapter5.html">Chapter 5 (Type Checking)</a>, where it becomes the <em>environment</em> passed to the type checker. Every <code>vtable</code> and <code>ftable</code> you see in Chapter 5 is an instance of what is described in this chapter.</p>
       </div>
     </section>
 
@@ -79,7 +78,7 @@ gcd(number a, number b) {         <span class="code-comment">/* different a, b �
 
       <h3>1. Binding and Scope</h3>
       <p>A <strong>declaration</strong> introduces a name and associates it with an item (a variable, a function, a type). This association is called a <strong>binding</strong>. A <strong>use</strong> of a name is a reference to the item it is bound to.</p>
-      <p>The <strong>scope</strong> of a declaration is the region of the program where that binding is visible. In the <a href="grammar.html">referenced grammar</a>, a scope corresponds to an <code>ALGORITHM</code> block — the region enclosed by <code>{ STAT }</code>. Each function body is its own scope. The <code>while</code> body inside <code>gcd</code> is a nested scope within that.</p>
+      <p>The <strong>scope</strong> of a declaration is the region of the program where that binding is visible. In the <a class="hyperlink" href="grammar.html">referenced grammar</a>, a scope corresponds to an <code>ALGORITHM</code> block — the region enclosed by <code>{ STAT }</code>. Each function body is its own scope. The <code>while</code> body inside <code>gcd</code> is a nested scope within that.</p>
       <p>Scoping based on the structure of the syntax tree is called <strong>lexical (static) binding</strong>. The rule is: a use of a name refers to the <em>closest enclosing declaration</em> of that name — the declaration in the smallest subtree that contains both the declaration and the use.</p>
 
       <h3>2. The Symbol Table</h3>
@@ -110,7 +109,6 @@ gcd(number a, number b) {         <span class="code-comment">/* different a, b �
       <h3>3. Populating the Symbol Table: Tree Crawling</h3>
       <p>The symbol table is populated by <strong>crawling the syntax tree</strong> — visiting every node and recording declarations as they are encountered. The traversal uses Depth-First Search (DFS) because scopes are nested and nesting maps directly to recursive tree descent.</p>
 
-      <div class="callout callout--info">
         <p class="callout__label">General Pseudocode</p>
         <pre class="code-block code-block--pseudo"><code>table = empty()
 
@@ -127,7 +125,6 @@ populate(node, table):
       populate(child, table)
 
 return table</code></pre>
-      </div>
 
       <h3>4. Implementations</h3>
       <p>There are two main families of implementation. The key difference is in how scopes are managed.</p>
@@ -165,7 +162,7 @@ return table</code></pre>
     <!-- ── EVENT 5: WORKED EXAMPLE — GCD ────────────────────────── -->
     <section class="section" id="example">
       <h2>Worked Example — GCD Program</h2>
-      <p>We use the full GCD program from the <a href="grammar.html">referenced grammar</a>.
+      <p>We use the full GCD program from the <a class="hyperlink" href="grammar.html">referenced grammar</a>.
          Hover over any name in the code to see its entry highlighted in the symbol table.
          Notice that <code>a</code> and <code>b</code> appear in <em>both</em> functions but resolve
          to different entries — each function has its own scope.</p>
@@ -332,8 +329,11 @@ isZero(<span class="var-ref" data-var="iz_x">number x</span>) {
     <section class="section" id="next">
       <h2>What Comes Next</h2>
       <div class="callout callout--next">
-        <p class="callout__label"><a href="chapter5.html">Chapter 5</a> &rarr; Type Checking</p>
+        <p class="callout__label">Chapter 5 &rarr; Type Checking</p>
         <p>The symbol table you built here becomes the <strong>environment</strong> that the type checker operates on. In Chapter 5, you will see two symbol tables passed through every function: <code>vtable</code>, which maps variable names to their types, and <code>ftable</code>, which maps function names to their signatures. For the GCD program, the ftable will contain entries for <code>gcd</code> and <code>isZero</code>, and the vtable inside <code>gcd</code> will contain <code>a</code>, <code>b</code>, and <code>temp</code> — exactly what was built here.</p>
+        <button class="btn-next" >
+          <a href="chapter5.html">Continue to Chapter 5 &rarr;</a> 
+        </button>
       </div>
     </section>
 

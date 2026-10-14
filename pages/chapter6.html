@@ -61,11 +61,11 @@ v1 := t6            <span class="code-comment">/* store result in b */</span></c
     <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
     <section class="section" id="recall">
       <h2>Connecting to What You Already Know</h2>
-      <p>In <a href="chapter5.html">Chapter 5</a> the type checker walked the syntax tree and
+      <p>In <a class="hyperlink" href="chapter5.html">Chapter 5</a> the type checker walked the syntax tree and
          verified that every operation made sense. It produced no output code — its job was
          purely to check. Now in Chapter 6 the same tree is walked again, but this time the
          goal is to <em>emit</em> instructions.</p>
-      <p>Critically, the vtable and ftable from <a href="chapter3.html">Chapter 3</a> are still
+      <p>Critically, the vtable and ftable from <a class="hyperlink" href="chapter3.html">Chapter 3</a> are still
          in use — but their content has changed. In Chapter 3 the tables stored <em>types</em>.
          In Chapter 6 they store <em>intermediate-language variable names</em>. The symbol table
          mechanism is identical; only what it maps names to has changed.</p>
@@ -401,7 +401,10 @@ isZero &rarr; _isZero</code></pre>
            physical register. Chapter 9 then expands the high-level function calls and returns
            (which we kept as primitives here) into actual stack-frame management — prologues,
            epilogues, and parameter passing.</p>
-      </div>
+            <button class="btn-next" >
+               <a href="chapter8.html">Continue to Chapter 8 &rarr;</a> 
+            </button>
+          </div>
     </section>
 
   </main>

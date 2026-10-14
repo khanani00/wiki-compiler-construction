@@ -60,7 +60,7 @@ gcd(number a, number b) {
     <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
     <section class="section" id="recall">
       <h2>Connecting to What You Already Know</h2>
-      <p>In <a href="chapter3.html">Chapter 3</a> you built a <strong>symbol table</strong> that maps names to information about what those names are bound to. For the GCD program, that process produced the following tables:</p>
+      <p>In <a class="hyperlink" href="chapter3.html">Chapter 3</a> you built a <strong>symbol table</strong> that maps names to information about what those names are bound to. For the GCD program, that process produced the following tables:</p>
       <div class="two-col">
         <div class="info-card">
           <p class="info-card__label">vtable (inside gcd)</p>
@@ -74,7 +74,7 @@ gcd(number a, number b) {
              <code>isZero &rarr; (number) &rarr; number</code></p>
         </div>
       </div>
-      <p>These are not new data structures. They are the persistent symbol tables from <a href="chapter3.html">Chapter 3</a>, populated by crawling the AST, now being <em>used</em> to check types. The type checker inherits them and passes them through every recursive call.</p>
+      <p>These are not new data structures. They are the persistent symbol tables from <a class="hyperlink" href="chapter3.html">Chapter 3</a>, populated by crawling the AST, now being <em>used</em> to check types. The type checker inherits them and passes them through every recursive call.</p>
     </section>
 
     <!-- ── EVENT 4: ATTRIBUTES ───────────────────────────────────── -->
@@ -174,7 +174,7 @@ gcd(number a, number b) {
           </div>
           <div class="explain-panel" data-panel="plus" style="display:none">
             <h4>Arithmetic (BINOP)</h4>
-            <p>Both operands must be <code>number</code>. Result is <code>number</code>. This covers <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code> in the <a href="grammar.html">referenced grammar</a>.</p>
+            <p>Both operands must be <code>number</code>. Result is <code>number</code>. This covers <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code> in the <a class="hyperlink" href="grammar.html">referenced grammar</a>.</p>
             <p class="explain-example">In GCD: <code>a / b</code> — both <code>number</code> &rarr; <code>number</code> ✓</p>
             <p class="explain-watch">Watch out: <code>a - (a / b * b)</code> requires three nested arithmetic checks, each returning <code>number</code>.</p>
           </div>
@@ -212,34 +212,8 @@ gcd(number a, number b) {
          until the whole expression is typed. Step through the animation below to watch the types
          flow from the leaves to the root. The program and its environments are shown first for
          reference.</p>
-
+      <p >Recall <a class="hyperlink" href="../index.html#program">gcd program</a> being typechecked</p>
       <div class="trace-setup">
-        <div class="trace-program">
-          <p class="demo-label">Program being type-checked</p>
-          <pre class="code-block" style="font-size:0.78rem"><code>main(number a, number b) {
-  number result := 0;
-  result := gcd(a, b);
-  return result
-}
-gcd(number a, number b) {
-  number temp := 0;
-  while (b > 0) do {
-    temp := b;
-    b := a - (a / b * b);
-    a := temp
-  };
-  return a
-}
-isZero(number x) {
-  number out := 0;
-  if (x = 0) then {
-    out := 1
-  } else {
-    out := 0
-  };
-  return out
-}</code></pre>
-        </div>
         <div class="trace-env">
           <p class="demo-label">Environments (inside gcd)</p>
           <table class="sym-table">
@@ -431,6 +405,9 @@ isZero(number x) {
       <div class="callout callout--next">
         <p class="callout__label">Chapter 6 &rarr; Intermediate Code Generation</p>
         <p>The type information gathered here does not disappear. In Chapter 6, the code generator uses type annotations from this phase to decide which machine instructions to emit. For the GCD program, knowing that <code>a</code>, <code>b</code>, and <code>temp</code> are all <code>number</code> tells the code generator to emit integer arithmetic instructions throughout — no runtime type checks needed. The work done in this chapter is what makes that optimisation possible.</p>
+        <button class="btn-next" >
+            <a href="chapter6.html">Continue to Chapter 6 &rarr;</a> 
+        </button>
       </div>
     </section>
 

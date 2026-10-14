@@ -43,7 +43,6 @@
     <!-- ── EVENT 2: LEARNING OBJECTIVES ─────────────────────────── -->
     <section class="section" id="objectives">
         <h2>Learning Objectives</h2>
-        <p>By the end of this article you should be able to:</p>
         <ul class="objectives-list">
             <li><span class="bloom bloom--remember">Remember</span> which productions in the Reference Grammar are ambiguous or left-recursive as written.</li>
             <li><span class="bloom bloom--understand">Understand</span> why an ambiguous or left-recursive grammar blocks a deterministic top-down parser, and how bottom-up parsing is able to handle a broader class of grammars.</li>
@@ -72,7 +71,7 @@
     <section class="section" id="recall">
         <h2>Connecting to What You Already Know</h2>
         <p>
-            The previous chapter, <a href="chapter1.html">Lexical Analysis</a>, ended with a finished token
+            The previous chapter, <a class="hyperlink" href="chapter1.html">Lexical Analysis</a>, ended with a finished token
             stream. That stream is this chapter's input. Running the combined DFA from Chapter 1 over
             <code>number temp := 0</code> gives exactly four tokens:
         </p>
@@ -127,7 +126,7 @@
         <p>
             The Reference Grammar avoids ambiguity by construction &mdash; every alternative in a production 
             begins with a distinct, unambiguous token, so none of the methods below ever
-            have to resolve a genuine either-or choice. See the <a href="#conflict-check">conflict check</a>
+            have to resolve a genuine either-or choice. See the <a class="hyperlink" href="#conflict-check">conflict check</a>
             section below for a more detailed explanation of how that works.
         </p>
     </section>
@@ -465,7 +464,7 @@ ELSE-PART &rarr; &epsilon;</code></pre>
         <h2>SLR</h2>
         <p>
             Building an SLR parser uses the same technique as
-            <a href="chapter1.html#construct-dfa">building the lexer's DFA in Chapter 1</a>:
+            <a class="hyperlink" href="chapter1.html#construct-dfa">building the lexer's DFA in Chapter 1</a>:
             one small automaton per rule, joined together, then turned into a deterministic machine with
             subset construction.
         </p>
@@ -479,7 +478,7 @@ ELSE-PART &rarr; &epsilon;</code></pre>
         <h3>The line we will parse</h3>
         <pre class="code-block">number temp := 0;</pre>
         <p>
-          Before we start, recall the <a href="subset-grammar.html">subset grammar</a> for the following SLR parsing example.
+          Before we start, recall the <a class="hyperlink" href="subset-grammar.html">subset grammar</a> for the following SLR parsing example.
         </p>
         <p>
             Each production is also numbered, because the reduce entries in the table refer to these numbers. The
@@ -520,7 +519,7 @@ ELSE-PART &rarr; &epsilon;</code></pre>
         <h3>NFA to DFA</h3>
         <p>
             This is the same construction as
-            <a href="chapter1.html#nfa-to-dfa">Chapter 1's NFA-to-DFA subset construction</a>, applied to item
+            <a class="hyperlink" href="chapter1.html#nfa-to-dfa">Chapter 1's NFA-to-DFA subset construction</a>, applied to item
             states instead of regex states. Revisit NFA-to-DFA in Chapter 1 if you need a refresher on how it works.
         </p>
         <!-- <p>
@@ -536,7 +535,7 @@ ELSE-PART &rarr; &epsilon;</code></pre>
         
         <h3>From DFA to Table</h3>
         <p>
-           Recall <a href="#follow-sets">FOLLOW sets</a> from above.
+           Recall <a class="hyperlink" href="#follow-sets">FOLLOW sets</a> from above.
         </p>
         <div class="callout callout--info">
             <p class="callout__label">These sets belong to this small grammar</p>
@@ -822,29 +821,19 @@ ELSE-PART &rarr; &epsilon;</code></pre>
             That's a complete SLR table for this line: 12 states, no cell with two entries, and every
             state is used when the line is parsed.
         </p>
-        <!-- <p>
-            <a class="btn btn-primary" href="#">See this table parse the line into a tree &rarr;</a>
-            <em>(coming later)</em>
-        </p>
-        <p>
-            The next page picks up exactly here. It pairs this table with parsing pseudocode and follows the
-            four tokens of <code>number temp := 0</code> one at a time. It keeps a stack of states; at every
-            step it looks up the current state and the next token in the table, and then shifts or reduces,
-            building the tree as it goes. You will see all 12 states get used, ending on
-            <code>acc</code>.
-        </p> -->
     </section>
 
      <!-- ── EVENT 9: NEXT ─────────────────────────────────────────── -->
         <section class="section" id="next">
             <h2>What Comes Next</h2>
             <div class="callout callout--next">
-                <a href="chapter3.html">
-                    <p class="callout__label">Chapter 3 &rarr; Scopes and symbol tables</p>
-                </a>
+                <p class="callout__label">Chapter 3 &rarr; Scopes and symbol tables</p>
                 <p>
                     The type information gathered by <code>CheckExp</code> does not disappear after this phase. 
                 </p>
+                <button class="btn-next" >
+                    <a href="chapter3.html">Continue to Chapter 3 &rarr;</a> 
+                </button>
             </div>
         </section>
   </main>

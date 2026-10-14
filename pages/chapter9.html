@@ -60,10 +60,10 @@
     <!-- ── EVENT 3: RECALL ───────────────────────────────────────── -->
     <section class="section" id="recall">
       <h2>Connecting to What You Already Know</h2>
-      <p>From <a href="chapter6.html">Chapter 6</a> we have the intermediate code for <code>gcd</code>, using
+      <p>From <a class="hyperlink" href="chapter6.html">Chapter 6</a> we have the intermediate code for <code>gcd</code>, using
          <code>v0</code>&nbsp;=&nbsp;<code>a</code>, <code>v1</code>&nbsp;=&nbsp;<code>b</code>,
          <code>v2</code>&nbsp;=&nbsp;<code>temp</code>, and temporaries <code>t1</code>–<code>t8</code>.
-         From <a href="chapter8.html">Chapter 8</a> we know that body fits in four registers. What is still
+         From <a class="hyperlink" href="chapter8.html">Chapter 8</a> we know that body fits in four registers. What is still
          missing is the <em>glue</em>: the code that lets <code>main</code> invoke <code>gcd</code> and recover
          its result. That glue is what Mogensen calls the call sequence and the function's prologue and
          epilogue.</p>
@@ -133,13 +133,15 @@
         <button class="save-toggle__btn" data-mode="callee">Callee-saves</button>
       </div>
 
-      <div class="xlat">
-        <div class="xlat__src">
+      <div class="xlat__src">
           <p class="demo-label">Source (inside main)</p>
           <pre class="code-block"><code><span class="code-hl">result := gcd(a, b)</span></code></pre>
           <p class="xlat__note">With <code>result = v2</code>, <code>a = v0</code>, <code>b = v1</code>,
              <code>n = 2</code>, and <code>L0</code> the label to resume at after the call returns.</p>
         </div>
+
+      <div class="xlat">
+        
         <div class="xlat__out">
           <p class="demo-label">Generated call sequence</p>
           <pre class="code-block code-block--interactive"><code id="callseqLines"></code></pre>
@@ -162,10 +164,7 @@
         <button class="save-toggle__btn is-active" data-mode="caller">Caller-saves</button>
         <button class="save-toggle__btn" data-mode="callee">Callee-saves</button>
       </div>
-
-      <div class="mode-block" data-group="prologue" data-mode="caller">
-        <div class="xlat">
-          <div class="xlat__src">
+      <div class="xlat__src">
             <p class="demo-label">Source: gcd header &amp; return</p>
             <pre class="code-block"><code>gcd(number a, number b) {
   number temp := 0;
@@ -173,6 +172,17 @@
   return a
 }</code></pre>
           </div>
+
+      <div class="mode-block" data-group="prologue" data-mode="caller">
+        <div class="xlat">
+          <!-- <div class="xlat__src">
+            <p class="demo-label">Source: gcd header &amp; return</p>
+            <pre class="code-block"><code>gcd(number a, number b) {
+  number temp := 0;
+  <span class="code-comment">... body ...</span>
+  return a
+}</code></pre>
+          </div> -->
           <div class="xlat__out">
             <p class="demo-label">Prologue + epilogue (caller-saves)</p>
 <pre class="code-block"><code>LABEL gcd
@@ -196,14 +206,14 @@ GOTO returnaddress       <span class="code-comment">; jump back into main</span>
 
       <div class="mode-block" data-group="prologue" data-mode="callee" hidden>
         <div class="xlat">
-          <div class="xlat__src">
+          <!-- <div class="xlat__src">
             <p class="demo-label">Source: gcd header &amp; return</p>
             <pre class="code-block"><code>gcd(number a, number b) {
   number temp := 0;
   <span class="code-comment">... body ...</span>
   return a
 }</code></pre>
-          </div>
+          </div> -->
           <div class="xlat__out">
             <p class="demo-label">Prologue + epilogue (callee-saves)</p>
 <pre class="code-block"><code>LABEL gcd

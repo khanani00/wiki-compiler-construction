@@ -10,8 +10,8 @@
   --col-link:      #0550ae;
   --col-navy-hover: #2E5A88;
   --col-code-bg:   #f0f0f0;
-  --col-accent:    #1a3a5c;   /* UP dark navy */
-  --col-highlight: #fff3b0;   /* soft amber — hover highlight */
+  --col-accent:    #1a3a5c; 
+  --col-highlight: #fff3b0;
 
   /* bloom level colours */
   --bloom-remember:  #4a90d9;
@@ -166,6 +166,31 @@ body {
 .callout--info     { border-left-color: #5ba85b;           background: #f2f9f2; }
 .callout--next     { border-left-color: var(--bloom-apply); background: #fff8f0; }
 
+.btn-next {
+  padding: 0.5rem 0.6rem;
+  border: none;
+  border-radius: 0.2rem;
+  background: var(--bloom-apply);   
+  color: #fff8f0;                   
+  cursor: pointer;
+}
+
+.btn-next a {
+    display: block;
+    padding: 0.5rem 0.6rem;
+}
+
+.btn-next { padding: 0; }
+.btn-next a,
+.btn-next a:link,
+.btn-next a:visited,
+.btn-next a:hover,
+.btn-next a:active,
+.btn-next a:focus {
+  color: #fff8f0;                   /* the lighter orange/cream */
+  text-decoration: none;            /* no underline in any state */
+}
+
 .callout__label {
   font-family: var(--font-ui);
   font-size: 1rem;
@@ -227,14 +252,16 @@ code {
 }
 
 .objectives-list li {
-  display: flex;
+  /* display: flex;
   align-items: baseline;
-  gap: 0.6rem;
+  gap: 0.6rem; */
   margin-bottom: 0.5rem;
 }
 
 /* ── BLOOM BADGES ─────────────────────────────────────────────── */
 .bloom {
+  display: inline-block;
+  margin-right:0.5rem;
   font-family: var(--font-ui);
   font-size: 0.68rem;
   font-weight: 700;
@@ -244,7 +271,7 @@ code {
   border-radius: 2px;
   color: #fff;
   white-space: nowrap;
-  flex-shrink: 0;
+  vertical-align: baseline;
 }
 
 .bloom--remember  { background: var(--bloom-remember); }
@@ -381,4 +408,21 @@ code {
 .diagram-embed__caption code {
   font-family: var(--font-mono);
   font-size: 0.85em;
+}
+
+/* hyperlinks */
+.hyperlink,
+.hyperlink:link,
+.hyperlink:visited,
+.hyperlink:hover,
+.hyperlink:active,
+.hyperlink:focus {
+  color: var(--col-link);
+  font-style: italic;
+  text-decoration: none;
+}
+
+.hyperlink:focus-visible {
+  outline: 2px solid var(--col-link);
+  outline-offset: 2px;
 }
