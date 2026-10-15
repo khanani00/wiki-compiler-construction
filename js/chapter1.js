@@ -24,129 +24,136 @@
 })();
 
 
-//Scanning the input (token-by-token trace) ──────────
-// Traces the actual Program used throughout the site:
-//   main() { number x := 5; text y := "hello"; number z := x + y; }
 (function () {
-  var steps = [
-    {
-      title: 'Start: scanning begins',
-      tree: [
-        { text: 'scan(the Program)', state: 'active' },
-        { text: '  pos = 0,  state = S0', state: 'pending' },
-        { text: '  tokens = []', state: 'pending' },
-      ],
-      detail: '<h4>Ready to scan</h4>' +
-              '<p><code>scan()</code> starts at position 0, in state <strong>S0</strong> &mdash; the start state of the combined DFA.</p>' +
-              '<p>This trace runs the whole Program, not just a fragment &mdash; 22 tokens, reusing the same handful of automata over and over. From here, repeated patterns get grouped so the trace stays readable; each genuinely new pattern gets its own step.</p>',
-    },
-    {
-      title: 'Token 1: main',
-      tree: [
-        { text: 'read \'main\'   S0 \u2192 S1 (identifier path)', state: 'active' },
-        { text: '  \'(\' forces accept: S1 \u2192 identifier "main"', state: 'active' },
-        { text: 'reserved-word lookup: "main" \u2208 {main, number, text, if, ...}', state: 'active' },
-        { text: '  \u2192 reclassified as KEYWORD(main), not _vname', state: 'active' },
-        { text: 'tokens = [ main ]', state: 'active' },
-      ],
-      detail: '<h4>First keyword</h4>' +
-              '<p>The identifier automaton accepts <code>main</code> exactly the way it would accept any identifier &mdash; the DFA itself has no idea "main" is special.</p>' +
-              '<p>The reserved-word check happens <em>after</em> acceptance, on the matched lexeme, not as part of the automaton: since <code>"main"</code> is in the keyword table, it\'s emitted as <span class="step-result">KEYWORD(main)</span>.</p>',
-    },
-    {
-      title: 'Tokens 2\u20134: ( ) {',
-      tree: [
-        { text: 'read \'(\'   S0 \u2192 accept \u2192 (', state: 'active' },
-        { text: 'read \')\'   S0 \u2192 accept \u2192 )', state: 'active' },
-        { text: 'read \'{\'   S0 \u2192 accept \u2192 {', state: 'active' },
-        { text: 'tokens = [ main, (, ), { ]', state: 'active' },
-      ],
-      detail: '<h4>First symbols</h4>' +
-              '<p>Every single-character symbol (<code>( ) { } , ; - + * /</code>) follows this same one-step pattern: no lookahead needed, accept immediately on the one character. Three different symbols, same mechanism &mdash; grouped here since none of them individually add anything new.</p>',
-    },
-    {
-      title: 'Tokens 5\u20136: number, x',
-      tree: [
-        { text: 'read \'number\'   S0 \u2192 S1 \u2192 accept \u2192 identifier "number"', state: 'active' },
-        { text: '  lookup: "number" \u2208 keywords \u2192 KEYWORD(number)', state: 'active' },
-        { text: 'read \'x\'        S0 \u2192 S1 \u2192 accept \u2192 identifier "x"', state: 'active' },
-        { text: '  lookup: "x" \u2209 keywords \u2192 stays _vname("x")', state: 'active' },
-        { text: 'tokens = [ ..., number, _vname(x) ]', state: 'active' },
-      ],
-      detail: '<h4>The other half of the lookup</h4>' +
-              '<p><code>number</code> repeats the keyword pattern from Token 1. <code>x</code> runs through the exact same automaton and lands on the exact same kind of accepting state &mdash; the only difference is the table lookup this time comes back empty, so it stays a plain <span class="step-result">_vname("x")</span>. Same DFA path, different outcome after acceptance.</p>',
-    },
-    {
-      title: 'Token 7: :=',
-      tree: [
-        { text: 'read \':=\'   S0 \u2192 S3 \u2192 S4 \u2192 accept \u2192 :=', state: 'active' },
-        { text: 'tokens = [ ..., := ]', state: 'active' },
-      ],
-      detail: '<h4>First assignment</h4>' +
-              '<p>Two-character literal, two real transitions: <code>:</code> then <code>=</code>. S3 alone (after just <code>:</code>) is non-accepting &mdash; a lone <code>:</code> would be a lexical error.</p>',
-    },
-    {
-      title: 'Token 8: 5',
-      tree: [
-        { text: 'read \'5\'   S0 \u2192 S2 \u2192 accept \u2192 _number("5")', state: 'active' },
-        { text: '  \';\' forces the accept (no [0-9] transition on \';\')', state: 'active' },
-        { text: 'tokens = [ ..., _number(5) ]', state: 'active' },
-      ],
-      detail: '<h4>First number literal</h4>' +
-              '<p>Same shape as the identifier automaton, different character class: <code>[0-9][0-9]*</code>.</p>',
-    },
-    {
-      title: 'Tokens 9\u201312: ; text y :=',
-      tree: [
-        { text: 'read \';\'     \u2192 ; (repeat: symbol)', state: 'active' },
-        { text: 'read \'text\'  \u2192 KEYWORD(text) (repeat: keyword hit)', state: 'active' },
-        { text: 'read \'y\'     \u2192 _vname(y) (repeat: identifier miss)', state: 'active' },
-        { text: 'read \':=\'    \u2192 := (repeat: assign)', state: 'active' },
-        { text: 'tokens = [ ..., ;, text, _vname(y), := ]', state: 'active' },
-      ],
-      detail: '<h4>No new cases</h4>' +
-              '<p>Every one of these four repeats a pattern already shown &mdash; grouped together since nothing new happens.</p>',
-    },
-    {
-      title: 'Token 13: "hello"',
-      tree: [
-        { text: 'read \'"\'        S0 \u2192 S5 (non-accepting: string opened)', state: 'active' },
-        { text: 'read h,e,l,l,o  S5 \u2192 S5 (self-loop, still non-accepting)', state: 'active' },
-        { text: 'read \'"\'        S5 \u2192 accept \u2192 _text("hello")', state: 'active' },
-        { text: 'tokens = [ ..., _text("hello") ]', state: 'active' },
-      ],
-      detail: '<h4>The one text literal in this program</h4>' +
-              '<p>Different shape from every other automaton so far: opening the quote does <em>not</em> accept, the loop in the middle stays non-accepting the whole way through, and only the closing quote flips it to accepting. This is the only point in the whole trace where this automaton fires &mdash; every other token in the Program is a keyword, identifier, number, assign, or symbol.</p>',
-    },
-    {
-      title: 'Tokens 14\u201321: ; number z := x + y ;',
-      tree: [
-        { text: 'read \';\'      \u2192 ; (repeat)', state: 'active' },
-        { text: 'read \'number\' \u2192 KEYWORD(number) (repeat)', state: 'active' },
-        { text: 'read \'z\'      \u2192 _vname(z) (repeat)', state: 'active' },
-        { text: 'read \':=\'     \u2192 := (repeat)', state: 'active' },
-        { text: 'read \'x\'      \u2192 _vname(x) (repeat)', state: 'active' },
-        { text: 'read \'+\'      S0 \u2192 accept \u2192 + (NEW: first operator)', state: 'active' },
-        { text: 'read \'y\'      \u2192 _vname(y) (repeat)', state: 'active' },
-        { text: 'read \';\'      \u2192 ; (repeat)', state: 'active' },
-        { text: 'tokens = [ ..., ;, number, _vname(z), :=, _vname(x), +, _vname(y), ; ]', state: 'active' },
-      ],
-      detail: '<h4>One new case, buried in repeats</h4>' +
-              '<p>Everything here repeats a pattern already established, except <code>+</code> &mdash; the first arithmetic operator in the trace. It follows the exact same immediate-accept mechanism as the symbols group from Tokens 2&ndash;4, just a different literal character.</p>',
-    },
-    {
-      title: 'Token 22: } (end of input)',
-      tree: [
-        { text: 'read \'}\'   S0 \u2192 accept \u2192 }', state: 'active' },
-        { text: 'end of input reached', state: 'active' },
-        { text: 'tokens = [ main, (, ), {, number, _vname(x), :=, _number(5), ;,', state: 'active' },
-        { text: '           text, _vname(y), :=, _text("hello"), ;, number,', state: 'active' },
-        { text: '           _vname(z), :=, _vname(x), +, _vname(y), ;, } ]', state: 'active' },
-      ],
-      detail: '<h4>Full token stream complete</h4>' +
-              '<p>22 tokens from 6 automata &mdash; identifier/keyword, number, text, assign, operator, symbols &mdash; every one reused multiple times except the text literal, which fired exactly once. This is exactly what Chapter 2&rsquo;s parser receives.</p>',
-    },
-  ];
+  
+function L(t) { return { text: t, state: 'active' }; }
+function P(t) { return { text: t, state: 'pending' }; }
+
+var steps = [
+  {
+    title: 'Start: scanning begins',
+    tree: [
+      L('input: main(number a, number b) {'),
+      L('         number result := 0;'),
+      L('         result := gcd(a, b);'),
+      L('         return result }'),
+      P('pos = 0, state = S0, last accepting = none'),
+      P('tokens = []'),
+    ],
+    detail: '<h4>Ready to scan</h4>' +
+            '<p><code>scan()</code> starts at <strong>S0</strong>, the start state of the combined, minimised DFA.</p>' +
+            '<p>The method has 26 tokens. Repeated patterns are only explained the first time they appear. Whitespace takes S0 back to S0 and emits nothing.</p>' +
+            '<p>One extra step happens after the DFA accepts an identifier: the scanner looks at the next character to label it <code>_fname</code> (next character is <code>(</code>) or <code>_vname</code> (anything else).</p>',
+  },
+  {
+    title: 'main(number a, number b) {',
+    tree: [
+      L("m,a,i,n    keyword path; next '(' has no edge"),
+      L('  last accepting {KEYWORD(main), IDENT}'),
+      L('  priority \u2192 KEYWORD(main)'),
+      L('(          \u2192 SYMBOL(()'),
+      L('number     \u2192 KEYWORD(number)'),
+      L('a          IDENT accepted; next is "," \u2192 _vname(a)'),
+      L(',          \u2192 SYMBOL(,)'),
+      L('number     \u2192 KEYWORD(number)'),
+      L('b          IDENT accepted; next is ")" \u2192 _vname(b)'),
+      L(')  {       \u2192 SYMBOL()), SYMBOL({)'),
+      P('running total: 9 tokens'),
+    ],
+    detail: '<h4>Keyword, then name</h4>' +
+            '<p><code>main</code> reaches a state that accepts both KEYWORD and IDENT. Priority picks <span class="step-result">KEYWORD(main)</span>, so it is never labelled <code>_fname</code>, even though a <code>(</code> follows. The same priority applies to <code>number</code>.</p>' +
+            '<p><code>a</code> and <code>b</code> are accepted by the identifier machine and then labelled <span class="step-result">_vname</span>, because they are not followed by <code>(</code>.</p>' +
+            '<p>Each single-character symbol is accepted in one step.</p>',
+  },
+  {
+    title: 'number result := 0;',
+    tree: [
+      L('number     \u2192 KEYWORD(number)   (repeat)'),
+      L('r,e        still on the "return" keyword path'),
+      L("s          path expects 't' \u2192 leave to IDENT loop"),
+      L('u,l,t      IDENT loop; next is ":" \u2192 _vname(result)'),
+      L('read :     S0 \u2192 q1 (non-accepting)'),
+      L('read =     q1 \u2192 q2 (accepting) \u2192 ASSIGN'),
+      L('0          S0 \u2192 NUMBER-zero \u2192 _number(0)'),
+      L(';          \u2192 SYMBOL(;)'),
+      P('running total: 14 tokens'),
+    ],
+    detail: '<h4>Three new patterns</h4>' +
+            '<p><code>result</code> starts like <code>return</code>, but the <code>s</code> breaks the match. Every keyword-prefix state also accepts IDENT, so nothing is lost.</p>' +
+            '<p><code>:=</code> needs two real transitions. A lone <code>:</code> never reaches an accepting state.</p>' +
+            '<p><code>0</code> leads to a state with no exits, so a leading zero cannot be followed by more digits.</p>',
+  },
+  {
+    title: 'result := gcd(a, b);',
+    tree: [
+      L('result     IDENT accepted; next is ":" \u2192 _vname(result)'),
+      L(':=         \u2192 ASSIGN   (repeat)'),
+      L('g,c,d      IDENT loop; next is "("'),
+      L('  \u2192 _fname(gcd)'),
+      L('(          \u2192 SYMBOL(()'),
+      L('a          next is "," \u2192 _vname(a)'),
+      L(',          \u2192 SYMBOL(,)'),
+      L('b          next is ")" \u2192 _vname(b)'),
+      L(')  ;       \u2192 SYMBOL()), SYMBOL(;)'),
+      P('running total: 23 tokens'),
+    ],
+    detail: '<h4>_fname vs _vname</h4>' +
+            '<p><code>gcd</code> and <code>a</code> end in the same accepting state of the DFA. The scanner then peeks at the next character: <code>(</code> gives <span class="step-result">_fname(gcd)</span>, anything else gives <span class="step-result">_vname</span>.</p>' +
+            '<p>So the split between <code>_vname</code> and <code>_fname</code> is not done by the automaton itself. It is a small rule applied to the lexeme after acceptance.</p>',
+  },
+  {
+    title: 'return result }',
+    tree: [
+      L('r,e,t,u,r,n  return path \u2192 KEYWORD(return)'),
+      L('result       next is "}" \u2192 _vname(result)'),
+      L('}            \u2192 SYMBOL(})'),
+      P('running total: 26 tokens'),
+    ],
+    detail: '<h4>End of main</h4>' +
+            '<p>There is no <code>;</code> after <code>return result</code>, because <code>;</code> only separates statements. The scanner emits just what it sees.</p>',
+  },
+  {
+    title: 'End of input',
+    tree: [
+      L('tokens = [ KEYWORD(main), (, KEYWORD(number), _vname(a), ,,'),
+      L('           KEYWORD(number), _vname(b), ), {,'),
+      L('           KEYWORD(number), _vname(result), :=, _number(0), ;,'),
+      L('           _vname(result), :=, _fname(gcd), (, _vname(a), ,, _vname(b), ), ;,'),
+      L('           KEYWORD(return), _vname(result), } ]'),
+      L('total: 26 tokens, no lexical errors'),
+    ],
+    detail: '<h4>Token stream complete</h4>' +
+            '<p>One left-to-right pass, no backtracking. This is exactly the stream Chapter 2&rsquo;s parser receives, and each token matches a terminal in the grammar: <code>_vname</code>, <code>_fname</code> and <code>_number</code>.</p>',
+  },
+
+  /* ───────────── extra cases ───────────── */
+  {
+    title: 'Extra: longest match (whilex)',
+    tree: [
+      L('read w,h,i,l,e   last accepting = {KEYWORD(while), IDENT}'),
+      L('read x           a transition exists (to IDENT): keep going'),
+      L("next ' ': no transition; last accepting = IDENT"),
+      L('  \u2192 _vname(whilex), not KEYWORD(while) + _vname(x)'),
+    ],
+    detail: '<h4>Longest match</h4>' +
+            '<p><code>main</code> never needs this, but it is why the scanner waits. We stop only when no transition exists, and the token is decided by the <em>last</em> accepting state passed, not the first.</p>',
+  },
+  {
+    title: 'Extra: lexical errors',
+    tree: [
+      L('input: result : = 0'),
+      L('read :   S0 \u2192 q1 (non-accepting)'),
+      L("next ' ': no transition, no accepting state passed"),
+      L('  \u2192 LEXICAL ERROR at this position'),
+      P(''),
+      L('input: @'),
+      L('  S0 has no transition on @ \u2192 LEXICAL ERROR'),
+    ],
+    detail: '<h4>Error rule</h4>' +
+            '<p>If no transition exists and no accepting state was passed since the token began, the lexer reports <span class="step-error">lexical error</span>. It never skips or guesses.</p>' +
+            '<p><code>: =</code> with a space fails because <code>:</code> alone is not a token.</p>',
+  },
+];
 
   var current = 0;
   var treeEl    = document.getElementById('stepTree');

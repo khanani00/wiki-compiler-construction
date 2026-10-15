@@ -1,6 +1,4 @@
-/* ── SHARED LAYOUTS ─────────────────────────────────────────────── */
 
-/* General two-column content layouts */
 .two-col,
 .two-col-recap,
 .rules-grid,
@@ -24,10 +22,10 @@
 }
 
 /* .two-col, */
-.two-col-recap,
+/* .two-col-recap,
 .interference-layout {
   margin: 1rem 0;
-}
+} */
 
 .notation-grid {
   grid-template-columns: 1fr 1fr;

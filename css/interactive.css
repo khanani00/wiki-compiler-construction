@@ -59,6 +59,29 @@
 
 .stepper-detail p { margin-bottom: 0.5rem; }
 
+.stepper-tree {
+  margin: 0;
+  padding: 1.2rem;
+  background: #1e2127;
+  color: #abb2bf;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.7;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* inline, not block: the JS joins lines with "\n" inside a <pre>,
+   so block spans would double the line spacing */
+.tree-line          { display: inline; }
+.tree-line--pending { opacity: 0.45; }
+.tree-line--active  { color: #fff; }
+.tree-line--done    { color: #7fbf7f; }
+
+@media (max-width: 700px) {
+  .stepper-body { grid-template-columns: 1fr; }
+}
+
 .step-call,
 .step-result,
 .step-error,

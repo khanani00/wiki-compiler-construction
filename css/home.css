@@ -2,6 +2,7 @@
     background: linear-gradient(180deg,#ffffff,#f4f6f9);
     border-bottom:1px solid var(--col-border);
     padding:1.5rem 1.5rem;
+    padding-top: 4rem;
 }
 
 .hero__content{
