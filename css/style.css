@@ -182,13 +182,16 @@ body {
 
 .btn-next { padding: 0; }
 .btn-next a,
-.btn-next a:link,
 .btn-next a:visited,
-.btn-next a:hover,
 .btn-next a:active,
 .btn-next a:focus {
   color: #fff8f0;                   /* the lighter orange/cream */
   text-decoration: none;            /* no underline in any state */
+}
+
+.btn-next:hover,
+.btn-next:has(a:hover) {
+  background: #c97a1f;              /* darker orange */
 }
 
 .callout__label {
@@ -213,7 +216,7 @@ code {
 .code-block {
   background: #1e2127;
   color: #abb2bf;
-  padding: 0.3rem 1.2rem;
+  padding: 1rem 1.2rem;
   border-radius: var(--radius);
   overflow-x: auto;
   margin: 0.8rem 0;
@@ -410,11 +413,10 @@ code {
   font-size: 0.85em;
 }
 
-/* hyperlinks */
+
 .hyperlink,
 .hyperlink:link,
 .hyperlink:visited,
-.hyperlink:hover,
 .hyperlink:active,
 .hyperlink:focus {
   color: var(--col-link);
@@ -422,7 +424,78 @@ code {
   text-decoration: none;
 }
 
+.hyperlink {
+  transition: color 0.15s ease;
+}
+
+.hyperlink:hover {
+  color: #003a85;
+  font-style: italic;
+  text-decoration: underline;
+}
 .hyperlink:focus-visible {
   outline: 2px solid var(--col-link);
   outline-offset: 2px;
+}
+
+/* ── RESPONSIVE PAGE SIZING ───────────────────────────────────── */
+site-header,
+main,
+.article,
+.section {
+  min-width: 0;
+}
+
+.article {
+  padding: clamp(1rem, 3vw, 2rem) clamp(0.75rem, 3vw, 1.5rem) 3rem;
+}
+
+.article__title {
+  font-size: clamp(1.55rem, 4vw, 1.9rem);
+  overflow-wrap: anywhere;
+}
+
+.section {
+  padding: clamp(0.75rem, 2.5vw, 1rem) clamp(0.75rem, 3vw, 1.5rem);
+}
+
+.section h2 {
+  font-size: clamp(1.4rem, 3.8vw, 1.8rem);
+  overflow-wrap: anywhere;
+}
+
+.section h3 {
+  font-size: clamp(1.08rem, 2.8vw, 1.2rem);
+  overflow-wrap: anywhere;
+}
+
+.section > *,
+.article > *,
+.callout,
+.exercise {
+  min-width: 0;
+}
+
+
+.site-footer {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .article {
+    overflow-x: clip;
+  }
+
+  .article__subtitle {
+    margin-bottom: 1.25rem;
+  }
+
+  .callout,
+  .exercise {
+    padding: 0.75rem;
+  }
+
+  .site-footer {
+    font-size: 0.75rem;
+  }
 }

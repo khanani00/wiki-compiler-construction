@@ -1,7 +1,3 @@
-/* ── TABS: Step 1 / Step 2 of "Creating the DFA" ─────────────────
-   Append to chapter1.css. Reuses existing tokens (--col-accent,
-   --col-border, --font-ui, --radius) so it matches the rest of the
-   site without introducing new colours. ──────────────────────── */
 
 .tabs {
     margin: 1rem 0 2rem;
@@ -23,7 +19,7 @@
     border: none;
     border-bottom: 3px solid transparent;
     padding: 0.5rem 0.9rem;
-    margin-bottom: -2px; /* sits on top of .tab-buttons' border */
+    margin-bottom: -2px; 
     color: var(--col-muted);
     cursor: pointer;
     transition: color 0.15s, border-color 0.15s;
@@ -40,7 +36,7 @@
 
 .tab-panel {
     display: none;
-    min-height: 220px;           /* reserved space for hand-drawn illustrations */
+    min-height: 220px;           
     border: 1px dashed var(--col-border);
     border-radius: var(--radius);
     padding: 1rem;
@@ -50,11 +46,49 @@
     display: block;
 }
 
-/* Step 3 / Step 4: same reserved-space treatment, no tabs needed */
 .dfa-visual-blank {
     min-height: 260px;
     border: 1px dashed var(--col-border);
     border-radius: var(--radius);
     padding: 1rem;
     margin: 1rem 0 2rem;
+}
+
+.media-split-container {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1.5rem;
+    width: 100%;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+
+.media-split-left {
+    flex: 0 1 auto;
+    min-width: min-content;
+    max-width: 50%;
+}
+
+.media-split-right {
+    flex: 1 1 50%;
+    min-width: 0;
+}
+
+.media-split-right iframe {
+    width: 100%;
+    border: none;
+    display: block;
+}
+
+@media (max-width: 850px) {
+    .media-split-container {
+        flex-direction: column;
+    }
+    .media-split-left,
+    .media-split-right {
+        max-width: 100%;
+        width: 100%;
+    }
 }

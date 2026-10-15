@@ -31,4 +31,5 @@
 }
 
 .dropdown__menu a:hover,
-.dropdown__menu a[aria-current="page"] { background: var(--col-navy-hover); }
+.dropdown__menu a[aria-current="page"] { background: var(--col-navy-hover);
+text-decoration: none; }
