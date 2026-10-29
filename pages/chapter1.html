@@ -33,7 +33,7 @@ b := a - (a / b * b);
 a := temp</pre>
         <p>To you, these 3 statements are immediately clear.</p>
         <p>To a compiler, this is a source file &mdash; a stream of characters.</p>
-        <p>Before the parser can build any structure, something has to scan these raw characters and group them into tokens: <em>VARIABLEifiers, operators, numbers, keywords</em> and so on.</p>
+        <p>Before the parser can build any structure, something has to scan these raw characters and group them into tokens: <em>identifiers, operators, numbers, keywords</em> and so on.</p>
         <p>This something is the <strong>lexer</strong>.</p>
     </div>
 
@@ -42,7 +42,7 @@ a := temp</pre>
         <p>
             A compiler's job is to turn source code into something a machine can run.
             That happens in stages &mdash; lexical analysis, syntax analysis, type checking, code generation &mdash; and lexical analysis is the first one,
-            because every later stage needs to work with meaningful tokens (VARIABLEifiers, numbers, operators), not raw characters.
+            because every later stage needs to work with meaningful tokens (identifiers, numbers, operators), not raw characters.
         </p>
         <p>
             A lexer groups characters into tokens, discards what doesn't matter (whitespace, comments),
@@ -55,12 +55,11 @@ a := temp</pre>
       <h2>Learning Objectives</h2>
       <p>By the end of this article you should be able to:</p>
       <ul class="objectives-list">
-        <li><span class="bloom bloom--remember">Remember</span> the token types in the <a class="hyperlink" href="grammar.html">Reference Grammar</a> (keyword, VARIABLEifier, number, assign, relational operator, binary operator, symbols) and the three lexer rules: longest match, priority and error handling.</li>
+        <li><span class="bloom bloom--remember">Remember</span> the token types in the <a class="hyperlink" href="grammar.html">Reference Grammar</a> (keyword, identifier, number, assign, relational operator, binary operator, symbols) and the three lexer rules: longest match, priority and error handling.</li>
         <li><span class="bloom bloom--understand">Understand</span> why a regular expression cannot be executed directly, and explain how the regex &rarr; NFA &rarr; DFA path turns a pattern into a working scanner.</li>
         <li><span class="bloom bloom--understand">Understand</span> the difference between an NFA and a DFA (&epsilon;-transitions, multiple transitions per symbol), and explain why lexers are built on DFAs.</li>
         <li><span class="bloom bloom--apply">Apply</span> &epsilon;-closure and subset construction to convert a small NFA into a DFA.</li>
         <li><span class="bloom bloom--apply">Apply</span> the DFA minimisation algorithm to the combined DFA, grouping accepting states by token class.</li>
-        <!-- <li><span class="bloom bloom--analyse">Analyse</span> how separate token DFAs are combined into one machine, and why keywords and VARIABLEifiers need an overlay rather than a simple merge.</li> -->
         <li><span class="bloom bloom--analyse">Analyse</span> a scan trace to determine where each token ends, showing how longest match, priority and lexical errors decide the outcome.</li>
       </ul>
     </section>
@@ -102,7 +101,7 @@ a := temp</pre>
         <div class="callout callout--info">
             <p class="callout__label"> _vname / _fname</p>
             <p>The lexer emits a single Identifier class. The grammar splits it into <code>_vname</code> and <code>_fname</code>:
-               an VARIABLEifier directly followed by <code>(</code> is a function name.</p>
+               an identifier directly followed by <code>(</code> is a function name.</p>
         </div>
 
         <h3>Why a DFA?</h3>
@@ -453,11 +452,11 @@ a := temp</pre>
 
         <div class="callout callout--info">
             <p class="callout__label">Letters are the exception</p>
-            <p>Keywords and VARIABLEifiers both start with a letter, and every keyword is also a valid VARIABLEifier. So the two machines are overlaid, not just merged:</p>
+            <p>Keywords and identifiers both start with a letter, and every keyword is also a valid identifier. So the two machines are overlaid, not just merged:</p>
             <ul>
                 <li>Every keyword-prefix state (<code>i</code>, <code>wh</code>, <code>retur</code>, &hellip;) also accepts Identifier.</li>
                 <li>Any character that does not continue the keyword leads to the Identifier loop state.</li>
-                <li>The last state of each keyword accepts both KEYWORD and Identifier. The <strong>priority rule</strong> picks KEYWORD. A further letter moves it on to Identifier, so <code>ifx</code> is an VARIABLEifier.</li>
+                <li>The last state of each keyword accepts both KEYWORD and Identifier. The <strong>priority rule</strong> picks KEYWORD. A further letter moves it on to Identifier, so <code>ifx</code> is an identifier.</li>
             </ul>
         </div>
         <p>
@@ -656,7 +655,7 @@ a := temp</pre>
                 <p>
                     Two states are equivalent for minimisation if, for every possible remaining input, they either
                     both lead to acceptance or both never do. From the scanner's point of view, they behave
-                    VARIABLEically no matter what comes next, so keeping them separate adds no distinguishing power.
+                    identically no matter what comes next, so keeping them separate adds no distinguishing power.
                     Since both states here always lead only to rejection regardless of input, they meet exactly
                     that condition and can be collapsed into one dead state.
                 </p>
